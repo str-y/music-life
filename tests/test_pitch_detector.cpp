@@ -136,7 +136,7 @@ static bool test_pd_a4_midi_and_note_name() {
     ASSERT_TRUE(r.pitched);
     ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
     ASSERT_TRUE(r.midi_note == 69);        // A4
-    ASSERT_TRUE(r.note_name == "A4");
+    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
     ASSERT_NEAR(r.cents_offset, 0.0f, 5.0f);
     return true;
 }
@@ -153,7 +153,7 @@ static bool test_pd_c4_note() {
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
     ASSERT_TRUE(r.pitched);
     ASSERT_TRUE(r.midi_note == 60);        // C4
-    ASSERT_TRUE(r.note_name == "C4");
+    ASSERT_TRUE(std::strcmp(r.note_name, "C4") == 0);
     return true;
 }
 
