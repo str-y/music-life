@@ -1,1 +1,0 @@
-/home/runner/work/music-life/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_pitch_detection.dir/link.d CMakeFiles/test_pitch_detection.dir/tests/test_pitch_detector.cpp.o -o test_pitch_detection  libpitch_detection.a
