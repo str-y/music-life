@@ -32,6 +32,7 @@ PitchDetector::PitchDetector(int sample_rate, int frame_size, float threshold, f
     , yin_(std::make_unique<Yin>(sample_rate, frame_size, threshold))
     , ring_buffer_(frame_size * 2, 0.0f)
     , frame_buffer_(frame_size, 0.0f)
+    , yin_workspace_(frame_size / 2, 0.0f)
     , write_pos_(0)
     , samples_ready_(0)
     , last_result_{}
@@ -83,7 +84,7 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
     }
 
     // Run YIN detection
-    float freq = yin_->detect(frame_buffer_.data());
+    float freq = yin_->detect(frame_buffer_.data(), yin_workspace_);
     float prob = yin_->probability();
 
     Result result{};

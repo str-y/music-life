@@ -73,7 +73,8 @@ static bool test_yin_sine_a4() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
@@ -88,7 +89,8 @@ static bool test_yin_sine_e2() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
@@ -103,7 +105,8 @@ static bool test_yin_sine_c5() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
     return true;
 }
@@ -115,7 +118,8 @@ static bool test_yin_silence_returns_no_pitch() {
     Yin yin(SR, FRAME, 0.10f);
     std::vector<float> buf(FRAME, 0.0f);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_TRUE(detected < 0.0f);
     return true;
 }
