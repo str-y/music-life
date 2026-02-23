@@ -9,9 +9,16 @@ struct MLPitchDetectorHandle {
 };
 
 MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold) {
+    return ml_pitch_detector_create_with_reference_pitch(sample_rate, frame_size, threshold, 440.0f);
+}
+
+MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_rate,
+                                                                     int frame_size,
+                                                                     float threshold,
+                                                                     float reference_pitch_hz) {
     try {
         auto* handle = new MLPitchDetectorHandle{
-            std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold)
+            std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz)
         };
         return handle;
     } catch (...) {
@@ -27,6 +34,16 @@ void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) {
 void ml_pitch_detector_reset(MLPitchDetectorHandle* handle) {
     if (!handle) return;
     handle->detector->reset();
+}
+
+int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz) {
+    if (!handle) return 0;
+    try {
+        handle->detector->set_reference_pitch(reference_pitch_hz);
+        return 1;
+    } catch (...) {
+        return 0;
+    }
 }
 
 MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples) {

@@ -249,6 +249,40 @@ static bool test_ffi_process_a4() {
     return true;
 }
 
+static bool test_pd_reference_pitch_a4_432() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    PitchDetector pd(SR, FRAME, 0.10f, 432.0f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 432.0f, SR);
+
+    PitchDetector::Result r = pd.process(buf.data(), FRAME);
+    ASSERT_TRUE(r.pitched);
+    ASSERT_TRUE(r.midi_note == 69);       // A4 relative to A4=432
+    ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
+    return true;
+}
+
+static bool test_ffi_set_reference_pitch() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(SR, FRAME, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 432.0f) == 1);
+
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 432.0f, SR);
+    MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), FRAME);
+    ASSERT_TRUE(r.pitched == 1);
+    ASSERT_TRUE(r.midi_note == 69);
+    ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
+
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -265,7 +299,9 @@ int main() {
     run_test("pd:  reset clears state",             test_pd_reset_clears_state);
     run_test("pd:  throws on bad sample_rate",      test_pd_invalid_sample_rate_throws);
     run_test("pd:  throws on bad frame_size",       test_pd_invalid_frame_size_throws);
+    run_test("pd:  supports A4=432 reference",      test_pd_reference_pitch_a4_432);
     run_test("ffi: A4 process bridge",              test_ffi_process_a4);
+    run_test("ffi: set reference pitch",            test_ffi_set_reference_pitch);
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;

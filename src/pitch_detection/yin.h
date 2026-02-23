@@ -41,6 +41,7 @@ private:
     int   half_buffer_;
 
     mutable float probability_;
+    mutable std::vector<float> df_buffer_;
 
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;
