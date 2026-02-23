@@ -127,7 +127,10 @@ String _deriveChordLabel(int midiNote) {
 /// listen to [chordStream] to receive chord labels in real time.
 ///
 /// Call [dispose] when done to release the native handle and close the stream.
-class NativePitchBridge {
+/// If [dispose] is never called the [NativeFinalizer]s registered at
+/// construction time will still free the native handle and the persistent FFI
+/// buffer once the Dart object becomes unreachable, preventing leaks.
+class NativePitchBridge implements Finalizable {
   /// Default frame size (samples) matching the native detector's default.
   static const int defaultFrameSize = 2048;
 
@@ -141,6 +144,15 @@ class NativePitchBridge {
   /// Higher values require stronger pitch evidence before firing.
   static const double defaultThreshold = 0.10;
 
+  /// Finalizer that calls `ml_pitch_detector_destroy` on the native handle
+  /// when this object is garbage-collected without an explicit [dispose] call.
+  final NativeFinalizer _handleFinalizer;
+
+  /// Finalizer that calls `free` on the persistent FFI buffer when this object
+  /// is garbage-collected without an explicit [dispose] call.
+  static final NativeFinalizer _bufferFinalizer =
+      NativeFinalizer(malloc.nativeFree);
+
   final Pointer<Void> _handle;
   final _MLProcessDart _nativeProcess;
   final _MLDestroyDart _nativeDestroy;
@@ -150,6 +162,9 @@ class NativePitchBridge {
 
   /// Number of Float elements that [_persistentBuffer] can hold.
   final int _frameSize;
+
+  /// Set to `true` by [dispose] to guard against use-after-free.
+  bool _disposed = false;
 
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
@@ -177,11 +192,18 @@ class NativePitchBridge {
     required _MLDestroyDart nativeDestroy,
     required Pointer<Float> persistentBuffer,
     required int frameSize,
+    required NativeFinalizer handleFinalizer,
   })  : _handle = handle,
         _nativeProcess = nativeProcess,
         _nativeDestroy = nativeDestroy,
         _persistentBuffer = persistentBuffer,
-        _frameSize = frameSize;
+        _frameSize = frameSize,
+        _handleFinalizer = handleFinalizer {
+    // Attach NativeFinalizers so that native resources are freed even if
+    // dispose() is never called (e.g. due to an unhandled exception or GC).
+    _handleFinalizer.attach(this, handle.cast(), detach: this);
+    _bufferFinalizer.attach(this, persistentBuffer.cast(), detach: this);
+  }
 
   /// Creates a [NativePitchBridge] backed by the platform's native library.
   factory NativePitchBridge({
@@ -190,6 +212,11 @@ class NativePitchBridge {
     double threshold = defaultThreshold,
   }) {
     final lib = _loadNativeLib();
+
+    final handleFinalizer = NativeFinalizer(
+      lib.lookup<NativeFunction<Void Function(Pointer<Void>)>>(
+          'ml_pitch_detector_destroy'),
+    );
 
     final create = lib.lookupFunction<_MLCreateNative, _MLCreateDart>(
         'ml_pitch_detector_create');
@@ -206,6 +233,7 @@ class NativePitchBridge {
           'ml_pitch_detector_destroy'),
       persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
       frameSize: frameSize,
+      handleFinalizer: handleFinalizer,
     );
   }
 
@@ -214,10 +242,7 @@ class NativePitchBridge {
   /// If the engine identifies a pitched note, the corresponding chord label
   /// is emitted on [chordStream].
   void processAudioFrame(Float32List samples) {
-    assert(
-      !_controller.isClosed,
-      'processAudioFrame called after dispose().',
-    );
+    if (_disposed) return;
     assert(
       samples.length <= _frameSize,
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
@@ -264,6 +289,7 @@ class NativePitchBridge {
   /// buffers them, and dispatches complete [_frameSize]-sample frames to
   /// [processAudioFrame].
   void _onAudioChunk(Uint8List chunk) {
+    if (_disposed) return;
     for (int i = 0; i + 1 < chunk.length; i += 2) {
       int s = chunk[i] | (chunk[i + 1] << 8);
       if (s >= 0x8000) s -= 0x10000; // sign-extend int16
@@ -279,6 +305,11 @@ class NativePitchBridge {
 
   /// Releases the native handle and closes [chordStream].
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    // Detach finalizers first so they don't double-free after explicit cleanup.
+    _handleFinalizer.detach(this);
+    _bufferFinalizer.detach(this);
     _audioSub?.cancel();
     _audioSub = null;
     _recorder.stop().ignore();
