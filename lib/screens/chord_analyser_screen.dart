@@ -2,104 +2,82 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// Demo chord sequence used to simulate real-time chord detection.
-/// In production this would be driven by the native pitch-detection engine
-/// via FFI / platform channels.
-const List<String> _demoChords = [
-  'Cmaj7',
-  'Am7',
-  'Fmaj7',
-  'G7',
-  'Em7',
-  'A7',
-  'Dm7',
-  'G7',
-  'Cmaj7',
-  'E7',
-  'Am7',
-  'D7',
-];
+import '../l10n/app_localizations.dart';
 
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
-/// How often (in seconds) the demo advances to the next chord.
-const int _demoIntervalSeconds = 2;
-
 class ChordAnalyserScreen extends StatefulWidget {
-  const ChordAnalyserScreen({super.key});
+  const ChordAnalyserScreen({super.key, required this.chordStream});
+
+  /// Stream of chord labels emitted by the native pitch-detection engine.
+  final Stream<String> chordStream;
 
   @override
   State<ChordAnalyserScreen> createState() => _ChordAnalyserScreenState();
 }
 
-class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
-  static final List<_ChordEntry> _savedHistory = <_ChordEntry>[];
-
-  /// The chord currently being "heard".
-  String _currentChord = _demoChords.first;
+class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
+    with SingleTickerProviderStateMixin {
+  /// The chord currently being detected.
+  String _currentChord = '---';
 
   /// Ordered list of recently detected chords (newest first).
   final List<_ChordEntry> _history = [];
 
-  Timer? _timer;
-  int _demoIndex = 0;
-  bool _useNativeBridge = false;
+  /// Key for the animated history list.
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+
+  StreamSubscription<String>? _subscription;
+
+  /// Controller for the pulsing "listening" indicator.
+  late final AnimationController _listeningCtrl;
 
   @override
   void initState() {
     super.initState();
-    _seedHistoryIfNeeded();
-    _history.addAll(_savedHistory);
-    _currentChord = _history.first.chord;
-    _startDemoTimer();
-  }
+    _listeningCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
 
-  void _seedHistoryIfNeeded() {
-    if (_savedHistory.isNotEmpty) return;
-    _savedHistory.add(
-      _ChordEntry(chord: _currentChord, time: DateTime.now(), source: 'demo'),
-    );
+    _subscription = widget.chordStream.listen((chord) {
+      if (!mounted) return;
+      setState(() => _currentChord = chord);
+      _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
+      _listKey.currentState?.insertItem(
+        0,
+        duration: const Duration(milliseconds: 300),
+      );
+      if (_history.length > _maxHistory) {
+        final removed = _history.removeLast();
+        _listKey.currentState?.removeItem(
+          _maxHistory,
+          (context, animation) => _ChordHistoryTile(
+            entry: removed,
+            isLatest: false,
+            colorScheme: Theme.of(context).colorScheme,
+            animation: animation,
+          ),
+          duration: Duration.zero,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _subscription?.cancel();
+    _listeningCtrl.dispose();
     super.dispose();
-  }
-
-  void _startDemoTimer() {
-    _timer = Timer.periodic(
-      const Duration(seconds: _demoIntervalSeconds),
-      (_) {
-        _demoIndex = (_demoIndex + 1) % _demoChords.length;
-        final next = _useNativeBridge
-            ? _nativeDetectChord()
-            : _demoChords[_demoIndex];
-        setState(() {
-          _currentChord = next;
-          _history.insert(
-            0,
-            _ChordEntry(
-              chord: next,
-              time: DateTime.now(),
-              source: _useNativeBridge ? 'native' : 'demo',
-            ),
-          );
-          if (_history.length > _maxHistory) {
-            _history.removeLast();
-          }
-          _savedHistory
-            ..clear()
-            ..addAll(_history);
-        });
-      },
-    );
   }
 
   String _nativeDetectChord() {
     final sequence = <String>['Am', 'F', 'C', 'G', 'Em', 'Dm7', 'Bdim', 'E7'];
-    return sequence[_demoIndex % sequence.length];
+    // This method is no longer used for the UI, but kept for potential future use or if other parts of the app still reference it.
+    // The _demoIndex variable it depends on is removed, so it would need to be re-implemented if used.
+    // For now, it's a dead method.
+    return sequence[0]; // Placeholder return
   }
 
   @override
@@ -109,16 +87,8 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('コード解析'),
+        title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
         backgroundColor: colorScheme.inversePrimary,
-        actions: [
-          Switch(
-            value: _useNativeBridge,
-            onChanged: (value) {
-              setState(() => _useNativeBridge = value);
-            },
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -130,7 +100,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '現在のコード',
+                    AppLocalizations.of(context)!.currentChord,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -155,13 +125,8 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                           ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _useNativeBridge ? 'ネイティブ解析に接続中…' : 'デモ解析中…',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
+                  const SizedBox(height: 12),
+                  _ListeningIndicator(controller: _listeningCtrl),
                 ],
               ),
             ),
@@ -177,7 +142,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                 Icon(Icons.history, size: 18, color: colorScheme.secondary),
                 const SizedBox(width: 6),
                 Text(
-                  'コード進行の履歴',
+                  AppLocalizations.of(context)!.chordHistory,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: colorScheme.secondary,
                       ),
@@ -190,24 +155,27 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
             child: _history.isEmpty
                 ? Center(
                     child: Text(
-                      'まだ履歴がありません',
+                      AppLocalizations.of(context)!.noChordHistory,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                     ),
                   )
-                : ListView.separated(
+                : AnimatedList(
+                    key: _listKey,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 4),
-                    itemCount: _history.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 6),
-                    itemBuilder: (context, index) {
+                    initialItemCount: _history.length,
+                    itemBuilder: (context, index, animation) {
                       final entry = _history[index];
-                      final isLatest = index == 0;
-                      return _ChordHistoryTile(
-                        entry: entry,
-                        isLatest: isLatest,
-                        colorScheme: colorScheme,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _ChordHistoryTile(
+                          entry: entry,
+                          isLatest: index == 0,
+                          colorScheme: colorScheme,
+                          animation: animation,
+                        ),
                       );
                     },
                   ),
@@ -225,18 +193,55 @@ String _formatTime(DateTime t) =>
     '${t.minute.toString().padLeft(2, '0')}:'
     '${t.second.toString().padLeft(2, '0')}';
 
+// ── Pulsing listening indicator ───────────────────────────────────────────────
+
+class _ListeningIndicator extends StatelessWidget {
+  const _ListeningIndicator({required this.controller});
+
+  final AnimationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(3, (i) {
+            final interval = Interval(
+              i * 0.15,
+              0.55 + i * 0.15,
+              curve: Curves.easeInOut,
+            );
+            final t = interval.transform(controller.value);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 4,
+              height: 6 + t * 10,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.35 + t * 0.65),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
   const _ChordEntry({
     required this.chord,
     required this.time,
-    required this.source,
   });
 
   final String chord;
   final DateTime time;
-  final String source;
 }
 
 // ── Chord history tile ────────────────────────────────────────────────────────
@@ -246,53 +251,61 @@ class _ChordHistoryTile extends StatelessWidget {
     required this.entry,
     required this.isLatest,
     required this.colorScheme,
+    required this.animation,
   });
 
   final _ChordEntry entry;
   final bool isLatest;
   final ColorScheme colorScheme;
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
     final timeLabel = _formatTime(entry.time);
 
-    return AnimatedOpacity(
-      opacity: isLatest ? 1.0 : 0.65,
-      duration: const Duration(milliseconds: 300),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isLatest
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: isLatest
-              ? Border.all(color: colorScheme.primary, width: 1.5)
-              : null,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                entry.chord,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight:
-                          isLatest ? FontWeight.bold : FontWeight.normal,
-                      color: isLatest
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.onSurface,
-                    ),
-              ),
+    return SizeTransition(
+      sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: AnimatedOpacity(
+          opacity: isLatest ? 1.0 : 0.65,
+          duration: const Duration(milliseconds: 300),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isLatest
+                  ? colorScheme.primaryContainer
+                  : colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: isLatest
+                  ? Border.all(color: colorScheme.primary, width: 1.5)
+                  : null,
             ),
-            Text(
-              '$timeLabel (${entry.source})',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isLatest
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.chord,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight:
+                              isLatest ? FontWeight.bold : FontWeight.normal,
+                          color: isLatest
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.onSurface,
+                        ),
                   ),
+                ),
+                Text(
+                  timeLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isLatest
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

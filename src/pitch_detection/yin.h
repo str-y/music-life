@@ -1,5 +1,6 @@
 #pragma once
 
+#include <complex>
 #include <vector>
 
 namespace music_life {
@@ -26,10 +27,14 @@ public:
     /**
      * Estimate the fundamental frequency of the given audio samples.
      *
-     * @param samples  Mono audio buffer (buffer_size samples, range [-1, 1]).
+     * @param samples    Mono audio buffer (buffer_size samples, range [-1, 1]).
+     * @param workspace  Caller-supplied scratch buffer (size >= buffer_size / 2).
+     *                   Providing this per-call buffer makes detect() safe for
+     *                   concurrent use from multiple real-time threads as long as
+     *                   each thread passes its own workspace.
      * @return Fundamental frequency in Hz, or -1 if no pitch is detected.
      */
-    float detect(const float* samples) const;
+    float detect(const float* samples, std::vector<float>& workspace);
 
     /** Probability of the last detected pitch (0–1). */
     float probability() const { return probability_; }
@@ -39,9 +44,21 @@ private:
     int   buffer_size_;
     float threshold_;
     int   half_buffer_;
+    int   fft_size_;
 
-    mutable float probability_;
-    mutable std::vector<float> df_buffer_;
+    float probability_;
+
+    // Pre-allocated scratch buffers for difference() – avoids per-call
+    // heap allocations in the real-time audio path.
+    mutable std::vector<std::complex<float>> fft_F_;
+    mutable std::vector<std::complex<float>> fft_G_;
+    mutable std::vector<float>               sq_prefix_;
+
+    // Pre-computed twiddle factors: twiddle_[k] = exp(-2pi*i*k / fft_size_)
+    // for k = 0 ... fft_size_/2 - 1.  Computed once in the constructor so the
+    // hot audio path never calls std::cos / std::sin.
+    std::vector<std::complex<float>> twiddle_;
+
 
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;

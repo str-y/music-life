@@ -1,8 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -30,6 +33,26 @@ class RecordingEntry {
     final s = durationSeconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'recordedAt': recordedAt.toIso8601String(),
+        'durationSeconds': durationSeconds,
+        'waveformData': waveformData,
+      };
+
+  factory RecordingEntry.fromJson(Map<String, dynamic> json) {
+    return RecordingEntry(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      recordedAt: DateTime.parse(json['recordedAt'] as String),
+      durationSeconds: json['durationSeconds'] as int,
+      waveformData: (json['waveformData'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+    );
+  }
 }
 
 class PracticeLogEntry {
@@ -42,68 +65,75 @@ class PracticeLogEntry {
   final DateTime date;
   final int durationMinutes;
   final String memo;
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'durationMinutes': durationMinutes,
+        'memo': memo,
+      };
+
+  factory PracticeLogEntry.fromJson(Map<String, dynamic> json) {
+    return PracticeLogEntry(
+      date: DateTime.parse(json['date'] as String),
+      durationMinutes: json['durationMinutes'] as int,
+      memo: json['memo'] as String? ?? '',
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Sample data (placeholder until real persistence is wired up)
+// Repository – persists recording metadata and practice logs via
+// SharedPreferences using JSON encoding.
 // ---------------------------------------------------------------------------
 
-List<double> _fakeWaveform(int seed, int count) {
-  final rng = math.Random(seed);
-  return List.generate(count, (_) => 0.15 + rng.nextDouble() * 0.85);
+class RecordingRepository {
+  static const _recordingsKey = 'recordings_v1';
+  static const _logsKey = 'practice_logs_v1';
+
+  Future<List<RecordingEntry>> loadRecordings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_recordingsKey);
+    if (jsonStr == null) return [];
+    try {
+      final list = jsonDecode(jsonStr) as List<dynamic>;
+      return list
+          .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveRecordings(List<RecordingEntry> recordings) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _recordingsKey,
+      jsonEncode(recordings.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  Future<List<PracticeLogEntry>> loadPracticeLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString(_logsKey);
+    if (jsonStr == null) return [];
+    try {
+      final list = jsonDecode(jsonStr) as List<dynamic>;
+      return list
+          .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> savePracticeLogs(List<PracticeLogEntry> logs) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _logsKey,
+      jsonEncode(logs.map((e) => e.toJson()).toList()),
+    );
+  }
 }
-
-final appRecordings = <RecordingEntry>[
-  RecordingEntry(
-    id: '1',
-    title: '練習セッション',
-    recordedAt: DateTime(2026, 2, 23, 19, 30),
-    durationSeconds: 183,
-    waveformData: _fakeWaveform(1, 40),
-  ),
-  RecordingEntry(
-    id: '2',
-    title: '練習セッション',
-    recordedAt: DateTime(2026, 2, 22, 18, 15),
-    durationSeconds: 245,
-    waveformData: _fakeWaveform(2, 40),
-  ),
-  RecordingEntry(
-    id: '3',
-    title: '練習セッション',
-    recordedAt: DateTime(2026, 2, 20, 20, 0),
-    durationSeconds: 97,
-    waveformData: _fakeWaveform(3, 40),
-  ),
-  RecordingEntry(
-    id: '4',
-    title: '練習セッション',
-    recordedAt: DateTime(2026, 2, 18, 17, 45),
-    durationSeconds: 312,
-    waveformData: _fakeWaveform(4, 40),
-  ),
-  RecordingEntry(
-    id: '5',
-    title: '練習セッション',
-    recordedAt: DateTime(2026, 2, 15, 21, 0),
-    durationSeconds: 540,
-    waveformData: _fakeWaveform(5, 40),
-  ),
-];
-
-final appPracticeLogs = <PracticeLogEntry>[
-  PracticeLogEntry(date: DateTime(2026, 2, 23), durationMinutes: 45, memo: 'ロングトーン'),
-  PracticeLogEntry(date: DateTime(2026, 2, 22), durationMinutes: 60, memo: 'スケール'),
-  PracticeLogEntry(date: DateTime(2026, 2, 20), durationMinutes: 30, memo: 'コード進行'),
-  PracticeLogEntry(date: DateTime(2026, 2, 18), durationMinutes: 75, memo: '耳コピ'),
-  PracticeLogEntry(date: DateTime(2026, 2, 15), durationMinutes: 90, memo: 'テンポ練習'),
-  PracticeLogEntry(date: DateTime(2026, 2, 12), durationMinutes: 40),
-  PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 55),
-  PracticeLogEntry(date: DateTime(2026, 2, 8), durationMinutes: 30),
-  PracticeLogEntry(date: DateTime(2026, 2, 5), durationMinutes: 20),
-  PracticeLogEntry(date: DateTime(2026, 2, 3), durationMinutes: 60),
-  PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 45),
-];
 
 // ---------------------------------------------------------------------------
 // LibraryScreen
@@ -119,12 +149,33 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  int _recordingCounter = appRecordings.length;
+  final _repository = RecordingRepository();
+
+  List<RecordingEntry> _recordings = [];
+  List<PracticeLogEntry> _logs = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final recordings = await _repository.loadRecordings();
+      final logs = await _repository.loadPracticeLogs();
+      if (!mounted) return;
+      setState(() {
+        _recordings = recordings;
+        _logs = logs;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -137,44 +188,28 @@ class _LibraryScreenState extends State<LibraryScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ライブラリ'),
-        actions: [
-          IconButton(
-            tooltip: '録音を保存',
-            icon: const Icon(Icons.fiber_manual_record),
-            onPressed: () {
-              if (_tabController.index != 0) return;
-              setState(() {
-                _recordingCounter++;
-                appRecordings.insert(
-                  0,
-                  RecordingEntry(
-                    id: 'rec_$_recordingCounter',
-                    title: '新規録音 $_recordingCounter',
-                    recordedAt: DateTime.now(),
-                    durationSeconds: 120 + (_recordingCounter % 180),
-                    waveformData: _fakeWaveform(_recordingCounter, 40),
-                  ),
-                );
-              });
-            },
-          ),
-        ],
+        title: Text(AppLocalizations.of(context)!.libraryTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.mic), text: '録音'),
-            Tab(icon: Icon(Icons.calendar_month), text: 'ログ'),
+          tabs: [
+            Tab(icon: const Icon(Icons.mic), text: AppLocalizations.of(context)!.recordingsTab),
+            Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.logsTab),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _RecordingsTab(recordings: appRecordings),
-          _LogTab(logs: appPracticeLogs),
-        ],
-      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(
+                semanticsLabel: 'Loading recordings and practice logs',
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _RecordingsTab(recordings: _recordings),
+                _LogTab(logs: _logs),
+              ],
+            ),
     );
   }
 }
@@ -199,6 +234,24 @@ class _RecordingsTabState extends State<_RecordingsTab> {
   Duration _playbackDuration = Duration.zero;
   Timer? _progressTicker;
 
+  late List<RecordingEntry> _sorted;
+
+  @override
+  void initState() {
+    super.initState();
+    _sorted = [...widget.recordings]
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+  }
+
+  @override
+  void didUpdateWidget(_RecordingsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.recordings != oldWidget.recordings) {
+      _sorted = [...widget.recordings]
+        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    }
+  }
+
   void _startProgressTicker() {
     _progressTicker?.cancel();
     _progressTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
@@ -206,7 +259,7 @@ class _RecordingsTabState extends State<_RecordingsTab> {
       final elapsed = DateTime.now().difference(_playbackStart!);
       final nextRatio = _playbackDuration.inMilliseconds <= 0
           ? 0.0
-          : (elapsed.inMilliseconds / _playbackDuration.inMilliseconds).clamp(0, 1);
+          : (elapsed.inMilliseconds / _playbackDuration.inMilliseconds).clamp(0.0, 1.0);
       if (nextRatio >= 1) {
         setState(() {
           _playingId = null;
@@ -249,24 +302,21 @@ class _RecordingsTabState extends State<_RecordingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...widget.recordings]
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-
-    if (sorted.isEmpty) {
-      return const Center(
+    if (_sorted.isEmpty) {
+      return Center(
         child: Text(
-          '録音データがありません',
-          style: TextStyle(color: Colors.grey),
+          AppLocalizations.of(context)!.noRecordings,
+          style: const TextStyle(color: Colors.grey),
         ),
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: sorted.length,
+      itemCount: _sorted.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final entry = sorted[index];
+        final entry = _sorted[index];
         final isPlaying = _playingId == entry.id;
         return _RecordingTile(
           entry: entry,
@@ -300,6 +350,7 @@ class _RecordingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -310,7 +361,7 @@ class _RecordingTile extends StatelessWidget {
             iconSize: 40,
             color: colorScheme.primary,
             onPressed: onPlayPause,
-            tooltip: isPlaying ? '一時停止' : '再生',
+            tooltip: isPlaying ? l10n.pause : l10n.play,
           ),
           title: Text(
             entry.title,
@@ -354,7 +405,7 @@ class _RecordingTile extends StatelessWidget {
 // Waveform painter
 // ---------------------------------------------------------------------------
 
-class _WaveformView extends StatelessWidget {
+class _WaveformView extends StatefulWidget {
   const _WaveformView({
     required this.data,
     required this.isPlaying,
@@ -366,22 +417,75 @@ class _WaveformView extends StatelessWidget {
   final Color color;
 
   @override
+  State<_WaveformView> createState() => _WaveformViewState();
+}
+
+class _WaveformViewState extends State<_WaveformView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breathCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (widget.isPlaying) _breathCtrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_WaveformView old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying != old.isPlaying) {
+      if (widget.isPlaying) {
+        _breathCtrl.repeat(reverse: true);
+      } else {
+        _breathCtrl.stop();
+        _breathCtrl.value = 0;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: CustomPaint(
-        painter: _WaveformPainter(data: data, color: color),
-        size: Size.infinite,
+    return Semantics(
+      label: 'Visual waveform representation of the recording',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 48,
+        child: AnimatedBuilder(
+          animation: _breathCtrl,
+          builder: (_, __) => CustomPaint(
+            painter: _WaveformPainter(
+              data: widget.data,
+              color: widget.color,
+              breathPhase: _breathCtrl.value,
+            ),
+            size: Size.infinite,
+          ),
+        ),
       ),
     );
   }
 }
 
 class _WaveformPainter extends CustomPainter {
-  _WaveformPainter({required this.data, required this.color});
+  _WaveformPainter({
+    required this.data,
+    required this.color,
+    this.breathPhase = 0.0,
+  });
 
   final List<double> data;
   final Color color;
+  final double breathPhase;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -398,10 +502,12 @@ class _WaveformPainter extends CustomPainter {
     final gap = barWidth * 0.6;
     final step = barWidth + gap;
     final centerY = size.height / 2;
+    final breathScale = 1.0 + breathPhase * 0.22;
 
     for (var i = 0; i < barCount; i++) {
       final x = i * step + barWidth / 2;
-      final halfHeight = (data[i] * centerY).clamp(2.0, centerY);
+      final halfHeight =
+          (data[i] * centerY * breathScale).clamp(2.0, centerY);
       canvas.drawLine(
         Offset(x, centerY - halfHeight),
         Offset(x, centerY + halfHeight),
@@ -412,7 +518,9 @@ class _WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.data != data;
+      oldDelegate.color != color ||
+      oldDelegate.data != data ||
+      oldDelegate.breathPhase != breathPhase;
 }
 
 // ---------------------------------------------------------------------------
@@ -507,22 +615,23 @@ class _MonthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: onPrev,
-          tooltip: '前の月',
+          tooltip: l10n.previousMonth,
         ),
         Text(
-          '$year年$month月',
+          l10n.yearMonth(year, month),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: onNext,
-          tooltip: '次の月',
+          tooltip: l10n.nextMonth,
         ),
       ],
     );
@@ -540,10 +649,19 @@ class _CalendarGrid extends StatelessWidget {
   final int month;
   final Set<int> practiceDays;
 
-  static const _weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final weekLabels = [
+      l10n.weekdaySun,
+      l10n.weekdayMon,
+      l10n.weekdayTue,
+      l10n.weekdayWed,
+      l10n.weekdayThu,
+      l10n.weekdayFri,
+      l10n.weekdaySat,
+    ];
     final colorScheme = Theme.of(context).colorScheme;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
     // Day-of-week index for the 1st (0 = Sunday)
@@ -556,9 +674,11 @@ class _CalendarGrid extends StatelessWidget {
       children: [
         // Weekday header row
         Row(
-          children: _weekLabels.map((label) {
-            final isSunday = label == '日';
-            final isSaturday = label == '土';
+          children: weekLabels.asMap().entries.map((entry) {
+            final index = entry.key;
+            final label = entry.value;
+            final isSunday = index == 0;
+            final isSaturday = index == 6;
             return Expanded(
               child: Center(
                 child: Padding(
@@ -701,6 +821,7 @@ class _PracticeSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       child: Padding(
@@ -710,14 +831,14 @@ class _PracticeSummary extends StatelessWidget {
           children: [
             _SummaryItem(
               icon: Icons.event_available,
-              value: '$practiceDayCount日',
-              label: '練習日数',
+              value: l10n.practiceDayCount(practiceDayCount),
+              label: l10n.practiceDays,
               color: colorScheme.primary,
             ),
             _SummaryItem(
               icon: Icons.timer,
-              value: '${totalMinutes}分',
-              label: '合計時間',
+              value: l10n.durationMinutes(totalMinutes),
+              label: l10n.totalTime,
               color: colorScheme.secondary,
             ),
           ],
@@ -756,10 +877,9 @@ class _SummaryItem extends StatelessWidget {
         ),
         Text(
           label,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: Colors.grey),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );

@@ -1,8 +1,9 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
+
+import 'l10n/app_localizations.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -24,9 +25,15 @@ class _RhythmScreenState extends State<RhythmScreen>
   // ── Metronome state ──────────────────────────────────────────────────────
   int _bpm = 120;
   bool _isPlaying = false;
-  Timer? _ticker;
-  Timer? _inputTicker;
+  Ticker? _metTicker;
   int _beatCount = 0;
+
+  /// Index of the last beat that has been triggered (to avoid double-firing).
+  int _lastBeatIndex = -1;
+
+  /// Wall-clock time when the metronome was started, used to compute the
+  /// scheduled beat time for the groove-analysis tap comparison.
+  DateTime? _metStartWallTime;
 
   // ── Groove analysis state ────────────────────────────────────────────────
   /// Offset of the last user tap relative to the ideal beat, in milliseconds.
@@ -50,8 +57,6 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   static const int _minBpm = 30;
   static const int _maxBpm = 240;
-  static const double _inputDetectionThreshold = 0.93;
-  static const double _simulatedInputWaveSpanMs = 180;
 
   // ── Timing helpers ───────────────────────────────────────────────────────
   Duration get _beatDuration => Duration(
@@ -59,40 +64,40 @@ class _RhythmScreenState extends State<RhythmScreen>
       );
 
   void _startMetronome() {
-    _ticker?.cancel();
-    _inputTicker?.cancel();
+    _metTicker?.dispose();
     _beatCount = 0;
-    _lastBeatTime = DateTime.now();
+    _lastBeatIndex = -1;
+    _metStartWallTime = DateTime.now();
+    _lastBeatTime = _metStartWallTime;
+    _timingScore = 100;
+    _lastOffsetMs = 0;
+
     _beatPulseCtrl.forward(from: 0);
-    _ticker = Timer.periodic(_beatDuration, (_) {
-      _lastBeatTime = DateTime.now();
-      _beatPulseCtrl.forward(from: 0);
-      SystemSound.play(SystemSoundType.click);
-      setState(() => _beatCount++);
-    });
-    _inputTicker = Timer.periodic(const Duration(milliseconds: 150), (_) {
-      if (!_isPlaying) return;
-      final wave = (math.sin(DateTime.now().millisecondsSinceEpoch / _simulatedInputWaveSpanMs) + 1) / 2;
-      setState(() => _inputLevel = wave);
-      if (wave > _inputDetectionThreshold && _lastBeatTime != null) {
-        final now = DateTime.now();
-        final beatMs = _beatDuration.inMilliseconds.toDouble();
-        var offset = now.difference(_lastBeatTime!).inMilliseconds.toDouble();
-        if (offset > beatMs / 2) offset -= beatMs;
-        setState(() {
-          _lastOffsetMs = offset;
-          final penalty = (offset.abs() / (beatMs / 2)) * 8;
-          _timingScore = (_timingScore - penalty).clamp(0, 100);
-        });
-      }
-    });
+    _metTicker = createTicker(_onMetronomeTick)..start();
     setState(() => _isPlaying = true);
   }
 
+  /// Called every frame by the [Ticker].  Computes the beat index from the
+  /// monotonic [elapsed] duration so that timing errors never accumulate.
+  void _onMetronomeTick(Duration elapsed) {
+    final beatIndex =
+        elapsed.inMicroseconds ~/ _beatDuration.inMicroseconds;
+    if (beatIndex > _lastBeatIndex) {
+      _lastBeatIndex = beatIndex;
+      // Derive the *scheduled* beat time so groove-tap comparison is accurate.
+      _lastBeatTime = _metStartWallTime!.add(
+        Duration(microseconds: beatIndex * _beatDuration.inMicroseconds),
+      );
+      if (mounted) {
+        _beatPulseCtrl.forward(from: 0);
+        setState(() => _beatCount = beatIndex + 1);
+      }
+    }
+  }
+
   void _stopMetronome() {
-    _ticker?.cancel();
-    _inputTicker?.cancel();
-    _ticker = null;
+    _metTicker?.dispose();
+    _metTicker = null;
     setState(() {
       _isPlaying = false;
       _beatCount = 0;
@@ -164,8 +169,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   @override
   void dispose() {
-    _ticker?.cancel();
-    _inputTicker?.cancel();
+    _metTicker?.dispose();
     _beatPulseCtrl.dispose();
     _tapRingCtrl.dispose();
     super.dispose();
@@ -178,7 +182,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('リズム & メトロノーム'),
+        title: Text(AppLocalizations.of(context)!.rhythmTitle),
       ),
       body: Column(
         children: [
@@ -204,13 +208,29 @@ class _RhythmScreenState extends State<RhythmScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // BPM display
-          Text(
-            '$_bpm',
-            style: TextStyle(
-              fontSize: 96,
-              fontWeight: FontWeight.bold,
-              color: cs.primary,
-              letterSpacing: -4,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -0.3),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+                child: child,
+              ),
+            ),
+            child: Text(
+              '$_bpm',
+              key: ValueKey(_bpm),
+              style: TextStyle(
+                fontSize: 96,
+                fontWeight: FontWeight.bold,
+                color: cs.primary,
+                letterSpacing: -4,
+              ),
             ),
           ),
           const Text(
@@ -274,6 +294,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   }
 
   Widget _buildGrooveSection(ColorScheme cs) {
+    final l10n = AppLocalizations.of(context)!;
     final scoreRatio = _timingScore / 100.0;
     final offsetLabel = _isPlaying
         ? (_lastOffsetMs >= 0
@@ -282,15 +303,18 @@ class _RhythmScreenState extends State<RhythmScreen>
         : '---';
     final scoreColor = Color.lerp(cs.error, cs.primary, scoreRatio)!;
 
-    return GestureDetector(
-      onTap: _onGrooveTap,
-      child: Container(
+    return Semantics(
+      label: 'Groove Target',
+      onTapHint: 'Tap to rhythm',
+      child: GestureDetector(
+        onTap: _onGrooveTap,
+        child: Container(
         color: cs.surfaceContainerHighest,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'グルーヴ解析',
+              l10n.grooveAnalysis,
               style: TextStyle(
                 fontSize: 14,
                 letterSpacing: 2,
@@ -300,7 +324,8 @@ class _RhythmScreenState extends State<RhythmScreen>
             const SizedBox(height: 8),
             // Animated target
             Expanded(
-              child: AnimatedBuilder(
+              child: ExcludeSemantics(
+                child: AnimatedBuilder(
                 animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
                 builder: (context, _) {
                   return CustomPaint(
@@ -318,6 +343,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                 },
               ),
             ),
+          ),
             // Score readout
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -327,7 +353,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                   Column(
                     children: [
                       Text(
-                        'タイミング',
+                        l10n.timing,
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurfaceVariant,
@@ -346,7 +372,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                   Column(
                     children: [
                       Text(
-                        'スコア',
+                        l10n.score,
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurfaceVariant,
@@ -363,30 +389,13 @@ class _RhythmScreenState extends State<RhythmScreen>
                     ],
                   ),
                   if (_isPlaying)
-                    Column(
-                      children: [
-                        Text(
-                          '入力音レベル ${(100 * _inputLevel).toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          width: 120,
-                          child: LinearProgressIndicator(value: _inputLevel),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'タップまたは入力音で解析',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurfaceVariant,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      l10n.tapRhythmHint,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                 ],
               ),
@@ -394,7 +403,8 @@ class _RhythmScreenState extends State<RhythmScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
@@ -454,14 +464,25 @@ class _GrooveTargetPainter extends CustomPainter {
       canvas.drawCircle(center, maxRadius * i / 3, ringPaint);
     }
 
-    // Beat pulse: expanding ring that fades out.
+    // Beat pulse: expanding ring that grows from center to edge and fades out.
     if (isPlaying && beatPhase > 0) {
-      final pulseRadius = maxRadius * 0.3 * beatPhase;
+      final pulseRadius = maxRadius * (0.1 + 0.9 * beatPhase);
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = primaryColor.withValues(alpha: (1 - beatPhase) * 200 / 255);
+        ..strokeWidth = 3.5
+        ..color = primaryColor.withValues(alpha: (1 - beatPhase) * 220 / 255);
       canvas.drawCircle(center, pulseRadius, pulsePaint);
+      // Inner flash fill at the very start of each beat.
+      if (beatPhase < 0.25) {
+        final flashOpacity = (1 - beatPhase / 0.25) * 40 / 255;
+        canvas.drawCircle(
+          center,
+          maxRadius * 0.3 * (beatPhase / 0.25),
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = primaryColor.withValues(alpha: flashOpacity),
+        );
+      }
     }
 
     // Center dot.

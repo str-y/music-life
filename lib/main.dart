@@ -1,222 +1,354 @@
-import 'dart:async';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import 'l10n/app_localizations.dart';
+import 'native_pitch_bridge.dart';
+import 'screens/library_screen.dart';
+import 'screens/tuner_screen.dart';
+import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
-import 'screens/library_screen.dart';
 
-const String _appTitle = 'Music Life';
+const String _privacyPolicyUrl =
+    'https://str-y.github.io/music-life/privacy-policy';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MusicLifeApp());
 }
 
-class MusicLifeApp extends StatelessWidget {
+class _AppSettings {
+  final bool darkMode;
+  final double referencePitch;
+
+  const _AppSettings({
+    this.darkMode = false,
+    this.referencePitch = 440.0,
+  });
+
+  _AppSettings copyWith({bool? darkMode, double? referencePitch}) {
+    return _AppSettings(
+      darkMode: darkMode ?? this.darkMode,
+      referencePitch: referencePitch ?? this.referencePitch,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _AppSettings &&
+          darkMode == other.darkMode &&
+          referencePitch == other.referencePitch;
+
+  @override
+  int get hashCode => Object.hash(darkMode, referencePitch);
+}
+
+class _AppSettingsScope extends InheritedWidget {
+  final _AppSettings settings;
+  final ValueChanged<_AppSettings> onChanged;
+
+  const _AppSettingsScope({
+    required this.settings,
+    required super.child,
+    required this.onChanged,
+  });
+
+  static _AppSettingsScope of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_AppSettingsScope>()!;
+  }
+
+  @override
+  bool updateShouldNotify(_AppSettingsScope old) => settings != old.settings;
+}
+
+class MusicLifeApp extends StatefulWidget {
   const MusicLifeApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: _appTitle,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MainScreen(),
-    );
-  }
+  State<MusicLifeApp> createState() => _MusicLifeAppState();
 }
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
+class _MusicLifeAppState extends State<MusicLifeApp> {
+  _AppSettings _settings = const _AppSettings();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(_appTitle),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          Text(
-            'ようこそ',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '今日の練習をはじめましょう。',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.tune),
-              title: const Text('チューナー'),
-              subtitle: const Text('音程をリアルタイムで確認'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const TunerScreen(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.graphic_eq),
-              title: const Text('練習ログ'),
-              subtitle: const Text('練習時間とメモを記録'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const PracticeLogScreen(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.library_music),
-              title: const Text('ライブラリ'),
-              subtitle: const Text('録音データの再生と練習ログ'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LibraryScreen(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.av_timer),
-              title: const Text('リズム & メトロノーム'),
-              subtitle: const Text('メトロノームとグルーヴ解析'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => const RhythmScreen(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.piano),
-              title: const Text('コード解析'),
-              subtitle: const Text('リアルタイムでコードを解析・表示'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ChordAnalyserScreen(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.rule),
-              title: const Text('実装済み機能'),
-              subtitle: const Text('前回一覧化した機能の対応状況'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const MissingImplementationsScreen(),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class TunerScreen extends StatefulWidget {
-  const TunerScreen({super.key});
-
-  @override
-  State<TunerScreen> createState() => _TunerScreenState();
-}
-
-class _TunerScreenState extends State<TunerScreen> {
-  Timer? _ticker;
-  double _frequency = 440.0;
-  double _inputLevel = 0.0;
-  String _note = 'A4';
-  int _frame = 0;
+  static const _kDarkMode = 'darkMode';
+  static const _kReferencePitch = 'referencePitch';
 
   @override
   void initState() {
     super.initState();
-    _ticker = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      _frame++;
-      final drift = math.sin(_frame / 4) * 1.8;
-      final level = (math.sin(_frame / 3) + 1) / 2;
-      setState(() {
-        _frequency = 440.0 + drift;
-        _inputLevel = level;
-        _note = _noteFromFrequency(_frequency);
-      });
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _settings = _AppSettings(
+        darkMode: prefs.getBool(_kDarkMode) ?? false,
+        referencePitch: prefs.getDouble(_kReferencePitch) ?? 440.0,
+      );
     });
   }
 
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  String _noteFromFrequency(double frequency) {
-    const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    final midi = (69 + 12 * (math.log(frequency / 440.0) / math.ln2)).round();
-    final octave = (midi ~/ 12) - 1;
-    return '${names[midi % 12]}$octave';
+  Future<void> _updateSettings(_AppSettings updated) async {
+    setState(() => _settings = updated);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kDarkMode, updated.darkMode);
+    await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }
 
   @override
   Widget build(BuildContext context) {
+    return _AppSettingsScope(
+      settings: _settings,
+      onChanged: _updateSettings,
+      child: MaterialApp(
+        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          useMaterial3: true,
+        ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
+        themeMode: _settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+        home: const MainScreen(),
+      ),
+    );
+  }
+}
+
+/// A page route with a subtle slide-up + fade entrance animation.
+PageRoute<T> _slideUpRoute<T>({required WidgetBuilder builder}) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, _) => builder(context),
+    transitionsBuilder: (context, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 320),
+  );
+}
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openSettings(BuildContext context) {
+    final scope = _AppSettingsScope.of(context);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _SettingsModal(
+        settings: scope.settings,
+        onChanged: scope.onChanged,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final entranceCurve = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOutCubic,
+    );
     return Scaffold(
-      appBar: AppBar(title: const Text('チューナー')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      appBar: AppBar(
+        title: Text(l10n.appTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: l10n.settingsTooltip,
+            onPressed: () => _openSettings(context),
+          ),
+        ],
+      ),
+      body: FadeTransition(
+        opacity: CurvedAnimation(
+          parent: _entranceCtrl,
+          curve: Curves.easeOut,
+        ),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.06),
+            end: Offset.zero,
+          ).animate(entranceCurve),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Icon(
-                Icons.tune,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
+              Text(
+                l10n.welcomeTitle,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
-              const SizedBox(height: 16),
-              Text(_note, style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 8),
               Text(
-                '${_frequency.toStringAsFixed(1)} Hz',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(value: _inputLevel),
-              const SizedBox(height: 8),
-              Text(
-                '入力レベル ${(100 * _inputLevel).toStringAsFixed(0)}%',
-                style: Theme.of(context).textTheme.bodyMedium,
+                l10n.welcomeSubtitle,
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
-              Text(
-                'マイク入力ストリームを想定したリアルタイム更新中',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.tune),
+                  title: Text(l10n.tunerTitle),
+                  subtitle: Text(l10n.tunerSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const TunerScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.graphic_eq),
+                  title: Text(l10n.practiceLogTitle),
+                  subtitle: Text(l10n.practiceLogSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const PracticeLogScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.library_music),
+                  title: Text(l10n.libraryTitle),
+                  subtitle: Text(l10n.librarySubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const LibraryScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.av_timer),
+                  title: Text(l10n.rhythmTitle),
+                  subtitle: Text(l10n.rhythmSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const RhythmScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.piano),
+                  title: Text(l10n.chordAnalyserTitle),
+                  subtitle: Text(l10n.chordAnalyserSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final status = await Permission.microphone.request();
+                    if (!context.mounted) return;
+                    if (status.isPermanentlyDenied) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.micPermissionDenied),
+                          action: SnackBarAction(
+                            label: l10n.openSettings,
+                            onPressed: openAppSettings,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    if (!status.isGranted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.micPermissionRequired),
+                        ),
+                      );
+                      return;
+                    }
+                    final bridge = NativePitchBridge();
+                    final hasPermission = await bridge.startCapture();
+                    if (!hasPermission) {
+                      bridge.dispose();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.micPermissionRequired),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    if (!context.mounted) {
+                      bridge.dispose();
+                      return;
+                    }
+                    // Await the route so we can dispose the bridge only after
+                    // the screen's own dispose() has already cancelled the
+                    // subscription.
+                    await Navigator.of(context).push(
+                      _slideUpRoute<void>(
+                        builder: (_) => ChordAnalyserScreen(
+                          chordStream: bridge.chordStream,
+                        ),
+                      ),
+                    );
+                    bridge.dispose();
+                  },
+                ),
               ),
             ],
           ),
@@ -226,117 +358,109 @@ class _TunerScreenState extends State<TunerScreen> {
   }
 }
 
-class PracticeLogScreen extends StatefulWidget {
-  const PracticeLogScreen({super.key});
+class _SettingsModal extends StatefulWidget {
+  final _AppSettings settings;
+  final ValueChanged<_AppSettings> onChanged;
+
+  const _SettingsModal({required this.settings, required this.onChanged});
 
   @override
-  State<PracticeLogScreen> createState() => _PracticeLogScreenState();
+  State<_SettingsModal> createState() => _SettingsModalState();
 }
 
-class _PracticeLogScreenState extends State<PracticeLogScreen> {
-  Future<void> _addLogEntry() async {
-    final memoController = TextEditingController();
-    final minutesController = TextEditingController(text: '30');
-    final added = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('練習ログを追加'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: minutesController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: '練習時間（分）'),
+class _SettingsModalState extends State<_SettingsModal> {
+  late _AppSettings _local;
+
+  @override
+  void initState() {
+    super.initState();
+    _local = widget.settings;
+  }
+
+  void _emit(_AppSettings updated) {
+    setState(() => _local = updated);
+    widget.onChanged(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        top: 24,
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            TextField(
-              controller: memoController,
-              decoration: const InputDecoration(labelText: 'メモ'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('キャンセル'),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('保存'),
+          Text(l10n.settingsTitle, style: textTheme.titleLarge),
+          const SizedBox(height: 24),
+          Text(l10n.themeSection, style: textTheme.titleSmall),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.darkMode),
+            value: _local.darkMode,
+            onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
           ),
+          const Divider(height: 32),
+          Text(l10n.calibration, style: textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(l10n.referencePitchLabel),
+              const SizedBox(width: 8),
+              Text(
+                '${_local.referencePitch.round()} Hz',
+                style: textTheme.bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          Slider(
+            min: 430,
+            max: 450,
+            divisions: 20,
+            label: '${_local.referencePitch.round()} Hz',
+            value: _local.referencePitch,
+            onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 32),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: Text(l10n.privacyPolicy),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () async {
+              final uri = Uri.parse(_privacyPolicyUrl);
+              if (!await launchUrl(uri,
+                  mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(l10n.privacyPolicyOpenError)),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(height: 8),
         ],
-      ),
-    );
-    if (added != true) return;
-
-    final minutes = int.tryParse(minutesController.text.trim()) ?? 0;
-    if (minutes <= 0) return;
-    setState(() {
-      appPracticeLogs.insert(
-        0,
-        PracticeLogEntry(
-          date: DateTime.now(),
-          durationMinutes: minutes,
-          memo: memoController.text.trim(),
-        ),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('練習ログ')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addLogEntry,
-        child: const Icon(Icons.add),
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: appPracticeLogs.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, index) {
-          final log = appPracticeLogs[index];
-          return ListTile(
-            leading: const Icon(Icons.edit_note),
-            title: Text('${log.durationMinutes}分'),
-            subtitle: Text(log.memo.isEmpty ? 'メモなし' : log.memo),
-            trailing: Text('${log.date.month}/${log.date.day}'),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class MissingImplementationsScreen extends StatelessWidget {
-  const MissingImplementationsScreen({super.key});
-
-  static const List<String> _items = <String>[
-    'チューナー: マイク入力想定のリアルタイム更新',
-    '練習ログ: 練習時間・メモの保存',
-    'ライブラリ: 録音データの保存',
-    'ライブラリ: 再生ボタン処理と進行表示',
-    'コード解析: ネイティブ接続モード切替',
-    'コード解析: 検出履歴の保持',
-    'リズム: メトロノームのクリック音',
-    'リズム: 入力音レベルによる解析',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('実装済み機能')),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: _items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: const Icon(Icons.check_circle),
-            title: Text(_items[index]),
-          );
-        },
       ),
     );
   }
