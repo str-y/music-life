@@ -46,6 +46,7 @@ PitchDetector::PitchDetector(int sample_rate, int frame_size, float threshold, f
     , yin_workspace_(frame_size / 2, 0.0f)
     , write_pos_(0)
     , samples_ready_(0)
+    , samples_since_last_process_(0)
     , last_result_{}
 {
     if (sample_rate <= 0) throw std::invalid_argument("sample_rate must be > 0");
@@ -86,11 +87,18 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
             ++samples_ready_;
         }
     }
+    samples_since_last_process_ += num_samples;
 
     // Not enough samples yet
     if (samples_ready_ < frame_size_) {
         return last_result_;
     }
+
+    // Hop hasn't elapsed (50% overlap): only run YIN every frame_size/2 new samples
+    if (samples_since_last_process_ < frame_size_ / 2) {
+        return last_result_;
+    }
+    samples_since_last_process_ = 0;
 
     // Assemble a contiguous frame from the ring buffer
     int start = (write_pos_ - frame_size_ + frame_size_ * 2) % (frame_size_ * 2);
