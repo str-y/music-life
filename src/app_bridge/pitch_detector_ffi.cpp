@@ -58,7 +58,7 @@ MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const flo
         out.probability  = result.probability;
         out.midi_note    = result.midi_note;
         out.cents_offset = result.cents_offset;
-        std::strncpy(out.note_name, result.note_name.c_str(), sizeof(out.note_name) - 1);
+        std::strncpy(out.note_name, result.note_name, sizeof(out.note_name) - 1);
         out.note_name[sizeof(out.note_name) - 1] = '\0';
     } catch (...) {
         return out;

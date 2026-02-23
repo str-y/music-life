@@ -4,9 +4,6 @@
 
 namespace {
 
-jclass gResultClass = nullptr;
-jmethodID gResultCtor = nullptr;
-
 music_life::PitchDetector* fromHandle(jlong handle) {
     if (handle == 0) return nullptr;
     return reinterpret_cast<music_life::PitchDetector*>(handle);
@@ -27,13 +24,6 @@ JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
     if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK || !env) {
         return JNI_ERR;
     }
-    jclass localClass = env->FindClass("com/musiclife/PitchDetector$Result");
-    if (!localClass) return JNI_ERR;
-    gResultClass = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
-    env->DeleteLocalRef(localClass);
-    if (!gResultClass) return JNI_ERR;
-    gResultCtor = env->GetMethodID(gResultClass, "<init>", "(ZFFIF)V");
-    if (!gResultCtor) return JNI_ERR;
     return JNI_VERSION_1_6;
 }
 
@@ -97,15 +87,16 @@ Java_com_musiclife_PitchDetector_nativeSetReferencePitch(
     }
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" JNIEXPORT void JNICALL
 Java_com_musiclife_PitchDetector_nativeProcess(
     JNIEnv* env,
     jobject /* thiz */,
     jlong handle,
     jfloatArray samples,
-    jint numSamples) {
+    jint numSamples,
+    jfloatArray resultOut) {
     auto* detector = fromHandle(handle);
-    if (!detector || !samples || numSamples <= 0) return nullptr;
+    if (!detector || !samples || numSamples <= 0 || !resultOut) return;
 
     struct FloatArrayGuard {
         JNIEnv* env;
@@ -117,37 +108,27 @@ Java_com_musiclife_PitchDetector_nativeProcess(
     };
 
     FloatArrayGuard sampleGuard{env, samples, env->GetFloatArrayElements(samples, nullptr)};
-    if (!sampleGuard.data) return nullptr;
+    if (!sampleGuard.data) return;
+
+    jsize arrayLength = env->GetArrayLength(samples);
+    if (static_cast<jsize>(numSamples) > arrayLength) {
+        throwRuntimeException(env, "numSamples exceeds array length");
+        return;
+    }
 
     music_life::PitchDetector::Result result{};
     try {
         result = detector->process(sampleGuard.data, static_cast<int>(numSamples));
     } catch (...) {
-        return nullptr;
-    }
-
-    if (!gResultClass || !gResultCtor) return nullptr;
-
-    return env->NewObject(
-        gResultClass,
-        gResultCtor,
-        result.pitched ? JNI_TRUE : JNI_FALSE,
-        result.frequency,
-        result.probability,
-        static_cast<jint>(result.midi_note),
-        result.cents_offset
-    );
-}
-
-extern "C" JNIEXPORT void JNICALL
-JNI_OnUnload(JavaVM* vm, void* /* reserved */) {
-    JNIEnv* env = nullptr;
-    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK || !env) {
         return;
     }
-    if (gResultClass) {
-        env->DeleteGlobalRef(gResultClass);
-        gResultClass = nullptr;
-    }
-    gResultCtor = nullptr;
+
+    jfloat out[5] = {
+        result.pitched ? 1.0f : 0.0f,
+        result.frequency,
+        result.probability,
+        static_cast<jfloat>(result.midi_note),
+        result.cents_offset
+    };
+    env->SetFloatArrayRegion(resultOut, 0, 5, out);
 }
