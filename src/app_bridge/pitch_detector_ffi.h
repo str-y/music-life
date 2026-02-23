@@ -12,6 +12,7 @@ typedef struct {
     float probability;
     int   midi_note;
     float cents_offset;
+    char  note_name[8];
 } MLPitchResult;
 
 MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold);

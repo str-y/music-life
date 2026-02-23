@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -244,6 +245,7 @@ static bool test_ffi_process_a4() {
     ASSERT_TRUE(r.pitched == 1);
     ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
     ASSERT_TRUE(r.midi_note == 69);
+    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
 
     ml_pitch_detector_destroy(handle);
     return true;
@@ -278,6 +280,7 @@ static bool test_ffi_set_reference_pitch() {
     ASSERT_TRUE(r.pitched == 1);
     ASSERT_TRUE(r.midi_note == 69);
     ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
+    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
 
     ml_pitch_detector_destroy(handle);
     return true;
