@@ -120,6 +120,12 @@ class NativePitchBridge {
   final _MLProcessDart _nativeProcess;
   final _MLDestroyDart _nativeDestroy;
 
+  /// Persistent native buffer reused across every [processAudioFrame] call.
+  final Pointer<Float> _persistentBuffer;
+
+  /// Number of Float elements that [_persistentBuffer] can hold.
+  final int _frameSize;
+
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
 
@@ -130,9 +136,13 @@ class NativePitchBridge {
     required Pointer<Void> handle,
     required _MLProcessDart nativeProcess,
     required _MLDestroyDart nativeDestroy,
+    required Pointer<Float> persistentBuffer,
+    required int frameSize,
   })  : _handle = handle,
         _nativeProcess = nativeProcess,
-        _nativeDestroy = nativeDestroy;
+        _nativeDestroy = nativeDestroy,
+        _persistentBuffer = persistentBuffer,
+        _frameSize = frameSize;
 
   /// Creates a [NativePitchBridge] backed by the platform's native library.
   factory NativePitchBridge({
@@ -155,6 +165,8 @@ class NativePitchBridge {
           'ml_pitch_detector_process'),
       nativeDestroy: lib.lookupFunction<_MLDestroyNative, _MLDestroyDart>(
           'ml_pitch_detector_destroy'),
+      persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
+      frameSize: frameSize,
     );
   }
 
@@ -167,19 +179,21 @@ class NativePitchBridge {
       !_controller.isClosed,
       'processAudioFrame called after dispose().',
     );
-    using((arena) {
-      final buf = arena<Float>(samples.length);
-      buf.asTypedList(samples.length).setAll(0, samples);
-      final result = _nativeProcess(_handle, buf, samples.length);
-      if (result.pitched != 0) {
-        _controller.add(_deriveChordLabel(result.midiNote));
-      }
-    });
+    assert(
+      samples.length <= _frameSize,
+      'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
+    );
+    _persistentBuffer.asTypedList(samples.length).setAll(0, samples);
+    final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
+    if (result.pitched != 0) {
+      _controller.add(_deriveChordLabel(result.midiNote));
+    }
   }
 
   /// Releases the native handle and closes [chordStream].
   void dispose() {
     _nativeDestroy(_handle);
+    malloc.free(_persistentBuffer);
     _controller.close();
   }
 }
