@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
@@ -7,7 +8,8 @@ import 'screens/chord_analyser_screen.dart';
 
 const String _appTitle = 'Music Life';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MusicLifeApp());
 }
 
@@ -66,8 +68,31 @@ class MusicLifeApp extends StatefulWidget {
 class _MusicLifeAppState extends State<MusicLifeApp> {
   _AppSettings _settings = const _AppSettings();
 
-  void _updateSettings(_AppSettings updated) {
+  static const _kDarkMode = 'darkMode';
+  static const _kReferencePitch = 'referencePitch';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _settings = _AppSettings(
+        darkMode: prefs.getBool(_kDarkMode) ?? false,
+        referencePitch: prefs.getDouble(_kReferencePitch) ?? 440.0,
+      );
+    });
+  }
+
+  Future<void> _updateSettings(_AppSettings updated) async {
     setState(() => _settings = updated);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kDarkMode, updated.darkMode);
+    await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }
 
   @override
