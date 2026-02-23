@@ -87,38 +87,6 @@ class PitchResult {
   final int midiNote;
 }
 
-// ── Chord inference ───────────────────────────────────────────────────────────
-
-const _kNoteNames = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-];
-
-// Pitch classes (relative to C) that belong to the C-major diatonic scale.
-const _kMajorScale = {0, 2, 4, 5, 7, 9, 11};
-
-// Diatonic degrees that carry a minor quality (D, E, A).
-const _kMinorDegrees = {2, 4, 9};
-
-// Pitch class of B, which receives a half-diminished (m7♭5) label.
-const _kHalfDiminishedDegree = 11;
-
-/// Derives a chord label from a single detected MIDI note.
-///
-/// This is a simplified heuristic mapping suitable for monophonic pitch
-/// detection.  Diatonic-scale notes map to maj7 or m7 chords; chromatic
-/// notes map to dominant-7 chords.  Replace with a polyphonic
-/// chord-detection algorithm when multi-note analysis is available.
-String _deriveChordLabel(int midiNote) {
-  final noteClass = midiNote % 12;
-  final root = _kNoteNames[noteClass];
-
-  if (noteClass == _kHalfDiminishedDegree) return '${root}m7♭5'; // B → half-diminished
-  if (_kMajorScale.contains(noteClass)) {
-    return _kMinorDegrees.contains(noteClass) ? '${root}m7' : '${root}maj7';
-  }
-  return '${root}7'; // chromatic → dominant 7
-}
-
 // ── Error handling ────────────────────────────────────────────────────────────
 
 /// Callback invoked when an unhandled error crosses the FFI boundary or
@@ -260,6 +228,10 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
 /// isolate so the UI thread is never blocked.  Listen to [chordStream] or
 /// [pitchStream] to receive results in real time.
 ///
+/// **Note:** This bridge performs monophonic pitch detection only.  The
+/// [chordStream] emits scientific note names (e.g. "A4") for the dominant
+/// fundamental frequency; no polyphonic chord analysis is performed.
+///
 /// Supply [onError] to receive any exception that escapes the FFI boundary
 /// or the audio-capture stream.
 ///
@@ -279,7 +251,6 @@ class NativePitchBridge {
   final int _frameSize;
   final double _threshold;
 
-  Isolate? _processingIsolate;
   SendPort? _audioSendPort;
   ReceivePort? _resultPort;
   StreamSubscription<dynamic>? _resultSub;
@@ -290,7 +261,9 @@ class NativePitchBridge {
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
 
-  /// Emits a chord label each time the native engine detects a pitched note.
+  /// Emits the detected note name (e.g. "A4") each time the native engine
+  /// detects a pitched note.  This is a monophonic note label; no chord
+  /// inference is performed.
   Stream<String> get chordStream => _controller.stream;
 
   final StreamController<PitchResult> _pitchController =
@@ -343,7 +316,7 @@ class NativePitchBridge {
     _resultPort = resultPort;
 
     try {
-      _processingIsolate = await Isolate.spawn(
+      await Isolate.spawn(
         _audioProcessingIsolate,
         _IsolateSetup(
           resultPort: resultPort.sendPort,
@@ -384,7 +357,6 @@ class NativePitchBridge {
 
     final ready = await completer.future;
     if (!ready) {
-      _processingIsolate = null;
       _resultSub?.cancel();
       _resultSub = null;
       resultPort.close();
@@ -429,7 +401,7 @@ class NativePitchBridge {
         midiNote is! int) {
       return;
     }
-    _controller.add(_deriveChordLabel(midiNote));
+    _controller.add(noteName);
     _pitchController.add(PitchResult(
       noteName: noteName,
       frequency: frequency,
@@ -450,7 +422,6 @@ class NativePitchBridge {
     _resultSub = null;
     _resultPort?.close();
     _resultPort = null;
-    _processingIsolate = null;
     _controller.close();
     _pitchController.close();
   }

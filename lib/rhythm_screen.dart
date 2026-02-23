@@ -26,7 +26,8 @@ class _RhythmScreenState extends State<RhythmScreen>
   int _bpm = 120;
   bool _isPlaying = false;
   Ticker? _metTicker;
-  int _beatCount = 0;
+
+
 
   /// Index of the last beat that has been triggered (to avoid double-firing).
   int _lastBeatIndex = -1;
@@ -42,7 +43,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   /// Cumulative timing score [0–100].
   double _timingScore = 100;
-  double _inputLevel = 0;
+
 
   /// Timestamp of the last scheduled beat (for tap comparison).
   DateTime? _lastBeatTime;
@@ -65,7 +66,6 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   void _startMetronome() {
     _metTicker?.dispose();
-    _beatCount = 0;
     _lastBeatIndex = -1;
     _metStartWallTime = DateTime.now();
     _lastBeatTime = _metStartWallTime;
@@ -90,7 +90,7 @@ class _RhythmScreenState extends State<RhythmScreen>
       );
       if (mounted) {
         _beatPulseCtrl.forward(from: 0);
-        setState(() => _beatCount = beatIndex + 1);
+        setState(() {});
       }
     }
   }
@@ -100,8 +100,6 @@ class _RhythmScreenState extends State<RhythmScreen>
     _metTicker = null;
     setState(() {
       _isPlaying = false;
-      _beatCount = 0;
-      _inputLevel = 0;
     });
   }
 
