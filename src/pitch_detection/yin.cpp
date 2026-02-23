@@ -14,7 +14,7 @@ namespace music_life {
 namespace {
 
 // In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
-// twiddle must contain n/2 pre-computed factors: twiddle[k] = exp(-2pi*i*k/n).
+<<<<<<< HEAD
 void fft_inplace(std::vector<std::complex<float>>& x,
                  const std::vector<std::complex<float>>& twiddle) {
     const int n = static_cast<int>(x.size());
@@ -99,6 +99,7 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
 float Yin::detect(const float* samples, std::vector<float>& workspace) {
     workspace.resize(half_buffer_);
     std::fill(workspace.begin(), workspace.end(), 0.0f);
+
     difference(samples, workspace);
     cmndf(workspace);
 
@@ -156,6 +157,7 @@ void Yin::difference(const float* samples, std::vector<float>& df) const {
     for (int tau = 0; tau < W; ++tau) {
         const float B_tau = sq_prefix_[tau + W] - sq_prefix_[tau];
         const float r_tau = fft_F_[tau].real();
+
         df[tau] = A + B_tau - 2.0f * r_tau;
     }
 }

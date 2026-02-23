@@ -72,6 +72,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;

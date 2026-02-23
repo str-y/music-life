@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'l10n/app_localizations.dart';
 
@@ -69,6 +71,7 @@ class _RhythmScreenState extends State<RhythmScreen>
     _lastBeatTime = _metStartWallTime;
     _timingScore = 100;
     _lastOffsetMs = 0;
+
     _beatPulseCtrl.forward(from: 0);
     _metTicker = createTicker(_onMetronomeTick)..start();
     setState(() => _isPlaying = true);

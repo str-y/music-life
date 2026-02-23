@@ -59,6 +59,7 @@ private:
     // hot audio path never calls std::cos / std::sin.
     std::vector<std::complex<float>> twiddle_;
 
+
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;
 

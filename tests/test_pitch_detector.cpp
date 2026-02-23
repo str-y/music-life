@@ -332,7 +332,6 @@ static bool test_pd_hop_size_skips_processing() {
     return true;
 }
 
-
 static bool test_ffi_process_null_handle() {
     // ml_pitch_detector_process must return a zeroed result (not crash) when
     // the handle is null.
@@ -392,8 +391,8 @@ int main() {
     run_test("ffi: process null handle is safe",    test_ffi_process_null_handle);
     run_test("ffi: process null samples is safe",   test_ffi_process_null_samples);
     run_test("ffi: process zero num_samples safe",  test_ffi_process_zero_num_samples);
-
     run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
+
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;

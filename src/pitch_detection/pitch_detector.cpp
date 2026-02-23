@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <stdexcept>
 
 namespace music_life {
@@ -30,6 +31,24 @@ static const char* const kNoteTable[128] = {
     "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8",
     "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9"
 };
+
+// Pre-built lookup table for all 128 MIDI note names.
+// Populated once at static-initialization time so the audio thread never
+// allocates.  Longest entry is "C#-1" (4 chars) + null = 5 bytes; 6 chars
+// gives comfortable headroom.
+static char s_note_name_buf[128][6];
+
+static bool init_note_name_table() {
+    for (int i = 0; i < 128; ++i) {
+        int octave = (i / 12) - 1;
+        int note   = i % 12;
+        std::snprintf(s_note_name_buf[i], sizeof(s_note_name_buf[i]),
+                      "%s%d", kNoteNames[note], octave);
+    }
+    return true;
+}
+
+[[maybe_unused]] static const bool s_note_name_table_initialized = init_note_name_table();
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -150,9 +169,7 @@ float PitchDetector::cents_between(float reference_hz, float actual_hz) {
     return 1200.0f * std::log2(actual_hz / reference_hz);
 }
 
-const char* PitchDetector::midi_to_note_name(int midi_note) {
-    if (midi_note < 0 || midi_note > 127) return "?";
-    return kNoteTable[midi_note];
+    return s_note_name_buf[midi_note];
 }
 
 } // namespace music_life

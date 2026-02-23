@@ -358,6 +358,7 @@ class _MainScreenState extends State<MainScreen>
   }
 }
 
+
 class _SettingsModal extends StatefulWidget {
   final _AppSettings settings;
   final ValueChanged<_AppSettings> onChanged;

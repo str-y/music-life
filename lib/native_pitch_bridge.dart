@@ -289,4 +289,5 @@ class NativePitchBridge {
     _controller.close();
     _pitchController.close();
   }
+
 }
