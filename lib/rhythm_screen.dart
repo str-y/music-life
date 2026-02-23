@@ -296,9 +296,12 @@ class _RhythmScreenState extends State<RhythmScreen>
         : '---';
     final scoreColor = Color.lerp(cs.error, cs.primary, scoreRatio)!;
 
-    return GestureDetector(
-      onTap: _onGrooveTap,
-      child: Container(
+    return Semantics(
+      label: 'Groove Target',
+      onTapHint: 'Tap to rhythm',
+      child: GestureDetector(
+        onTap: _onGrooveTap,
+        child: Container(
         color: cs.surfaceContainerHighest,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -314,7 +317,8 @@ class _RhythmScreenState extends State<RhythmScreen>
             const SizedBox(height: 8),
             // Animated target
             Expanded(
-              child: AnimatedBuilder(
+              child: ExcludeSemantics(
+                child: AnimatedBuilder(
                 animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
                 builder: (context, _) {
                   return CustomPaint(
@@ -332,6 +336,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                 },
               ),
             ),
+          ),
             // Score readout
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -391,7 +396,8 @@ class _RhythmScreenState extends State<RhythmScreen>
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
