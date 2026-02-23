@@ -118,6 +118,17 @@ String _deriveChordLabel(int midiNote) {
   return '${root}7'; // chromatic → dominant 7
 }
 
+// ── Error handling ────────────────────────────────────────────────────────────
+
+/// Callback invoked when an unhandled error crosses the FFI boundary or
+/// occurs inside the audio-capture stream.
+///
+/// Integrate with a crash-reporting service (e.g. Firebase Crashlytics,
+/// Sentry) by forwarding [error] and [stack] to the service inside this
+/// callback.  The callback is always invoked on the same isolate that
+/// encountered the error.
+typedef FfiErrorHandler = void Function(Object error, StackTrace stack);
+
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
 /// Bridges the native C++ pitch-detection engine to a Dart [Stream].
@@ -151,6 +162,9 @@ class NativePitchBridge {
   /// Number of Float elements that [_persistentBuffer] can hold.
   final int _frameSize;
 
+  /// Optional callback for FFI-boundary and audio-stream errors.
+  final FfiErrorHandler? _onError;
+
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
 
@@ -177,17 +191,24 @@ class NativePitchBridge {
     required _MLDestroyDart nativeDestroy,
     required Pointer<Float> persistentBuffer,
     required int frameSize,
+    FfiErrorHandler? onError,
   })  : _handle = handle,
         _nativeProcess = nativeProcess,
         _nativeDestroy = nativeDestroy,
         _persistentBuffer = persistentBuffer,
-        _frameSize = frameSize;
+        _frameSize = frameSize,
+        _onError = onError;
 
   /// Creates a [NativePitchBridge] backed by the platform's native library.
+  ///
+  /// Supply [onError] to receive any exception that escapes the FFI boundary
+  /// or the audio-capture stream.  Forward the arguments to a crash-reporting
+  /// service such as Firebase Crashlytics or Sentry from within the callback.
   factory NativePitchBridge({
     int sampleRate = defaultSampleRate,
     int frameSize = defaultFrameSize,
     double threshold = defaultThreshold,
+    FfiErrorHandler? onError,
   }) {
     final lib = _loadNativeLib();
 
@@ -206,6 +227,7 @@ class NativePitchBridge {
           'ml_pitch_detector_destroy'),
       persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
       frameSize: frameSize,
+      onError: onError,
     );
   }
 
@@ -223,22 +245,26 @@ class NativePitchBridge {
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
     _persistentBuffer.asTypedList(samples.length).setAll(0, samples);
-    final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
-    if (result.pitched != 0) {
-      _controller.add(_deriveChordLabel(result.midiNote));
-      // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
-      final bytes = <int>[];
-      for (int i = 0; i < 8; i++) {
-        final b = result.noteName[i];
-        if (b == 0) break;
-        bytes.add(b);
+    try {
+      final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
+      if (result.pitched != 0) {
+        _controller.add(_deriveChordLabel(result.midiNote));
+        // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
+        final bytes = <int>[];
+        for (int i = 0; i < 8; i++) {
+          final b = result.noteName[i];
+          if (b == 0) break;
+          bytes.add(b);
+        }
+        _pitchController.add(PitchResult(
+          noteName: String.fromCharCodes(bytes),
+          frequency: result.frequency,
+          centsOffset: result.centsOffset,
+          midiNote: result.midiNote,
+        ));
       }
-      _pitchController.add(PitchResult(
-        noteName: String.fromCharCodes(bytes),
-        frequency: result.frequency,
-        centsOffset: result.centsOffset,
-        midiNote: result.midiNote,
-      ));
+    } catch (e, stack) {
+      _onError?.call(e, stack);
     }
   }
 
@@ -246,18 +272,26 @@ class NativePitchBridge {
   /// default input device into the native pitch detector.
   ///
   /// Returns `true` if capture started successfully, or `false` if microphone
-  /// permission was denied.
+  /// permission was denied or an error occurs while opening the stream.
   Future<bool> startCapture() async {
     if (!await _recorder.hasPermission()) return false;
-    final stream = await _recorder.startStream(
-      const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: defaultSampleRate,
-        numChannels: 1,
-      ),
-    );
-    _audioSub = stream.listen(_onAudioChunk);
-    return true;
+    try {
+      final stream = await _recorder.startStream(
+        const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: defaultSampleRate,
+          numChannels: 1,
+        ),
+      );
+      _audioSub = stream.listen(
+        _onAudioChunk,
+        onError: _onError,
+      );
+      return true;
+    } catch (e, stack) {
+      _onError?.call(e, stack);
+      return false;
+    }
   }
 
   /// Converts an incoming PCM-16 little-endian [chunk] to float samples,
