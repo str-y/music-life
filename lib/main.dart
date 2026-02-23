@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/library_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 
@@ -75,6 +76,13 @@ class MainScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Card(
             child: ListTile(
+              leading: const Icon(Icons.library_music),
+              title: const Text('ライブラリ'),
+              subtitle: const Text('録音データの再生と練習ログ'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LibraryScreen(),
               leading: const Icon(Icons.av_timer),
               title: const Text('リズム & メトロノーム'),
               subtitle: const Text('メトロノームとグルーヴ解析'),
