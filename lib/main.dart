@@ -52,8 +52,8 @@ class _AppSettingsScope extends InheritedWidget {
 
   const _AppSettingsScope({
     required this.settings,
-    required this.onChanged,
     required super.child,
+    required this.onChanged,
   });
 
   static _AppSettingsScope of(BuildContext context) {
@@ -357,7 +357,6 @@ class _MainScreenState extends State<MainScreen>
     );
   }
 }
-
 
 class _SettingsModal extends StatefulWidget {
   final _AppSettings settings;

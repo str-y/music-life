@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
@@ -57,20 +59,24 @@ class PracticeLogEntry {
   const PracticeLogEntry({
     required this.date,
     required this.durationMinutes,
+    this.memo = '',
   });
 
   final DateTime date;
   final int durationMinutes;
+  final String memo;
 
   Map<String, dynamic> toJson() => {
         'date': date.toIso8601String(),
         'durationMinutes': durationMinutes,
+        'memo': memo,
       };
 
   factory PracticeLogEntry.fromJson(Map<String, dynamic> json) {
     return PracticeLogEntry(
       date: DateTime.parse(json['date'] as String),
       durationMinutes: json['durationMinutes'] as int,
+      memo: json['memo'] as String? ?? '',
     );
   }
 }
@@ -223,6 +229,11 @@ class _RecordingsTab extends StatefulWidget {
 
 class _RecordingsTabState extends State<_RecordingsTab> {
   String? _playingId;
+  double _positionRatio = 0;
+  DateTime? _playbackStart;
+  Duration _playbackDuration = Duration.zero;
+  Timer? _progressTicker;
+
   late List<RecordingEntry> _sorted;
 
   @override
@@ -241,10 +252,52 @@ class _RecordingsTabState extends State<_RecordingsTab> {
     }
   }
 
-  void _togglePlayback(String id) {
-    setState(() {
-      _playingId = (_playingId == id) ? null : id;
+  void _startProgressTicker() {
+    _progressTicker?.cancel();
+    _progressTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted || _playingId == null || _playbackStart == null) return;
+      final elapsed = DateTime.now().difference(_playbackStart!);
+      final nextRatio = _playbackDuration.inMilliseconds <= 0
+          ? 0.0
+          : (elapsed.inMilliseconds / _playbackDuration.inMilliseconds).clamp(0.0, 1.0);
+      if (nextRatio >= 1) {
+        setState(() {
+          _playingId = null;
+          _positionRatio = 0;
+          _playbackStart = null;
+        });
+        _progressTicker?.cancel();
+        return;
+      }
+      setState(() {
+        _positionRatio = nextRatio;
+      });
     });
+  }
+
+  void _togglePlayback(String id) {
+    final selected = widget.recordings.firstWhere((entry) => entry.id == id);
+    setState(() {
+      if (_playingId == id) {
+        _playingId = null;
+        _positionRatio = 0;
+        _playbackStart = null;
+        _progressTicker?.cancel();
+        return;
+      }
+      _playingId = id;
+      _positionRatio = 0;
+      _playbackStart = DateTime.now();
+      _playbackDuration = Duration(seconds: selected.durationSeconds);
+    });
+    _startProgressTicker();
+    SystemSound.play(SystemSoundType.click);
+  }
+
+  @override
+  void dispose() {
+    _progressTicker?.cancel();
+    super.dispose();
   }
 
   @override
@@ -268,6 +321,7 @@ class _RecordingsTabState extends State<_RecordingsTab> {
         return _RecordingTile(
           entry: entry,
           isPlaying: isPlaying,
+          progress: isPlaying ? _positionRatio : 0,
           onPlayPause: () => _togglePlayback(entry.id),
         );
       },
@@ -279,11 +333,13 @@ class _RecordingTile extends StatelessWidget {
   const _RecordingTile({
     required this.entry,
     required this.isPlaying,
+    required this.progress,
     required this.onPlayPause,
   });
 
   final RecordingEntry entry;
   final bool isPlaying;
+  final double progress;
   final VoidCallback onPlayPause;
 
   String _formatDate(DateTime dt) {
@@ -325,10 +381,19 @@ class _RecordingTile extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
-          child: _WaveformView(
-            data: entry.waveformData,
-            isPlaying: isPlaying,
-            color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _WaveformView(
+                data: entry.waveformData,
+                isPlaying: isPlaying,
+                color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
+              ),
+              if (isPlaying) ...[
+                const SizedBox(height: 6),
+                LinearProgressIndicator(value: progress),
+              ],
+            ],
           ),
         ),
       ],

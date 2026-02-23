@@ -4,12 +4,6 @@
 
 namespace {
 
-<<<<<<< HEAD
-jclass gResultClass = nullptr;
-jmethodID gResultCtor = nullptr;
-
-=======
->>>>>>> main
 music_life::PitchDetector* fromHandle(jlong handle) {
     if (handle == 0) return nullptr;
     return reinterpret_cast<music_life::PitchDetector*>(handle);
@@ -26,17 +20,7 @@ void throwRuntimeException(JNIEnv* env, const char* message) {
 
 extern "C" JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
-    JNIEnv* env = nullptr;
-    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK || !env) {
-        return JNI_ERR;
-    }
-    jclass localClass = env->FindClass("com/musiclife/PitchDetector$Result");
-    if (!localClass) return JNI_ERR;
-    gResultClass = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
-    env->DeleteLocalRef(localClass);
-    if (!gResultClass) return JNI_ERR;
-    gResultCtor = env->GetMethodID(gResultClass, "<init>", "(ZFFIF)V");
-    if (!gResultCtor) return JNI_ERR;
+    (void)vm;
     return JNI_VERSION_1_6;
 }
 
@@ -133,9 +117,6 @@ Java_com_musiclife_PitchDetector_nativeProcess(
     try {
         result = detector->process(sampleGuard.data, static_cast<int>(numSamples));
     } catch (...) {
-        return;
-    }
-
         return;
     }
 

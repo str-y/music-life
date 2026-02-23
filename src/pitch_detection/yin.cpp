@@ -14,7 +14,6 @@ namespace music_life {
 namespace {
 
 // In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
-<<<<<<< HEAD
 void fft_inplace(std::vector<std::complex<float>>& x,
                  const std::vector<std::complex<float>>& twiddle) {
     const int n = static_cast<int>(x.size());

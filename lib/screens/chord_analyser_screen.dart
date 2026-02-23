@@ -72,6 +72,13 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
     super.dispose();
   }
 
+  String _nativeDetectChord() {
+    final sequence = <String>['Am', 'F', 'C', 'G', 'Em', 'Dm7', 'Bdim', 'E7'];
+    // This method is no longer used for the UI, but kept for potential future use or if other parts of the app still reference it.
+    // The _demoIndex variable it depends on is removed, so it would need to be re-implemented if used.
+    // For now, it's a dead method.
+    return sequence[0]; // Placeholder return
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,7 +221,7 @@ class _ListeningIndicator extends StatelessWidget {
               width: 4,
               height: 6 + t * 10,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.35 + t * 0.65),
+                color: color.withOpacity(0.35 + t * 0.65),
                 borderRadius: BorderRadius.circular(2),
               ),
             );
@@ -228,7 +235,10 @@ class _ListeningIndicator extends StatelessWidget {
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
-  const _ChordEntry({required this.chord, required this.time});
+  const _ChordEntry({
+    required this.chord,
+    required this.time,
+  });
 
   final String chord;
   final DateTime time;

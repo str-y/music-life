@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'l10n/app_localizations.dart';
 
@@ -43,6 +42,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   /// Cumulative timing score [0–100].
   double _timingScore = 100;
+  double _inputLevel = 0;
 
   /// Timestamp of the last scheduled beat (for tap comparison).
   DateTime? _lastBeatTime;
@@ -101,6 +101,7 @@ class _RhythmScreenState extends State<RhythmScreen>
     setState(() {
       _isPlaying = false;
       _beatCount = 0;
+      _inputLevel = 0;
     });
   }
 
