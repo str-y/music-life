@@ -62,6 +62,30 @@ DynamicLibrary _loadNativeLib() {
   );
 }
 
+// ── Pitch result ─────────────────────────────────────────────────────────────
+
+/// Decoded pitch information emitted by [NativePitchBridge.pitchStream].
+class PitchResult {
+  const PitchResult({
+    required this.noteName,
+    required this.frequency,
+    required this.centsOffset,
+    required this.midiNote,
+  });
+
+  /// Scientific note name, e.g. "A4" or "C#3".
+  final String noteName;
+
+  /// Detected fundamental frequency in Hz.
+  final double frequency;
+
+  /// Deviation from the nearest semitone in cents (−50 … +50).
+  final double centsOffset;
+
+  /// MIDI note number (0–127).
+  final int midiNote;
+}
+
 // ── Chord inference ───────────────────────────────────────────────────────────
 
 const _kNoteNames = [
@@ -133,6 +157,12 @@ class NativePitchBridge {
   /// Emits a chord label each time the native engine detects a pitched note.
   Stream<String> get chordStream => _controller.stream;
 
+  final StreamController<PitchResult> _pitchController =
+      StreamController<PitchResult>.broadcast();
+
+  /// Emits a [PitchResult] each time the native engine detects a pitched note.
+  Stream<PitchResult> get pitchStream => _pitchController.stream;
+
   // ── Audio capture ──────────────────────────────────────────────────────────
 
   final AudioRecorder _recorder = AudioRecorder();
@@ -196,6 +226,19 @@ class NativePitchBridge {
     final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
     if (result.pitched != 0) {
       _controller.add(_deriveChordLabel(result.midiNote));
+      // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
+      final bytes = <int>[];
+      for (int i = 0; i < 8; i++) {
+        final b = result.noteName[i];
+        if (b == 0) break;
+        bytes.add(b);
+      }
+      _pitchController.add(PitchResult(
+        noteName: String.fromCharCodes(bytes),
+        frequency: result.frequency,
+        centsOffset: result.centsOffset,
+        midiNote: result.midiNote,
+      ));
     }
   }
 
@@ -244,5 +287,6 @@ class NativePitchBridge {
     _nativeDestroy(_handle);
     malloc.free(_persistentBuffer);
     _controller.close();
+    _pitchController.close();
   }
 }

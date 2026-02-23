@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
+import 'screens/tuner_screen.dart';
+import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 
@@ -249,8 +251,10 @@ class _MainScreenState extends State<MainScreen>
                   title: const Text('練習ログ'),
                   subtitle: const Text('練習時間とメモを記録'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('練習ログ機能は準備中です')),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const PracticeLogScreen(),
+                    ),
                   ),
                 ),
               ),
@@ -344,72 +348,6 @@ class _MainScreenState extends State<MainScreen>
                     bridge.dispose();
                   },
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class TunerScreen extends StatefulWidget {
-  const TunerScreen({super.key});
-
-  @override
-  State<TunerScreen> createState() => _TunerScreenState();
-}
-
-class _TunerScreenState extends State<TunerScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseCtrl;
-  late final Animation<double> _pulseAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.18).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('チューナー')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ScaleTransition(
-                scale: _pulseAnim,
-                child: Icon(
-                  Icons.tune,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('A4', style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 8),
-              Text('440.0 Hz', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 24),
-              Text(
-                'マイク入力によるリアルタイム検出は今後対応予定です。',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),
