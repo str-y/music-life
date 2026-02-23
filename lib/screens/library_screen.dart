@@ -167,6 +167,23 @@ class _RecordingsTab extends StatefulWidget {
 
 class _RecordingsTabState extends State<_RecordingsTab> {
   String? _playingId;
+  late List<RecordingEntry> _sorted;
+
+  @override
+  void initState() {
+    super.initState();
+    _sorted = [...widget.recordings]
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+  }
+
+  @override
+  void didUpdateWidget(_RecordingsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.recordings != oldWidget.recordings) {
+      _sorted = [...widget.recordings]
+        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    }
+  }
 
   void _togglePlayback(String id) {
     setState(() {
@@ -176,10 +193,7 @@ class _RecordingsTabState extends State<_RecordingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...widget.recordings]
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-
-    if (sorted.isEmpty) {
+    if (_sorted.isEmpty) {
       return const Center(
         child: Text(
           '録音データがありません',
@@ -190,10 +204,10 @@ class _RecordingsTabState extends State<_RecordingsTab> {
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: sorted.length,
+      itemCount: _sorted.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final entry = sorted[index];
+        final entry = _sorted[index];
         final isPlaying = _playingId == entry.id;
         return _RecordingTile(
           entry: entry,
