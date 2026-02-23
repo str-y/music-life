@@ -67,6 +67,7 @@ private:
 
     std::vector<float> ring_buffer_;
     std::vector<float> frame_buffer_;
+    std::vector<float> yin_workspace_;
     int                write_pos_;
     int                samples_ready_;
 

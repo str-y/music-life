@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
@@ -199,11 +200,18 @@ class MainScreen extends StatelessWidget {
               title: const Text('コード解析'),
               subtitle: const Text('リアルタイムでコードを解析・表示'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ChordAnalyserScreen(),
-                ),
-              ),
+              onTap: () async {
+                final bridge = NativePitchBridge();
+                // Await the route so we can dispose the bridge only after the
+                // screen's own dispose() has already cancelled the subscription.
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        ChordAnalyserScreen(chordStream: bridge.chordStream),
+                  ),
+                );
+                bridge.dispose();
+              },
             ),
           ),
         ],
@@ -330,42 +338,6 @@ class _SettingsModalState extends State<_SettingsModal> {
           ),
           const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-}
-
-class TunerScreen extends StatelessWidget {
-  const TunerScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('チューナー')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.tune,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text('A4', style: Theme.of(context).textTheme.displaySmall),
-              const SizedBox(height: 8),
-              Text('440.0 Hz', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 24),
-              Text(
-                'マイク入力によるリアルタイム検出は今後対応予定です。',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

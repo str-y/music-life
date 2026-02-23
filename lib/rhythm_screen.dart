@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -23,8 +22,15 @@ class _RhythmScreenState extends State<RhythmScreen>
   // ── Metronome state ──────────────────────────────────────────────────────
   int _bpm = 120;
   bool _isPlaying = false;
-  Timer? _ticker;
+  Ticker? _metTicker;
   int _beatCount = 0;
+
+  /// Index of the last beat that has been triggered (to avoid double-firing).
+  int _lastBeatIndex = -1;
+
+  /// Wall-clock time when the metronome was started, used to compute the
+  /// scheduled beat time for the groove-analysis tap comparison.
+  DateTime? _metStartWallTime;
 
   // ── Groove analysis state ────────────────────────────────────────────────
   /// Offset of the last user tap relative to the ideal beat, in milliseconds.
@@ -54,21 +60,37 @@ class _RhythmScreenState extends State<RhythmScreen>
       );
 
   void _startMetronome() {
-    _ticker?.cancel();
+    _metTicker?.dispose();
     _beatCount = 0;
-    _lastBeatTime = DateTime.now();
+    _lastBeatIndex = -1;
+    _metStartWallTime = DateTime.now();
+    _lastBeatTime = _metStartWallTime;
     _beatPulseCtrl.forward(from: 0);
-    _ticker = Timer.periodic(_beatDuration, (_) {
-      _lastBeatTime = DateTime.now();
-      _beatPulseCtrl.forward(from: 0);
-      setState(() => _beatCount++);
-    });
+    _metTicker = createTicker(_onMetronomeTick)..start();
     setState(() => _isPlaying = true);
   }
 
+  /// Called every frame by the [Ticker].  Computes the beat index from the
+  /// monotonic [elapsed] duration so that timing errors never accumulate.
+  void _onMetronomeTick(Duration elapsed) {
+    final beatIndex =
+        elapsed.inMicroseconds ~/ _beatDuration.inMicroseconds;
+    if (beatIndex > _lastBeatIndex) {
+      _lastBeatIndex = beatIndex;
+      // Derive the *scheduled* beat time so groove-tap comparison is accurate.
+      _lastBeatTime = _metStartWallTime!.add(
+        Duration(microseconds: beatIndex * _beatDuration.inMicroseconds),
+      );
+      if (mounted) {
+        _beatPulseCtrl.forward(from: 0);
+        setState(() => _beatCount = beatIndex + 1);
+      }
+    }
+  }
+
   void _stopMetronome() {
-    _ticker?.cancel();
-    _ticker = null;
+    _metTicker?.dispose();
+    _metTicker = null;
     setState(() {
       _isPlaying = false;
       _beatCount = 0;
@@ -139,7 +161,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    _metTicker?.dispose();
     _beatPulseCtrl.dispose();
     _tapRingCtrl.dispose();
     super.dispose();

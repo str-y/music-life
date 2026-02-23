@@ -51,13 +51,17 @@ MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const flo
     MLPitchResult out{};
     if (!handle || !samples || num_samples <= 0) return out;
 
-    const music_life::PitchDetector::Result result = handle->detector->process(samples, num_samples);
-    out.pitched      = result.pitched ? 1 : 0;
-    out.frequency    = result.frequency;
-    out.probability  = result.probability;
-    out.midi_note    = result.midi_note;
-    out.cents_offset = result.cents_offset;
-    std::strncpy(out.note_name, result.note_name, sizeof(out.note_name) - 1);
-    out.note_name[sizeof(out.note_name) - 1] = '\0';
+    try {
+        const music_life::PitchDetector::Result result = handle->detector->process(samples, num_samples);
+        out.pitched      = result.pitched ? 1 : 0;
+        out.frequency    = result.frequency;
+        out.probability  = result.probability;
+        out.midi_note    = result.midi_note;
+        out.cents_offset = result.cents_offset;
+        std::strncpy(out.note_name, result.note_name, sizeof(out.note_name) - 1);
+        out.note_name[sizeof(out.note_name) - 1] = '\0';
+    } catch (...) {
+        return out;
+    }
     return out;
 }

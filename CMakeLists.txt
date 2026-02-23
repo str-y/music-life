@@ -24,6 +24,26 @@ target_compile_options(pitch_detection PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /O2>
 )
 
+# SIMD/Architecture optimization flags
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+    # 64-bit ARM (arm64-v8a, Apple Silicon): NEON is mandatory
+    target_compile_options(pitch_detection PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-march=armv8-a>
+    )
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM)")
+    # 32-bit ARM (armeabi-v7a): enable NEON explicitly
+    target_compile_options(pitch_detection PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-mfpu=neon>
+    )
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|i[3-6]86|x86)")
+    # x86/x86_64: enable SSE2 and SSE4.1
+    target_compile_options(pitch_detection PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-msse2>
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-msse4.1>
+        $<$<CXX_COMPILER_ID:MSVC>:/arch:SSE2>
+    )
+endif()
+
 # -----------------------------------------------------------------------
 # Tests (enabled by default; pass -DBUILD_TESTING=OFF to skip)
 # -----------------------------------------------------------------------
