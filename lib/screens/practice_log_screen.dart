@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
+
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _LogEntry {
@@ -127,12 +129,12 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('練習ログ'),
+        title: Text(AppLocalizations.of(context)!.practiceLogTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.calendar_month), text: 'カレンダー'),
-            Tab(icon: Icon(Icons.list), text: '記録一覧'),
+          tabs: [
+            Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.calendarTab),
+            Tab(icon: const Icon(Icons.list), text: AppLocalizations.of(context)!.recordListTab),
           ],
         ),
       ),
@@ -155,7 +157,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        tooltip: '練習を記録',
+        tooltip: AppLocalizations.of(context)!.recordPractice,
         child: const Icon(Icons.add),
       ),
     );
@@ -181,6 +183,7 @@ class _CalendarTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final year = displayMonth.year;
     final month = displayMonth.month;
 
@@ -195,16 +198,16 @@ class _CalendarTab extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: onPrev,
-                tooltip: '前の月',
+                tooltip: l10n.previousMonth,
               ),
               Text(
-                '$year年$month月',
+                l10n.yearMonth(year, month),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: onNext,
-                tooltip: '次の月',
+                tooltip: l10n.nextMonth,
               ),
             ],
           ),
@@ -225,14 +228,14 @@ class _CalendarTab extends StatelessWidget {
                 children: [
                   _SummaryItem(
                     icon: Icons.event_available,
-                    value: '${practiceDays.length}日',
-                    label: '練習日数',
+                    value: l10n.practiceDayCount(practiceDays.length),
+                    label: l10n.practiceDays,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   _SummaryItem(
                     icon: Icons.timer,
-                    value: '${totalMinutes}分',
-                    label: '合計時間',
+                    value: l10n.durationMinutes(totalMinutes),
+                    label: l10n.totalTime,
                     color: Theme.of(context).colorScheme.secondary,
                   ),
                 ],
@@ -256,10 +259,19 @@ class _CalendarGrid extends StatelessWidget {
   final int month;
   final Set<int> practiceDays;
 
-  static const _weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final weekLabels = [
+      l10n.weekdaySun,
+      l10n.weekdayMon,
+      l10n.weekdayTue,
+      l10n.weekdayWed,
+      l10n.weekdayThu,
+      l10n.weekdayFri,
+      l10n.weekdaySat,
+    ];
     final cs = Theme.of(context).colorScheme;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
     final firstWeekday = DateTime(year, month, 1).weekday % 7;
@@ -268,7 +280,9 @@ class _CalendarGrid extends StatelessWidget {
     return Column(
       children: [
         Row(
-          children: _weekLabels.map((label) {
+          children: weekLabels.asMap().entries.map((entry) {
+            final index = entry.key;
+            final label = entry.value;
             return Expanded(
               child: Center(
                 child: Padding(
@@ -278,9 +292,9 @@ class _CalendarGrid extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
-                      color: label == '日'
+                      color: index == 0
                           ? Colors.red.shade400
-                          : label == '土'
+                          : index == 6
                               ? Colors.blue.shade400
                               : cs.onSurface,
                     ),
@@ -443,6 +457,7 @@ class _ListTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (entries.isEmpty) {
       return Center(
         child: Column(
@@ -455,14 +470,14 @@ class _ListTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '練習記録がありません',
+              l10n.noPracticeRecords,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
-              '＋ボタンで記録を追加しましょう',
+              l10n.addRecordHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -493,7 +508,7 @@ class _ListTab extends StatelessWidget {
           ),
           subtitle: e.note.isNotEmpty ? Text(e.note) : null,
           trailing: Text(
-            '${e.durationMinutes}分',
+            l10n.durationMinutes(e.durationMinutes),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.primary,
@@ -540,8 +555,9 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('練習を記録'),
+      title: Text(l10n.recordPractice),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -552,21 +568,21 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today),
               title: Text(_formatDate(_date)),
-              subtitle: const Text('練習日'),
+              subtitle: Text(l10n.practiceDate),
               onTap: _pickDate,
               trailing: const Icon(Icons.edit, size: 16),
             ),
             const Divider(),
             // Duration selector
             Text(
-              '練習時間: $_durationMinutes 分',
+              l10n.practiceDurationLabel(_durationMinutes),
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             Slider(
               min: 5,
               max: 180,
               divisions: 35,
-              label: '$_durationMinutes 分',
+              label: l10n.durationMinutes(_durationMinutes),
               value: _durationMinutes.toDouble(),
               onChanged: (v) =>
                   setState(() => _durationMinutes = v.round()),
@@ -575,10 +591,10 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
             // Optional note
             TextField(
               controller: _noteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'メモ（任意）',
-                hintText: '例: スケール練習、曲の練習',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.notesOptional,
+                hintText: l10n.notesHint,
+                border: const OutlineInputBorder(),
               ),
               maxLines: 2,
             ),
@@ -588,7 +604,7 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('キャンセル'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
@@ -598,7 +614,7 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
               note: _noteCtrl.text.trim(),
             ),
           ),
-          child: const Text('保存'),
+          child: Text(l10n.save),
         ),
       ],
     );

@@ -1,0 +1,322 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Music Life",
+  "@appTitle": {
+    "description": "The application title"
+  },
+
+  "settingsTooltip": "Settings",
+  "@settingsTooltip": {
+    "description": "Tooltip for the settings icon button"
+  },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Title of the settings modal"
+  },
+
+  "openSettings": "Open Settings",
+  "@openSettings": {
+    "description": "Button label to open app settings"
+  },
+
+  "micPermissionRequired": "Microphone permission is required.",
+  "@micPermissionRequired": {
+    "description": "Snackbar message when microphone permission is not granted"
+  },
+
+  "micPermissionDenied": "Microphone access is denied. Please allow it in Settings.",
+  "@micPermissionDenied": {
+    "description": "Snackbar message when microphone permission is permanently denied"
+  },
+
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Label for the privacy policy link"
+  },
+
+  "privacyPolicyOpenError": "Could not open the Privacy Policy.",
+  "@privacyPolicyOpenError": {
+    "description": "Snackbar message when the privacy policy URL fails to open"
+  },
+
+  "themeSection": "Theme",
+  "@themeSection": {
+    "description": "Section header for theme settings"
+  },
+
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Label for the dark mode toggle"
+  },
+
+  "calibration": "Calibration",
+  "@calibration": {
+    "description": "Section header for calibration settings"
+  },
+
+  "referencePitchLabel": "Reference Pitch A =",
+  "@referencePitchLabel": {
+    "description": "Label for the reference pitch slider"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button label"
+  },
+
+  "previousMonth": "Previous month",
+  "@previousMonth": {
+    "description": "Tooltip for the previous month navigation button"
+  },
+
+  "nextMonth": "Next month",
+  "@nextMonth": {
+    "description": "Tooltip for the next month navigation button"
+  },
+
+  "practiceDays": "Practice days",
+  "@practiceDays": {
+    "description": "Label for the practice days count in the summary"
+  },
+
+  "totalTime": "Total time",
+  "@totalTime": {
+    "description": "Label for the total practice time in the summary"
+  },
+
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button label"
+  },
+
+  "welcomeTitle": "Welcome",
+  "@welcomeTitle": {
+    "description": "Welcome headline on the main screen"
+  },
+
+  "welcomeSubtitle": "Let's start today's practice.",
+  "@welcomeSubtitle": {
+    "description": "Welcome sub-headline on the main screen"
+  },
+
+  "tunerTitle": "Tuner",
+  "@tunerTitle": {
+    "description": "Title of the Tuner screen"
+  },
+
+  "tunerSubtitle": "Check pitch in real-time",
+  "@tunerSubtitle": {
+    "description": "Subtitle for the Tuner card on the main screen"
+  },
+
+  "playSound": "Please play a sound.",
+  "@playSound": {
+    "description": "Prompt shown in the tuner when waiting for audio input"
+  },
+
+  "tuningOk": "Tuning OK",
+  "@tuningOk": {
+    "description": "Message shown when the note is in tune"
+  },
+
+  "practiceLogTitle": "Practice Log",
+  "@practiceLogTitle": {
+    "description": "Title of the Practice Log screen"
+  },
+
+  "practiceLogSubtitle": "Record practice time and notes",
+  "@practiceLogSubtitle": {
+    "description": "Subtitle for the Practice Log card on the main screen"
+  },
+
+  "calendarTab": "Calendar",
+  "@calendarTab": {
+    "description": "Label for the calendar tab"
+  },
+
+  "recordListTab": "Records",
+  "@recordListTab": {
+    "description": "Label for the record list tab"
+  },
+
+  "recordPractice": "Record Practice",
+  "@recordPractice": {
+    "description": "FAB tooltip and dialog title for adding a practice log entry"
+  },
+
+  "noPracticeRecords": "No practice records",
+  "@noPracticeRecords": {
+    "description": "Empty state message in the practice log list"
+  },
+
+  "addRecordHint": "Add a record with the + button",
+  "@addRecordHint": {
+    "description": "Hint shown below the empty state message in the practice log list"
+  },
+
+  "practiceDate": "Practice date",
+  "@practiceDate": {
+    "description": "Subtitle for the date picker in the add practice dialog"
+  },
+
+  "notesOptional": "Notes (optional)",
+  "@notesOptional": {
+    "description": "Label for the optional notes field in the add practice dialog"
+  },
+
+  "notesHint": "e.g. Scales, song practice",
+  "@notesHint": {
+    "description": "Hint text for the notes field in the add practice dialog"
+  },
+
+  "libraryTitle": "Library",
+  "@libraryTitle": {
+    "description": "Title of the Library screen"
+  },
+
+  "librarySubtitle": "Playback recordings and practice logs",
+  "@librarySubtitle": {
+    "description": "Subtitle for the Library card on the main screen"
+  },
+
+  "recordingsTab": "Recordings",
+  "@recordingsTab": {
+    "description": "Label for the recordings tab in the Library screen"
+  },
+
+  "logsTab": "Logs",
+  "@logsTab": {
+    "description": "Label for the logs tab in the Library screen"
+  },
+
+  "noRecordings": "No recordings",
+  "@noRecordings": {
+    "description": "Empty state message in the recordings list"
+  },
+
+  "play": "Play",
+  "@play": {
+    "description": "Tooltip for the play button"
+  },
+
+  "pause": "Pause",
+  "@pause": {
+    "description": "Tooltip for the pause button"
+  },
+
+  "rhythmTitle": "Rhythm & Metronome",
+  "@rhythmTitle": {
+    "description": "Title of the Rhythm & Metronome screen"
+  },
+
+  "rhythmSubtitle": "Metronome and groove analysis",
+  "@rhythmSubtitle": {
+    "description": "Subtitle for the Rhythm card on the main screen"
+  },
+
+  "grooveAnalysis": "Groove Analysis",
+  "@grooveAnalysis": {
+    "description": "Section label for the groove analysis panel"
+  },
+
+  "timing": "Timing",
+  "@timing": {
+    "description": "Label for the timing readout in the groove analysis panel"
+  },
+
+  "score": "Score",
+  "@score": {
+    "description": "Label for the score readout in the groove analysis panel"
+  },
+
+  "tapRhythmHint": "Tap to keep the rhythm",
+  "@tapRhythmHint": {
+    "description": "Hint shown while the metronome is playing"
+  },
+
+  "chordAnalyserTitle": "Chord Analyser",
+  "@chordAnalyserTitle": {
+    "description": "Title of the Chord Analyser screen"
+  },
+
+  "chordAnalyserSubtitle": "Analyze and display chords in real-time",
+  "@chordAnalyserSubtitle": {
+    "description": "Subtitle for the Chord Analyser card on the main screen"
+  },
+
+  "currentChord": "Current Chord",
+  "@currentChord": {
+    "description": "Label above the current chord display"
+  },
+
+  "chordHistory": "Chord progression history",
+  "@chordHistory": {
+    "description": "Section header for the chord history timeline"
+  },
+
+  "noChordHistory": "No history yet",
+  "@noChordHistory": {
+    "description": "Empty state message in the chord history list"
+  },
+
+  "weekdaySun": "Sun",
+  "@weekdaySun": { "description": "Abbreviated Sunday label in the calendar" },
+
+  "weekdayMon": "Mon",
+  "@weekdayMon": { "description": "Abbreviated Monday label in the calendar" },
+
+  "weekdayTue": "Tue",
+  "@weekdayTue": { "description": "Abbreviated Tuesday label in the calendar" },
+
+  "weekdayWed": "Wed",
+  "@weekdayWed": { "description": "Abbreviated Wednesday label in the calendar" },
+
+  "weekdayThu": "Thu",
+  "@weekdayThu": { "description": "Abbreviated Thursday label in the calendar" },
+
+  "weekdayFri": "Fri",
+  "@weekdayFri": { "description": "Abbreviated Friday label in the calendar" },
+
+  "weekdaySat": "Sat",
+  "@weekdaySat": { "description": "Abbreviated Saturday label in the calendar" },
+
+  "yearMonth": "{year}/{month}",
+  "@yearMonth": {
+    "description": "Formatted year and month for the calendar header",
+    "placeholders": {
+      "year": { "type": "int" },
+      "month": { "type": "int" }
+    }
+  },
+
+  "practiceDayCount": "{count} days",
+  "@practiceDayCount": {
+    "description": "Number of practice days in the summary card",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "durationMinutes": "{minutes} min",
+  "@durationMinutes": {
+    "description": "Duration displayed as minutes",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+
+  "practiceDurationLabel": "Practice time: {minutes} min",
+  "@practiceDurationLabel": {
+    "description": "Label showing selected practice duration in the add-practice dialog",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  }
+}
