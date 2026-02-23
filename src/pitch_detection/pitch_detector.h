@@ -2,8 +2,8 @@
 
 #include "yin.h"
 
+#include <atomic>
 #include <memory>
-#include <string>
 
 namespace music_life {
 
@@ -28,7 +28,7 @@ public:
         float probability;    ///< Confidence [0, 1]
         int   midi_note;      ///< Closest MIDI note number (0–127)
         float cents_offset;   ///< Offset from the nearest semitone in cents [-50, 50]
-        std::string note_name; ///< e.g. "A4", "C#3"
+        const char* note_name; ///< e.g. "A4", "C#3"
     };
 
     /**
@@ -63,20 +63,23 @@ public:
 private:
     int   sample_rate_;
     int   frame_size_;
-    float reference_pitch_hz_;
+    std::atomic<float> reference_pitch_hz_;
     std::unique_ptr<Yin> yin_;
 
+    std::atomic<bool>  reset_pending_;  ///< Set by reset(); consumed lock-free by process()
     std::vector<float> ring_buffer_;
     std::vector<float> frame_buffer_;
+    std::vector<float> yin_workspace_;
     int                write_pos_;
     int                samples_ready_;
+    int                samples_since_last_process_;
 
     Result last_result_;
 
     int   frequency_to_midi(float frequency) const;
     float midi_to_frequency(int midi_note) const;
     static float cents_between(float f1, float f2);
-    static std::string midi_to_note_name(int midi_note);
+    static const char* midi_to_note_name(int midi_note);
 };
 
 } // namespace music_life

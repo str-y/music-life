@@ -73,7 +73,8 @@ static bool test_yin_sine_a4() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
@@ -88,7 +89,8 @@ static bool test_yin_sine_e2() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
@@ -103,7 +105,8 @@ static bool test_yin_sine_c5() {
     std::vector<float> buf(FRAME);
     make_sine(buf, EXPECTED_HZ, SR);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
     return true;
 }
@@ -115,8 +118,28 @@ static bool test_yin_silence_returns_no_pitch() {
     Yin yin(SR, FRAME, 0.10f);
     std::vector<float> buf(FRAME, 0.0f);
 
-    float detected = yin.detect(buf.data());
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
     ASSERT_TRUE(detected < 0.0f);
+    return true;
+}
+
+static bool test_yin_workspace_no_reallocation() {
+    // When the workspace is pre-allocated with the correct capacity,
+    // Yin::detect must not trigger a heap reallocation (i.e. the
+    // internal buffer pointer must remain unchanged across the call).
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME, 0.0f);
+
+    std::vector<float> workspace(FRAME / 2);
+    const float* ptr_before = workspace.data();
+    yin.detect(buf.data(), workspace);
+    const float* ptr_after = workspace.data();
+
+    ASSERT_TRUE(ptr_before == ptr_after);
     return true;
 }
 
@@ -136,7 +159,7 @@ static bool test_pd_a4_midi_and_note_name() {
     ASSERT_TRUE(r.pitched);
     ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
     ASSERT_TRUE(r.midi_note == 69);        // A4
-    ASSERT_TRUE(r.note_name == "A4");
+    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
     ASSERT_NEAR(r.cents_offset, 0.0f, 5.0f);
     return true;
 }
@@ -153,7 +176,7 @@ static bool test_pd_c4_note() {
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
     ASSERT_TRUE(r.pitched);
     ASSERT_TRUE(r.midi_note == 60);        // C4
-    ASSERT_TRUE(r.note_name == "C4");
+    ASSERT_TRUE(std::strcmp(r.note_name, "C4") == 0);
     return true;
 }
 
@@ -286,6 +309,66 @@ static bool test_ffi_set_reference_pitch() {
     return true;
 }
 
+static bool test_pd_hop_size_skips_processing() {
+    // After a full frame is processed, feeding fewer than hop_size (frame_size/2)
+    // new samples must NOT trigger another YIN run.
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    PitchDetector pd(SR, FRAME);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 440.0f, SR);
+
+    // First full frame → detection fires
+    PitchDetector::Result r1 = pd.process(buf.data(), FRAME);
+    ASSERT_TRUE(r1.pitched);
+
+    // Feed silence just below the hop threshold (1023 < 1024)
+    std::vector<float> silence(FRAME / 2 - 1, 0.0f);
+    PitchDetector::Result r2 = pd.process(silence.data(), FRAME / 2 - 1);
+    // YIN must NOT have re-run; stale result is returned unchanged
+    ASSERT_TRUE(r2.pitched);
+    ASSERT_NEAR(r2.frequency, r1.frequency, 0.01f);
+    return true;
+}
+
+
+static bool test_ffi_process_null_handle() {
+    // ml_pitch_detector_process must return a zeroed result (not crash) when
+    // the handle is null.
+    std::vector<float> buf(2048, 0.0f);
+    MLPitchResult r = ml_pitch_detector_process(nullptr, buf.data(), static_cast<int>(buf.size()));
+    ASSERT_TRUE(r.pitched == 0);
+    ASSERT_TRUE(r.frequency == 0.0f);
+    ASSERT_TRUE(r.midi_note == 0);
+    return true;
+}
+
+static bool test_ffi_process_null_samples() {
+    // ml_pitch_detector_process must return a zeroed result (not crash) when
+    // the sample pointer is null.
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    MLPitchResult r = ml_pitch_detector_process(handle, nullptr, 2048);
+    ASSERT_TRUE(r.pitched == 0);
+    ASSERT_TRUE(r.frequency == 0.0f);
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
+static bool test_ffi_process_zero_num_samples() {
+    // ml_pitch_detector_process must return a zeroed result (not crash) when
+    // num_samples is zero.
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    std::vector<float> buf(2048, 0.0f);
+    MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), 0);
+    ASSERT_TRUE(r.pitched == 0);
+    ASSERT_TRUE(r.frequency == 0.0f);
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -295,6 +378,7 @@ int main() {
     run_test("yin: detects low-E guitar (82 Hz)",   test_yin_sine_e2);
     run_test("yin: detects C5 (523 Hz)",            test_yin_sine_c5);
     run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
+    run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
@@ -305,6 +389,11 @@ int main() {
     run_test("pd:  supports A4=432 reference",      test_pd_reference_pitch_a4_432);
     run_test("ffi: A4 process bridge",              test_ffi_process_a4);
     run_test("ffi: set reference pitch",            test_ffi_set_reference_pitch);
+    run_test("ffi: process null handle is safe",    test_ffi_process_null_handle);
+    run_test("ffi: process null samples is safe",   test_ffi_process_null_samples);
+    run_test("ffi: process zero num_samples safe",  test_ffi_process_zero_num_samples);
+
+    run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
