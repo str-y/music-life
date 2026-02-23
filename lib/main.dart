@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'screens/chord_analyser_screen.dart';
+
 const String _appTitle = 'Music Life';
 
 void main() {
@@ -64,6 +66,20 @@ class MainScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('練習ログ機能は準備中です')),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.piano),
+              title: const Text('コード解析'),
+              subtitle: const Text('リアルタイムでコードを解析・表示'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ChordAnalyserScreen(),
+                ),
               ),
             ),
           ),
