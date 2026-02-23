@@ -49,20 +49,23 @@ PitchDetector::PitchDetector(int sample_rate, int frame_size, float threshold, f
 // ---------------------------------------------------------------------------
 
 void PitchDetector::reset() {
+    std::lock_guard<std::mutex> lock(state_mutex_);
     std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
-    write_pos_    = 0;
+    write_pos_     = 0;
     samples_ready_ = 0;
-    last_result_  = {};
+    last_result_   = {};
 }
 
 void PitchDetector::set_reference_pitch(float reference_pitch_hz) {
     if (reference_pitch_hz < kMinReferencePitch || reference_pitch_hz > kMaxReferencePitch) {
         throw std::invalid_argument("reference_pitch_hz must be in [432, 445]");
     }
-    reference_pitch_hz_ = reference_pitch_hz;
+    reference_pitch_hz_.store(reference_pitch_hz, std::memory_order_relaxed);
 }
 
 PitchDetector::Result PitchDetector::process(const float* samples, int num_samples) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
     // Feed incoming samples into the ring buffer
     for (int i = 0; i < num_samples; ++i) {
         ring_buffer_[write_pos_] = samples[i];
@@ -112,12 +115,14 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
 
 int PitchDetector::frequency_to_midi(float frequency) const {
     if (frequency <= 0.0f) return 0;
-    float midi = 12.0f * std::log2(frequency / reference_pitch_hz_) + static_cast<float>(kA4_Midi);
+    float ref = reference_pitch_hz_.load(std::memory_order_relaxed);
+    float midi = 12.0f * std::log2(frequency / ref) + static_cast<float>(kA4_Midi);
     return std::clamp(static_cast<int>(std::round(midi)), 0, 127);
 }
 
 float PitchDetector::midi_to_frequency(int midi_note) const {
-    return reference_pitch_hz_ * std::pow(2.0f, (static_cast<float>(midi_note - kA4_Midi)) / 12.0f);
+    float ref = reference_pitch_hz_.load(std::memory_order_relaxed);
+    return ref * std::pow(2.0f, (static_cast<float>(midi_note - kA4_Midi)) / 12.0f);
 }
 
 float PitchDetector::cents_between(float reference_hz, float actual_hz) {
