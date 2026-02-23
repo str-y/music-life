@@ -14,8 +14,8 @@ static constexpr float kA4_Hz        = 440.0f;
 static constexpr int   kA4_Midi      = 69;
 static constexpr float kMinFrequency = 20.0f;   // Hz
 static constexpr float kMaxFrequency = 4200.0f; // Hz
-static constexpr float kMinReferencePitch = 432.0f;
-static constexpr float kMaxReferencePitch = 445.0f;
+static constexpr float kMinReferencePitch = 430.0f;
+static constexpr float kMaxReferencePitch = 450.0f;
 
 static const char* kNoteNames[] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"

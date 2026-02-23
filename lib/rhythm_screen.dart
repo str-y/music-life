@@ -65,6 +65,8 @@ class _RhythmScreenState extends State<RhythmScreen>
     _lastBeatIndex = -1;
     _metStartWallTime = DateTime.now();
     _lastBeatTime = _metStartWallTime;
+    _timingScore = 100;
+    _lastOffsetMs = 0;
     _beatPulseCtrl.forward(from: 0);
     _metTicker = createTicker(_onMetronomeTick)..start();
     setState(() => _isPlaying = true);
