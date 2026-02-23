@@ -2,9 +2,55 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <limits>
 
 namespace music_life {
+
+// ---------------------------------------------------------------------------
+// Internal FFT utilities (anonymous namespace)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
+void fft_inplace(std::vector<std::complex<float>>& x) {
+    const int n = static_cast<int>(x.size());
+
+    // Bit-reversal permutation
+    for (int i = 1, j = 0; i < n; ++i) {
+        int bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) std::swap(x[i], x[j]);
+    }
+
+    // Butterfly passes
+    for (int len = 2; len <= n; len <<= 1) {
+        const float ang = -2.0f * static_cast<float>(M_PI) / static_cast<float>(len);
+        const std::complex<float> wlen(std::cos(ang), std::sin(ang));
+        for (int i = 0; i < n; i += len) {
+            std::complex<float> w(1.0f, 0.0f);
+            for (int j = 0; j < len / 2; ++j) {
+                const std::complex<float> u = x[i + j];
+                const std::complex<float> v = x[i + j + len / 2] * w;
+                x[i + j]           = u + v;
+                x[i + j + len / 2] = u - v;
+                w *= wlen;
+            }
+        }
+    }
+}
+
+// In-place IFFT via conjugate trick.
+void ifft_inplace(std::vector<std::complex<float>>& x) {
+    for (auto& c : x) c = std::conj(c);
+    fft_inplace(x);
+    const float inv_n = 1.0f / static_cast<float>(x.size());
+    for (auto& c : x) c = std::conj(c) * inv_n;
+}
+
+} // anonymous namespace
 
 // ---------------------------------------------------------------------------
 // Construction
@@ -40,19 +86,50 @@ float Yin::detect(const float* samples) const {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2: Difference function
+// Step 2: Difference function (O(N log N) via FFT-based autocorrelation)
 //
-//   d(tau) = sum_{j=1}^{W} ( x_j - x_{j+tau} )^2
+//   d(tau) = sum_{j=0}^{W-1} ( x_j - x_{j+tau} )^2
+//          = A + B(tau) - 2 * r(tau)
+//
+//   where:
+//     A      = sum_{j=0}^{W-1} x_j^2                (constant, prefix sum)
+//     B(tau) = sum_{j=tau}^{tau+W-1} x_j^2           (sliding window, prefix sum)
+//     r(tau) = sum_{j=0}^{W-1} x_j * x_{j+tau}       (cross-correlation via FFT)
 // ---------------------------------------------------------------------------
 
 void Yin::difference(const float* samples, std::vector<float>& df) const {
-    for (int tau = 0; tau < half_buffer_; ++tau) {
-        float sum = 0.0f;
-        for (int j = 0; j < half_buffer_; ++j) {
-            float delta = samples[j] - samples[j + tau];
-            sum += delta * delta;
-        }
-        df[tau] = sum;
+    const int W = half_buffer_;
+
+    // FFT size: next power of two that is >= 2 * buffer_size to prevent
+    // circular aliasing in the cross-correlation.
+    int fft_size = 1;
+    while (fft_size < 2 * buffer_size_) fft_size <<= 1;
+
+    // f = x[0..W-1], zero-padded to fft_size
+    std::vector<std::complex<float>> F(fft_size, {0.0f, 0.0f});
+    for (int j = 0; j < W; ++j) F[j] = {samples[j], 0.0f};
+
+    // g = x[0..buffer_size-1], zero-padded to fft_size
+    std::vector<std::complex<float>> G(fft_size, {0.0f, 0.0f});
+    for (int j = 0; j < buffer_size_; ++j) G[j] = {samples[j], 0.0f};
+
+    fft_inplace(F);
+    fft_inplace(G);
+
+    // Cross-correlation in frequency domain: conj(F) * G
+    for (int i = 0; i < fft_size; ++i) F[i] = std::conj(F[i]) * G[i];
+    ifft_inplace(F);  // F[tau].real() == r(tau)
+
+    // Prefix sums of squares for A and B(tau)
+    std::vector<float> sq_prefix(buffer_size_ + 1, 0.0f);
+    for (int j = 0; j < buffer_size_; ++j)
+        sq_prefix[j + 1] = sq_prefix[j] + samples[j] * samples[j];
+
+    const float A = sq_prefix[W];
+    for (int tau = 0; tau < W; ++tau) {
+        const float B_tau = sq_prefix[tau + W] - sq_prefix[tau];
+        const float r_tau = F[tau].real();
+        df[tau] = A + B_tau - 2.0f * r_tau;
     }
 }
 
