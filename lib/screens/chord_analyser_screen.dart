@@ -2,75 +2,72 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// Demo chord sequence used to simulate real-time chord detection.
-/// In production this would be driven by the native pitch-detection engine
-/// via FFI / platform channels.
-const List<String> _demoChords = [
-  'Cmaj7',
-  'Am7',
-  'Fmaj7',
-  'G7',
-  'Em7',
-  'A7',
-  'Dm7',
-  'G7',
-  'Cmaj7',
-  'E7',
-  'Am7',
-  'D7',
-];
-
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
-/// How often (in seconds) the demo advances to the next chord.
-const int _demoIntervalSeconds = 2;
-
 class ChordAnalyserScreen extends StatefulWidget {
-  const ChordAnalyserScreen({super.key});
+  const ChordAnalyserScreen({super.key, required this.chordStream});
+
+  /// Stream of chord labels emitted by the native pitch-detection engine.
+  final Stream<String> chordStream;
 
   @override
   State<ChordAnalyserScreen> createState() => _ChordAnalyserScreenState();
 }
 
-class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
-  /// The chord currently being "heard".
-  String _currentChord = _demoChords.first;
+class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
+    with SingleTickerProviderStateMixin {
+  /// The chord currently being detected.
+  String _currentChord = '---';
 
   /// Ordered list of recently detected chords (newest first).
   final List<_ChordEntry> _history = [];
 
-  Timer? _timer;
-  int _demoIndex = 0;
+  /// Key for the animated history list.
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+
+  StreamSubscription<String>? _subscription;
+
+  /// Controller for the pulsing "listening" indicator.
+  late final AnimationController _listeningCtrl;
 
   @override
   void initState() {
     super.initState();
-    _history.add(_ChordEntry(chord: _currentChord, time: DateTime.now()));
-    _startDemoTimer();
+    _listeningCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+
+    _subscription = widget.chordStream.listen((chord) {
+      if (!mounted) return;
+      setState(() => _currentChord = chord);
+      _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
+      _listKey.currentState?.insertItem(
+        0,
+        duration: const Duration(milliseconds: 300),
+      );
+      if (_history.length > _maxHistory) {
+        final removed = _history.removeLast();
+        _listKey.currentState?.removeItem(
+          _maxHistory,
+          (context, animation) => _ChordHistoryTile(
+            entry: removed,
+            isLatest: false,
+            colorScheme: Theme.of(context).colorScheme,
+            animation: animation,
+          ),
+          duration: Duration.zero,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _subscription?.cancel();
+    _listeningCtrl.dispose();
     super.dispose();
-  }
-
-  void _startDemoTimer() {
-    _timer = Timer.periodic(
-      const Duration(seconds: _demoIntervalSeconds),
-      (_) {
-        _demoIndex = (_demoIndex + 1) % _demoChords.length;
-        final next = _demoChords[_demoIndex];
-        setState(() {
-          _currentChord = next;
-          _history.insert(0, _ChordEntry(chord: next, time: DateTime.now()));
-          if (_history.length > _maxHistory) {
-            _history.removeLast();
-          }
-        });
-      },
-    );
   }
 
   @override
@@ -118,13 +115,8 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                           ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'リアルタイム解析中…',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
+                  const SizedBox(height: 12),
+                  _ListeningIndicator(controller: _listeningCtrl),
                 ],
               ),
             ),
@@ -159,18 +151,21 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                           ),
                     ),
                   )
-                : ListView.separated(
+                : AnimatedList(
+                    key: _listKey,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 4),
-                    itemCount: _history.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 6),
-                    itemBuilder: (context, index) {
+                    initialItemCount: _history.length,
+                    itemBuilder: (context, index, animation) {
                       final entry = _history[index];
-                      final isLatest = index == 0;
-                      return _ChordHistoryTile(
-                        entry: entry,
-                        isLatest: isLatest,
-                        colorScheme: colorScheme,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _ChordHistoryTile(
+                          entry: entry,
+                          isLatest: index == 0,
+                          colorScheme: colorScheme,
+                          animation: animation,
+                        ),
                       );
                     },
                   ),
@@ -188,6 +183,45 @@ String _formatTime(DateTime t) =>
     '${t.minute.toString().padLeft(2, '0')}:'
     '${t.second.toString().padLeft(2, '0')}';
 
+// ── Pulsing listening indicator ───────────────────────────────────────────────
+
+class _ListeningIndicator extends StatelessWidget {
+  const _ListeningIndicator({required this.controller});
+
+  final AnimationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(3, (i) {
+            final interval = Interval(
+              i * 0.15,
+              0.55 + i * 0.15,
+              curve: Curves.easeInOut,
+            );
+            final t = interval.transform(controller.value);
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: 4,
+              height: 6 + t * 10,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.35 + t * 0.65),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
@@ -204,53 +238,61 @@ class _ChordHistoryTile extends StatelessWidget {
     required this.entry,
     required this.isLatest,
     required this.colorScheme,
+    required this.animation,
   });
 
   final _ChordEntry entry;
   final bool isLatest;
   final ColorScheme colorScheme;
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
     final timeLabel = _formatTime(entry.time);
 
-    return AnimatedOpacity(
-      opacity: isLatest ? 1.0 : 0.65,
-      duration: const Duration(milliseconds: 300),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isLatest
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: isLatest
-              ? Border.all(color: colorScheme.primary, width: 1.5)
-              : null,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                entry.chord,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight:
-                          isLatest ? FontWeight.bold : FontWeight.normal,
-                      color: isLatest
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.onSurface,
-                    ),
-              ),
+    return SizeTransition(
+      sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: AnimatedOpacity(
+          opacity: isLatest ? 1.0 : 0.65,
+          duration: const Duration(milliseconds: 300),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isLatest
+                  ? colorScheme.primaryContainer
+                  : colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: isLatest
+                  ? Border.all(color: colorScheme.primary, width: 1.5)
+                  : null,
             ),
-            Text(
-              timeLabel,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isLatest
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.chord,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight:
+                              isLatest ? FontWeight.bold : FontWeight.normal,
+                          color: isLatest
+                              ? colorScheme.onPrimaryContainer
+                              : colorScheme.onSurface,
+                        ),
                   ),
+                ),
+                Text(
+                  timeLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isLatest
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

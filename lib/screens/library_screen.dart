@@ -167,6 +167,23 @@ class _RecordingsTab extends StatefulWidget {
 
 class _RecordingsTabState extends State<_RecordingsTab> {
   String? _playingId;
+  late List<RecordingEntry> _sorted;
+
+  @override
+  void initState() {
+    super.initState();
+    _sorted = [...widget.recordings]
+      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+  }
+
+  @override
+  void didUpdateWidget(_RecordingsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.recordings != oldWidget.recordings) {
+      _sorted = [...widget.recordings]
+        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    }
+  }
 
   void _togglePlayback(String id) {
     setState(() {
@@ -176,10 +193,7 @@ class _RecordingsTabState extends State<_RecordingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...widget.recordings]
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
-
-    if (sorted.isEmpty) {
+    if (_sorted.isEmpty) {
       return const Center(
         child: Text(
           '録音データがありません',
@@ -190,10 +204,10 @@ class _RecordingsTabState extends State<_RecordingsTab> {
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: sorted.length,
+      itemCount: _sorted.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final entry = sorted[index];
+        final entry = _sorted[index];
         final isPlaying = _playingId == entry.id;
         return _RecordingTile(
           entry: entry,
@@ -269,7 +283,7 @@ class _RecordingTile extends StatelessWidget {
 // Waveform painter
 // ---------------------------------------------------------------------------
 
-class _WaveformView extends StatelessWidget {
+class _WaveformView extends StatefulWidget {
   const _WaveformView({
     required this.data,
     required this.isPlaying,
@@ -281,22 +295,71 @@ class _WaveformView extends StatelessWidget {
   final Color color;
 
   @override
+  State<_WaveformView> createState() => _WaveformViewState();
+}
+
+class _WaveformViewState extends State<_WaveformView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breathCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (widget.isPlaying) _breathCtrl.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_WaveformView old) {
+    super.didUpdateWidget(old);
+    if (widget.isPlaying != old.isPlaying) {
+      if (widget.isPlaying) {
+        _breathCtrl.repeat(reverse: true);
+      } else {
+        _breathCtrl.stop();
+        _breathCtrl.value = 0;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _breathCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
-      child: CustomPaint(
-        painter: _WaveformPainter(data: data, color: color),
-        size: Size.infinite,
+      child: AnimatedBuilder(
+        animation: _breathCtrl,
+        builder: (_, __) => CustomPaint(
+          painter: _WaveformPainter(
+            data: widget.data,
+            color: widget.color,
+            breathPhase: _breathCtrl.value,
+          ),
+          size: Size.infinite,
+        ),
       ),
     );
   }
 }
 
 class _WaveformPainter extends CustomPainter {
-  _WaveformPainter({required this.data, required this.color});
+  _WaveformPainter({
+    required this.data,
+    required this.color,
+    this.breathPhase = 0.0,
+  });
 
   final List<double> data;
   final Color color;
+  final double breathPhase;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -313,10 +376,12 @@ class _WaveformPainter extends CustomPainter {
     final gap = barWidth * 0.6;
     final step = barWidth + gap;
     final centerY = size.height / 2;
+    final breathScale = 1.0 + breathPhase * 0.22;
 
     for (var i = 0; i < barCount; i++) {
       final x = i * step + barWidth / 2;
-      final halfHeight = (data[i] * centerY).clamp(2.0, centerY);
+      final halfHeight =
+          (data[i] * centerY * breathScale).clamp(2.0, centerY);
       canvas.drawLine(
         Offset(x, centerY - halfHeight),
         Offset(x, centerY + halfHeight),
@@ -327,7 +392,9 @@ class _WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.data != data;
+      oldDelegate.color != color ||
+      oldDelegate.data != data ||
+      oldDelegate.breathPhase != breathPhase;
 }
 
 // ---------------------------------------------------------------------------
@@ -671,10 +738,9 @@ class _SummaryItem extends StatelessWidget {
         ),
         Text(
           label,
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: Colors.grey),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     );
