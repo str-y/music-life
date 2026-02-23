@@ -10,11 +10,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(pitch_detection STATIC
     src/pitch_detection/yin.cpp
     src/pitch_detection/pitch_detector.cpp
+    src/app_bridge/pitch_detector_ffi.cpp
 )
 
 target_include_directories(pitch_detection
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src/pitch_detection
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/app_bridge
 )
 
 target_compile_options(pitch_detection PRIVATE
