@@ -1,5 +1,6 @@
 #include "yin.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -15,6 +16,7 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
     , threshold_(threshold)
     , half_buffer_(buffer_size / 2)
     , probability_(0.0f)
+    , df_buffer_(half_buffer_, 0.0f)
 {}
 
 // ---------------------------------------------------------------------------
@@ -22,19 +24,18 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
 // ---------------------------------------------------------------------------
 
 float Yin::detect(const float* samples) const {
-    std::vector<float> df(half_buffer_, 0.0f);
+    std::fill(df_buffer_.begin(), df_buffer_.end(), 0.0f);
+    difference(samples, df_buffer_);
+    cmndf(df_buffer_);
 
-    difference(samples, df);
-    cmndf(df);
-
-    int tau = absolute_threshold(df);
+    int tau = absolute_threshold(df_buffer_);
     if (tau == -1) {
         probability_ = 0.0f;
         return -1.0f;
     }
 
-    float refined_tau = parabolic_interpolation(df, tau);
-    probability_ = 1.0f - df[tau];
+    float refined_tau = parabolic_interpolation(df_buffer_, tau);
+    probability_ = 1.0f - df_buffer_[tau];
     return static_cast<float>(sample_rate_) / refined_tau;
 }
 

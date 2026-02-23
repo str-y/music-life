@@ -38,7 +38,8 @@ public:
      */
     explicit PitchDetector(int sample_rate,
                            int frame_size = 2048,
-                           float threshold = 0.10f);
+                           float threshold = 0.10f,
+                           float reference_pitch_hz = 440.0f);
 
     ~PitchDetector() = default;
 
@@ -57,20 +58,23 @@ public:
 
     /** Reset internal state (call on stream restart). */
     void reset();
+    void set_reference_pitch(float reference_pitch_hz);
 
 private:
     int   sample_rate_;
     int   frame_size_;
+    float reference_pitch_hz_;
     std::unique_ptr<Yin> yin_;
 
     std::vector<float> ring_buffer_;
+    std::vector<float> frame_buffer_;
     int                write_pos_;
     int                samples_ready_;
 
     Result last_result_;
 
-    static int   frequency_to_midi(float frequency);
-    static float midi_to_frequency(int midi_note);
+    int   frequency_to_midi(float frequency) const;
+    float midi_to_frequency(int midi_note) const;
     static float cents_between(float f1, float f2);
     static std::string midi_to_note_name(int midi_note);
 };
