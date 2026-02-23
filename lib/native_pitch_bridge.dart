@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:record/record.dart';
 
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
@@ -59,6 +60,30 @@ DynamicLibrary _loadNativeLib() {
   throw UnsupportedError(
     'NativePitchBridge is not supported on ${Platform.operatingSystem}.',
   );
+}
+
+// ── Pitch result ─────────────────────────────────────────────────────────────
+
+/// Decoded pitch information emitted by [NativePitchBridge.pitchStream].
+class PitchResult {
+  const PitchResult({
+    required this.noteName,
+    required this.frequency,
+    required this.centsOffset,
+    required this.midiNote,
+  });
+
+  /// Scientific note name, e.g. "A4" or "C#3".
+  final String noteName;
+
+  /// Detected fundamental frequency in Hz.
+  final double frequency;
+
+  /// Deviation from the nearest semitone in cents (−50 … +50).
+  final double centsOffset;
+
+  /// MIDI note number (0–127).
+  final int midiNote;
 }
 
 // ── Chord inference ───────────────────────────────────────────────────────────
@@ -132,6 +157,20 @@ class NativePitchBridge {
   /// Emits a chord label each time the native engine detects a pitched note.
   Stream<String> get chordStream => _controller.stream;
 
+  final StreamController<PitchResult> _pitchController =
+      StreamController<PitchResult>.broadcast();
+
+  /// Emits a [PitchResult] each time the native engine detects a pitched note.
+  Stream<PitchResult> get pitchStream => _pitchController.stream;
+
+  // ── Audio capture ──────────────────────────────────────────────────────────
+
+  final AudioRecorder _recorder = AudioRecorder();
+  StreamSubscription<Uint8List>? _audioSub;
+
+  /// Partial-frame accumulator for PCM samples between [processAudioFrame] calls.
+  final List<double> _sampleBuffer = [];
+
   NativePitchBridge._({
     required Pointer<Void> handle,
     required _MLProcessDart nativeProcess,
@@ -187,13 +226,68 @@ class NativePitchBridge {
     final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
     if (result.pitched != 0) {
       _controller.add(_deriveChordLabel(result.midiNote));
+      // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
+      final bytes = <int>[];
+      for (int i = 0; i < 8; i++) {
+        final b = result.noteName[i];
+        if (b == 0) break;
+        bytes.add(b);
+      }
+      _pitchController.add(PitchResult(
+        noteName: String.fromCharCodes(bytes),
+        frequency: result.frequency,
+        centsOffset: result.centsOffset,
+        midiNote: result.midiNote,
+      ));
+    }
+  }
+
+  /// Requests microphone permission and starts streaming audio from the
+  /// default input device into the native pitch detector.
+  ///
+  /// Returns `true` if capture started successfully, or `false` if microphone
+  /// permission was denied.
+  Future<bool> startCapture() async {
+    if (!await _recorder.hasPermission()) return false;
+    final stream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: defaultSampleRate,
+        numChannels: 1,
+      ),
+    );
+    _audioSub = stream.listen(_onAudioChunk);
+    return true;
+  }
+
+  /// Converts an incoming PCM-16 little-endian [chunk] to float samples,
+  /// buffers them, and dispatches complete [_frameSize]-sample frames to
+  /// [processAudioFrame].
+  void _onAudioChunk(Uint8List chunk) {
+    for (int i = 0; i + 1 < chunk.length; i += 2) {
+      int s = chunk[i] | (chunk[i + 1] << 8);
+      if (s >= 0x8000) s -= 0x10000; // sign-extend int16
+      _sampleBuffer.add(s / 32768.0);
+    }
+    while (_sampleBuffer.length >= _frameSize) {
+      processAudioFrame(
+        Float32List.fromList(_sampleBuffer.sublist(0, _frameSize)),
+      );
+      _sampleBuffer.removeRange(0, _frameSize);
     }
   }
 
   /// Releases the native handle and closes [chordStream].
   void dispose() {
+    _audioSub?.cancel();
+    _audioSub = null;
+    _recorder.stop().ignore();
+    _recorder.dispose();
+    _sampleBuffer.clear();
     _nativeDestroy(_handle);
     malloc.free(_persistentBuffer);
     _controller.close();
+    _pitchController.close();
   }
+
 }

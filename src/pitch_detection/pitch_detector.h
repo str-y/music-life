@@ -2,6 +2,7 @@
 
 #include "yin.h"
 
+#include <atomic>
 #include <memory>
 
 namespace music_life {
@@ -62,14 +63,16 @@ public:
 private:
     int   sample_rate_;
     int   frame_size_;
-    float reference_pitch_hz_;
+    std::atomic<float> reference_pitch_hz_;
     std::unique_ptr<Yin> yin_;
 
+    std::atomic<bool>  reset_pending_;  ///< Set by reset(); consumed lock-free by process()
     std::vector<float> ring_buffer_;
     std::vector<float> frame_buffer_;
     std::vector<float> yin_workspace_;
     int                write_pos_;
     int                samples_ready_;
+    int                samples_since_last_process_;
 
     Result last_result_;
 
