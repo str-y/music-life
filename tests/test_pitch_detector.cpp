@@ -368,6 +368,34 @@ static bool test_ffi_process_zero_num_samples() {
     return true;
 }
 
+static bool test_ffi_create_invalid_sample_rate_returns_null() {
+    // ml_pitch_detector_create must return nullptr (and log to stderr) when
+    // an invalid sample_rate causes the PitchDetector constructor to throw.
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(0, 2048, 0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    return true;
+}
+
+static bool test_ffi_create_invalid_frame_size_returns_null() {
+    // ml_pitch_detector_create must return nullptr (and log to stderr) when
+    // an invalid frame_size causes the PitchDetector constructor to throw.
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 1, 0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    return true;
+}
+
+static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
+    // ml_pitch_detector_set_reference_pitch must return 0 (and log to stderr)
+    // when the value is outside the valid [430, 450] Hz range.
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 440.0f) == 1); // valid: within range
+    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 400.0f) == 0); // invalid: too low
+    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 500.0f) == 0); // invalid: too high
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -392,6 +420,9 @@ int main() {
     run_test("ffi: process null samples is safe",   test_ffi_process_null_samples);
     run_test("ffi: process zero num_samples safe",  test_ffi_process_zero_num_samples);
     run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
+    run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
+    run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
+    run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
 
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
