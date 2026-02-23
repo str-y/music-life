@@ -387,17 +387,21 @@ class _WaveformViewState extends State<_WaveformView>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: AnimatedBuilder(
-        animation: _breathCtrl,
-        builder: (_, __) => CustomPaint(
-          painter: _WaveformPainter(
-            data: widget.data,
-            color: widget.color,
-            breathPhase: _breathCtrl.value,
+    return Semantics(
+      label: 'Visual waveform representation of the recording',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 48,
+        child: AnimatedBuilder(
+          animation: _breathCtrl,
+          builder: (_, __) => CustomPaint(
+            painter: _WaveformPainter(
+              data: widget.data,
+              color: widget.color,
+              breathPhase: _breathCtrl.value,
+            ),
+            size: Size.infinite,
           ),
-          size: Size.infinite,
         ),
       ),
     );
