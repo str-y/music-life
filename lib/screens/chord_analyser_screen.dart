@@ -60,6 +60,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
     _timer = Timer.periodic(
       const Duration(seconds: _demoIntervalSeconds),
       (_) {
+        if (!mounted) return;
         _demoIndex = (_demoIndex + 1) % _demoChords.length;
         final next = _demoChords[_demoIndex];
         setState(() {
