@@ -1,0 +1,2 @@
+/usr/bin/ar qc libpitch_detection.a CMakeFiles/pitch_detection.dir/src/pitch_detection/yin.cpp.o CMakeFiles/pitch_detection.dir/src/pitch_detection/pitch_detector.cpp.o
+/usr/bin/ranlib libpitch_detection.a
