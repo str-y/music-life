@@ -200,13 +200,29 @@ class _RhythmScreenState extends State<RhythmScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // BPM display
-          Text(
-            '$_bpm',
-            style: TextStyle(
-              fontSize: 96,
-              fontWeight: FontWeight.bold,
-              color: cs.primary,
-              letterSpacing: -4,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -0.3),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
+                child: child,
+              ),
+            ),
+            child: Text(
+              '$_bpm',
+              key: ValueKey(_bpm),
+              style: TextStyle(
+                fontSize: 96,
+                fontWeight: FontWeight.bold,
+                color: cs.primary,
+                letterSpacing: -4,
+              ),
             ),
           ),
           const Text(
@@ -433,14 +449,25 @@ class _GrooveTargetPainter extends CustomPainter {
       canvas.drawCircle(center, maxRadius * i / 3, ringPaint);
     }
 
-    // Beat pulse: expanding ring that fades out.
+    // Beat pulse: expanding ring that grows from center to edge and fades out.
     if (isPlaying && beatPhase > 0) {
-      final pulseRadius = maxRadius * 0.3 * beatPhase;
+      final pulseRadius = maxRadius * (0.1 + 0.9 * beatPhase);
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = primaryColor.withValues(alpha: (1 - beatPhase) * 200 / 255);
+        ..strokeWidth = 3.5
+        ..color = primaryColor.withValues(alpha: (1 - beatPhase) * 220 / 255);
       canvas.drawCircle(center, pulseRadius, pulsePaint);
+      // Inner flash fill at the very start of each beat.
+      if (beatPhase < 0.25) {
+        final flashOpacity = (1 - beatPhase / 0.25) * 40 / 255;
+        canvas.drawCircle(
+          center,
+          maxRadius * 0.3 * (beatPhase / 0.25),
+          Paint()
+            ..style = PaintingStyle.fill
+            ..color = primaryColor.withValues(alpha: flashOpacity),
+        );
+      }
     }
 
     // Center dot.
