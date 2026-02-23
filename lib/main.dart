@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'rhythm_screen.dart';
+
 const String _appTitle = 'Music Life';
 
 void main() {
@@ -64,6 +66,21 @@ class MainScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('練習ログ機能は準備中です')),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.av_timer),
+              title: const Text('リズム & メトロノーム'),
+              subtitle: const Text('メトロノームとグルーヴ解析'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const RhythmScreen(),
+                ),
               ),
             ),
           ),
