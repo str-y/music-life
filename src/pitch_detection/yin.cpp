@@ -97,7 +97,8 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
 // ---------------------------------------------------------------------------
 
 float Yin::detect(const float* samples, std::vector<float>& workspace) {
-    workspace.assign(half_buffer_, 0.0f);
+    workspace.resize(half_buffer_);
+    std::fill(workspace.begin(), workspace.end(), 0.0f);
     difference(samples, workspace);
     cmndf(workspace);
 
