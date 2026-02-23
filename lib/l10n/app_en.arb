@@ -246,19 +246,19 @@
     "description": "Title of the Chord Analyser screen"
   },
 
-  "chordAnalyserSubtitle": "Analyze and display chords in real-time",
+  "chordAnalyserSubtitle": "Detect and display notes in real-time (monophonic)",
   "@chordAnalyserSubtitle": {
     "description": "Subtitle for the Chord Analyser card on the main screen"
   },
 
-  "currentChord": "Current Chord",
+  "currentChord": "Detected Note",
   "@currentChord": {
-    "description": "Label above the current chord display"
+    "description": "Label above the currently detected note display"
   },
 
-  "chordHistory": "Chord progression history",
+  "chordHistory": "Note history",
   "@chordHistory": {
-    "description": "Section header for the chord history timeline"
+    "description": "Section header for the detected note history timeline"
   },
 
   "noChordHistory": "No history yet",

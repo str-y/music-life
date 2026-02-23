@@ -86,45 +86,17 @@ class PitchResult {
   final int midiNote;
 }
 
-// ── Chord inference ───────────────────────────────────────────────────────────
-
-const _kNoteNames = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-];
-
-// Pitch classes (relative to C) that belong to the C-major diatonic scale.
-const _kMajorScale = {0, 2, 4, 5, 7, 9, 11};
-
-// Diatonic degrees that carry a minor quality (D, E, A).
-const _kMinorDegrees = {2, 4, 9};
-
-// Pitch class of B, which receives a half-diminished (m7♭5) label.
-const _kHalfDiminishedDegree = 11;
-
-/// Derives a chord label from a single detected MIDI note.
-///
-/// This is a simplified heuristic mapping suitable for monophonic pitch
-/// detection.  Diatonic-scale notes map to maj7 or m7 chords; chromatic
-/// notes map to dominant-7 chords.  Replace with a polyphonic
-/// chord-detection algorithm when multi-note analysis is available.
-String _deriveChordLabel(int midiNote) {
-  final noteClass = midiNote % 12;
-  final root = _kNoteNames[noteClass];
-
-  if (noteClass == _kHalfDiminishedDegree) return '${root}m7♭5'; // B → half-diminished
-  if (_kMajorScale.contains(noteClass)) {
-    return _kMinorDegrees.contains(noteClass) ? '${root}m7' : '${root}maj7';
-  }
-  return '${root}7'; // chromatic → dominant 7
-}
-
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
 /// Bridges the native C++ pitch-detection engine to a Dart [Stream].
 ///
 /// Create one instance per active recording session.  Feed audio frames via
 /// [processAudioFrame] (called by the platform audio-capture layer), and
-/// listen to [chordStream] to receive chord labels in real time.
+/// listen to [chordStream] to receive detected note names in real time.
+///
+/// **Note:** This bridge performs monophonic pitch detection only.  The
+/// [chordStream] emits scientific note names (e.g. "A4") for the dominant
+/// fundamental frequency; no polyphonic chord analysis is performed.
 ///
 /// Call [dispose] when done to release the native handle and close the stream.
 class NativePitchBridge {
@@ -154,7 +126,9 @@ class NativePitchBridge {
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
 
-  /// Emits a chord label each time the native engine detects a pitched note.
+  /// Emits the detected note name (e.g. "A4") each time the native engine
+  /// detects a pitched note.  This is a monophonic note label; no chord
+  /// inference is performed.
   Stream<String> get chordStream => _controller.stream;
 
   final StreamController<PitchResult> _pitchController =
@@ -211,7 +185,7 @@ class NativePitchBridge {
 
   /// Feed a frame of 32-bit float PCM samples to the native pitch detector.
   ///
-  /// If the engine identifies a pitched note, the corresponding chord label
+  /// If the engine identifies a pitched note, the detected note name
   /// is emitted on [chordStream].
   void processAudioFrame(Float32List samples) {
     assert(
@@ -225,7 +199,6 @@ class NativePitchBridge {
     _persistentBuffer.asTypedList(samples.length).setAll(0, samples);
     final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
     if (result.pitched != 0) {
-      _controller.add(_deriveChordLabel(result.midiNote));
       // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
       final bytes = <int>[];
       for (int i = 0; i < 8; i++) {
@@ -233,8 +206,10 @@ class NativePitchBridge {
         if (b == 0) break;
         bytes.add(b);
       }
+      final noteName = String.fromCharCodes(bytes);
+      _controller.add(noteName);
       _pitchController.add(PitchResult(
-        noteName: String.fromCharCodes(bytes),
+        noteName: noteName,
         frequency: result.frequency,
         centsOffset: result.centsOffset,
         midiNote: result.midiNote,
