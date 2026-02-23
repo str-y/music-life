@@ -2,75 +2,46 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-/// Demo chord sequence used to simulate real-time chord detection.
-/// In production this would be driven by the native pitch-detection engine
-/// via FFI / platform channels.
-const List<String> _demoChords = [
-  'Cmaj7',
-  'Am7',
-  'Fmaj7',
-  'G7',
-  'Em7',
-  'A7',
-  'Dm7',
-  'G7',
-  'Cmaj7',
-  'E7',
-  'Am7',
-  'D7',
-];
-
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
-/// How often (in seconds) the demo advances to the next chord.
-const int _demoIntervalSeconds = 2;
-
 class ChordAnalyserScreen extends StatefulWidget {
-  const ChordAnalyserScreen({super.key});
+  const ChordAnalyserScreen({super.key, required this.chordStream});
+
+  /// Stream of chord labels emitted by the native pitch-detection engine.
+  final Stream<String> chordStream;
 
   @override
   State<ChordAnalyserScreen> createState() => _ChordAnalyserScreenState();
 }
 
 class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
-  /// The chord currently being "heard".
-  String _currentChord = _demoChords.first;
+  /// The chord currently being detected.
+  String _currentChord = '---';
 
   /// Ordered list of recently detected chords (newest first).
   final List<_ChordEntry> _history = [];
 
-  Timer? _timer;
-  int _demoIndex = 0;
+  StreamSubscription<String>? _subscription;
 
   @override
   void initState() {
     super.initState();
-    _history.add(_ChordEntry(chord: _currentChord, time: DateTime.now()));
-    _startDemoTimer();
+    _subscription = widget.chordStream.listen((chord) {
+      setState(() {
+        _currentChord = chord;
+        _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
+        if (_history.length > _maxHistory) {
+          _history.removeLast();
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _subscription?.cancel();
     super.dispose();
-  }
-
-  void _startDemoTimer() {
-    _timer = Timer.periodic(
-      const Duration(seconds: _demoIntervalSeconds),
-      (_) {
-        _demoIndex = (_demoIndex + 1) % _demoChords.length;
-        final next = _demoChords[_demoIndex];
-        setState(() {
-          _currentChord = next;
-          _history.insert(0, _ChordEntry(chord: next, time: DateTime.now()));
-          if (_history.length > _maxHistory) {
-            _history.removeLast();
-          }
-        });
-      },
-    );
   }
 
   @override
