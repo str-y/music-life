@@ -286,9 +286,30 @@ static bool test_ffi_set_reference_pitch() {
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// Driver
-// ---------------------------------------------------------------------------
+static bool test_pd_hop_size_skips_processing() {
+    // After a full frame is processed, feeding fewer than hop_size (frame_size/2)
+    // new samples must NOT trigger another YIN run.
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    PitchDetector pd(SR, FRAME);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 440.0f, SR);
+
+    // First full frame → detection fires
+    PitchDetector::Result r1 = pd.process(buf.data(), FRAME);
+    ASSERT_TRUE(r1.pitched);
+
+    // Feed silence just below the hop threshold (1023 < 1024)
+    std::vector<float> silence(FRAME / 2 - 1, 0.0f);
+    PitchDetector::Result r2 = pd.process(silence.data(), FRAME / 2 - 1);
+    // YIN must NOT have re-run; stale result is returned unchanged
+    ASSERT_TRUE(r2.pitched);
+    ASSERT_NEAR(r2.frequency, r1.frequency, 0.01f);
+    return true;
+}
+
+
 
 int main() {
     run_test("yin: detects A4 sine",                test_yin_sine_a4);
@@ -305,6 +326,8 @@ int main() {
     run_test("pd:  supports A4=432 reference",      test_pd_reference_pitch_a4_432);
     run_test("ffi: A4 process bridge",              test_ffi_process_a4);
     run_test("ffi: set reference pitch",            test_ffi_set_reference_pitch);
+
+    run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
