@@ -45,11 +45,6 @@ class PitchDetector(
         }
     }
 
-    @Suppress("deprecation")
-    protected fun finalize() {
-        close()
-    }
-
     private external fun nativeCreate(
         sampleRate: Int,
         frameSize: Int,

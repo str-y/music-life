@@ -27,10 +27,14 @@
                         format:inputFormat
                          block:^(AVAudioPCMBuffer* buffer, AVAudioTime* when) {
         (void)when;
-        if (!handler || !buffer.floatChannelData || buffer.frameLength == 0) {
+        if (!handler || !buffer.floatChannelData || buffer.format.channelCount == 0 || buffer.frameLength == 0) {
             return;
         }
-        handler(buffer.floatChannelData[0], buffer.frameLength);
+        const float* channelData = buffer.floatChannelData[0];
+        if (!channelData) {
+            return;
+        }
+        handler(channelData, buffer.frameLength);
     }];
 
     [self.engine prepare];
