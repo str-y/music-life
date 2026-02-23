@@ -1,5 +1,6 @@
 #pragma once
 
+#include <complex>
 #include <vector>
 
 namespace music_life {
@@ -43,8 +44,15 @@ private:
     int   buffer_size_;
     float threshold_;
     int   half_buffer_;
+    int   fft_size_;
 
     float probability_;
+
+    // Pre-allocated scratch buffers for difference() – avoids per-call
+    // heap allocations in the real-time audio path.
+    mutable std::vector<std::complex<float>> fft_F_;
+    mutable std::vector<std::complex<float>> fft_G_;
+    mutable std::vector<float>               sq_prefix_;
 
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;

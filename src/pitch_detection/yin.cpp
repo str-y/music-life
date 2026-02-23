@@ -53,6 +53,16 @@ void ifft_inplace(std::vector<std::complex<float>>& x) {
 } // anonymous namespace
 
 // ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+static int compute_fft_size(int buffer_size) {
+    int s = 1;
+    while (s < 2 * buffer_size) s <<= 1;
+    return s;
+}
+
+// ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
 
@@ -61,7 +71,11 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
     , buffer_size_(buffer_size)
     , threshold_(threshold)
     , half_buffer_(buffer_size / 2)
+    , fft_size_(compute_fft_size(buffer_size))
     , probability_(0.0f)
+    , fft_F_(fft_size_, {0.0f, 0.0f})
+    , fft_G_(fft_size_, {0.0f, 0.0f})
+    , sq_prefix_(buffer_size + 1, 0.0f)
 {}
 
 // ---------------------------------------------------------------------------
@@ -99,35 +113,34 @@ float Yin::detect(const float* samples, std::vector<float>& workspace) {
 void Yin::difference(const float* samples, std::vector<float>& df) const {
     const int W = half_buffer_;
 
-    // FFT size: next power of two that is >= 2 * buffer_size to prevent
-    // circular aliasing in the cross-correlation.
-    int fft_size = 1;
-    while (fft_size < 2 * buffer_size_) fft_size <<= 1;
+    // Re-use pre-allocated buffers.  The full fft_size_ range must be zeroed
+    // because after fft_inplace / ifft_inplace every element is written, so
+    // residual values from the previous call would corrupt the zero-padding.
+    std::fill(fft_F_.begin(), fft_F_.end(), std::complex<float>{0.0f, 0.0f});
+    std::fill(fft_G_.begin(), fft_G_.end(), std::complex<float>{0.0f, 0.0f});
 
-    // f = x[0..W-1], zero-padded to fft_size
-    std::vector<std::complex<float>> F(fft_size, {0.0f, 0.0f});
-    for (int j = 0; j < W; ++j) F[j] = {samples[j], 0.0f};
+    // f = x[0..W-1], zero-padded to fft_size_
+    for (int j = 0; j < W; ++j) fft_F_[j] = {samples[j], 0.0f};
 
-    // g = x[0..buffer_size-1], zero-padded to fft_size
-    std::vector<std::complex<float>> G(fft_size, {0.0f, 0.0f});
-    for (int j = 0; j < buffer_size_; ++j) G[j] = {samples[j], 0.0f};
+    // g = x[0..buffer_size_-1], zero-padded to fft_size_
+    for (int j = 0; j < buffer_size_; ++j) fft_G_[j] = {samples[j], 0.0f};
 
-    fft_inplace(F);
-    fft_inplace(G);
+    fft_inplace(fft_F_);
+    fft_inplace(fft_G_);
 
     // Cross-correlation in frequency domain: conj(F) * G
-    for (int i = 0; i < fft_size; ++i) F[i] = std::conj(F[i]) * G[i];
-    ifft_inplace(F);  // F[tau].real() == r(tau)
+    for (int i = 0; i < fft_size_; ++i) fft_F_[i] = std::conj(fft_F_[i]) * fft_G_[i];
+    ifft_inplace(fft_F_);  // fft_F_[tau].real() == r(tau)
 
     // Prefix sums of squares for A and B(tau)
-    std::vector<float> sq_prefix(buffer_size_ + 1, 0.0f);
+    sq_prefix_[0] = 0.0f;
     for (int j = 0; j < buffer_size_; ++j)
-        sq_prefix[j + 1] = sq_prefix[j] + samples[j] * samples[j];
+        sq_prefix_[j + 1] = sq_prefix_[j] + samples[j] * samples[j];
 
-    const float A = sq_prefix[W];
+    const float A = sq_prefix_[W];
     for (int tau = 0; tau < W; ++tau) {
-        const float B_tau = sq_prefix[tau + W] - sq_prefix[tau];
-        const float r_tau = F[tau].real();
+        const float B_tau = sq_prefix_[tau + W] - sq_prefix_[tau];
+        const float r_tau = fft_F_[tau].real();
         df[tau] = A + B_tau - 2.0f * r_tau;
     }
 }
