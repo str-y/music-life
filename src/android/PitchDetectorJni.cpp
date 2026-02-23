@@ -110,6 +110,12 @@ Java_com_musiclife_PitchDetector_nativeProcess(
     FloatArrayGuard sampleGuard{env, samples, env->GetFloatArrayElements(samples, nullptr)};
     if (!sampleGuard.data) return;
 
+    jsize arrayLength = env->GetArrayLength(samples);
+    if (static_cast<jsize>(numSamples) > arrayLength) {
+        throwRuntimeException(env, "numSamples exceeds array length");
+        return;
+    }
+
     music_life::PitchDetector::Result result{};
     try {
         result = detector->process(sampleGuard.data, static_cast<int>(numSamples));
