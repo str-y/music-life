@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'native_pitch_bridge.dart';
@@ -264,6 +265,30 @@ class _MainScreenState extends State<MainScreen>
                   subtitle: const Text('リアルタイムでコードを解析・表示'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
+                    final status = await Permission.microphone.request();
+                    if (!context.mounted) return;
+                    if (status.isPermanentlyDenied) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'マイクのアクセスが拒否されています。設定から許可してください。',
+                          ),
+                          action: SnackBarAction(
+                            label: '設定を開く',
+                            onPressed: openAppSettings,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    if (!status.isGranted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('マイクへのアクセス許可が必要です。'),
+                        ),
+                      );
+                      return;
+                    }
                     final bridge = NativePitchBridge();
                     final hasPermission = await bridge.startCapture();
                     if (!hasPermission) {
