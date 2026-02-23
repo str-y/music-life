@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'screens/library_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
+import 'screens/library_screen.dart';
 
 const String _appTitle = 'Music Life';
 
@@ -83,6 +83,13 @@ class MainScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const LibraryScreen(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
               leading: const Icon(Icons.av_timer),
               title: const Text('リズム & メトロノーム'),
               subtitle: const Text('メトロノームとグルーヴ解析'),
@@ -105,6 +112,20 @@ class MainScreen extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const ChordAnalyserScreen(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.rule),
+              title: const Text('不足している実装'),
+              subtitle: const Text('現在のアプリで未対応の機能一覧'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const MissingImplementationsScreen(),
                 ),
               ),
             ),
@@ -146,6 +167,35 @@ class TunerScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class MissingImplementationsScreen extends StatelessWidget {
+  const MissingImplementationsScreen({super.key});
+
+  static const List<String> _items = <String>[
+    'チューナー: マイク入力によるリアルタイム検出',
+    '練習ログ: 練習時間・メモの保存',
+    'ライブラリ: 録音データの永続化と実音声の再生',
+    'コード解析: デモ表示ではなくネイティブ解析への接続',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('不足している実装')),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: const Icon(Icons.checklist),
+            title: Text(_items[index]),
+          );
+        },
       ),
     );
   }
