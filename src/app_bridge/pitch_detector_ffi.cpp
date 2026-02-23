@@ -20,6 +20,7 @@ MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size,
 }
 
 void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) {
+    if (!handle) return;
     delete handle;
 }
 
