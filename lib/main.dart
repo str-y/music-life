@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'rhythm_screen.dart';
+import 'screens/chord_analyser_screen.dart';
 
 const String _appTitle = 'Music Life';
 
@@ -82,6 +83,20 @@ class MainScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute<void>(
                   builder: (_) => const RhythmScreen(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.piano),
+              title: const Text('コード解析'),
+              subtitle: const Text('リアルタイムでコードを解析・表示'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ChordAnalyserScreen(),
                 ),
               ),
             ),
