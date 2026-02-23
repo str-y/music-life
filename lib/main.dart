@@ -265,6 +265,22 @@ class _MainScreenState extends State<MainScreen>
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     final bridge = NativePitchBridge();
+                    final hasPermission = await bridge.startCapture();
+                    if (!hasPermission) {
+                      bridge.dispose();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('マイクへのアクセス許可が必要です'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    if (!context.mounted) {
+                      bridge.dispose();
+                      return;
+                    }
                     // Await the route so we can dispose the bridge only after
                     // the screen's own dispose() has already cancelled the
                     // subscription.
