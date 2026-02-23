@@ -17,6 +17,7 @@ class PitchDetector(
     )
 
     private var nativeHandle: Long = nativeCreate(sampleRate, frameSize, threshold, referencePitchHz)
+    private val resultBuffer = FloatArray(5)
 
     init {
         require(nativeHandle != 0L) { "Failed to create native PitchDetector" }
@@ -26,8 +27,14 @@ class PitchDetector(
         if (samples.isEmpty()) {
             return Result(false, 0.0f, 0.0f, 0, 0.0f)
         }
-        return nativeProcess(nativeHandle, samples, samples.size)
-            ?: Result(false, 0.0f, 0.0f, 0, 0.0f)
+        nativeProcess(nativeHandle, samples, samples.size, resultBuffer)
+        return Result(
+            pitched     = resultBuffer[0] != 0.0f,
+            frequency   = resultBuffer[1],
+            probability = resultBuffer[2],
+            midiNote    = resultBuffer[3].toInt(),
+            centsOffset = resultBuffer[4],
+        )
     }
 
     fun reset() {
@@ -55,7 +62,7 @@ class PitchDetector(
     private external fun nativeDestroy(handle: Long)
     private external fun nativeReset(handle: Long)
     private external fun nativeSetReferencePitch(handle: Long, referencePitchHz: Float): Boolean
-    private external fun nativeProcess(handle: Long, samples: FloatArray, numSamples: Int): Result?
+    private external fun nativeProcess(handle: Long, samples: FloatArray, numSamples: Int, result: FloatArray)
 
     companion object {
         init {
