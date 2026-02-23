@@ -72,6 +72,7 @@ private:
     std::vector<float> yin_workspace_;
     int                write_pos_;
     int                samples_ready_;
+    int                samples_since_last_process_;
 
     Result last_result_;
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
@@ -7,6 +9,8 @@ import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 
 const String _appTitle = 'Music Life';
+const String _privacyPolicyUrl =
+    'https://str-y.github.io/music-life/privacy-policy';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -286,7 +290,47 @@ class _MainScreenState extends State<MainScreen>
                   subtitle: const Text('リアルタイムでコードを解析・表示'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
+                    final status = await Permission.microphone.request();
+                    if (!context.mounted) return;
+                    if (status.isPermanentlyDenied) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'マイクのアクセスが拒否されています。設定から許可してください。',
+                          ),
+                          action: SnackBarAction(
+                            label: '設定を開く',
+                            onPressed: openAppSettings,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    if (!status.isGranted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('マイクへのアクセス許可が必要です。'),
+                        ),
+                      );
+                      return;
+                    }
                     final bridge = NativePitchBridge();
+                    final hasPermission = await bridge.startCapture();
+                    if (!hasPermission) {
+                      bridge.dispose();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('マイクへのアクセス許可が必要です'),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    if (!context.mounted) {
+                      bridge.dispose();
+                      return;
+                    }
                     // Await the route so we can dispose the bridge only after
                     // the screen's own dispose() has already cancelled the
                     // subscription.
@@ -454,6 +498,26 @@ class _SettingsModalState extends State<_SettingsModal> {
             label: '${_local.referencePitch.round()} Hz',
             value: _local.referencePitch,
             onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 32),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('プライバシーポリシー'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () async {
+              final uri = Uri.parse(_privacyPolicyUrl);
+              if (!await launchUrl(uri,
+                  mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('プライバシーポリシーを開けませんでした')),
+                  );
+                }
+              }
+            },
           ),
           const SizedBox(height: 8),
         ],
