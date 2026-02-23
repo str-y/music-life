@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <memory>
-#include <string>
 
 namespace music_life {
 
@@ -29,7 +28,7 @@ public:
         float probability;    ///< Confidence [0, 1]
         int   midi_note;      ///< Closest MIDI note number (0–127)
         float cents_offset;   ///< Offset from the nearest semitone in cents [-50, 50]
-        std::string note_name; ///< e.g. "A4", "C#3"
+        const char* note_name; ///< e.g. "A4", "C#3"
     };
 
     /**
@@ -79,7 +78,7 @@ private:
     int   frequency_to_midi(float frequency) const;
     float midi_to_frequency(int midi_note) const;
     static float cents_between(float f1, float f2);
-    static std::string midi_to_note_name(int midi_note);
+    static const char* midi_to_note_name(int midi_note);
 };
 
 } // namespace music_life
