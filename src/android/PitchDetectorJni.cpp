@@ -1,14 +1,11 @@
 #include "../pitch_detection/pitch_detector.h"
 
 #include <jni.h>
-#include <mutex>
 
 namespace {
 
 jclass gResultClass = nullptr;
 jmethodID gResultCtor = nullptr;
-std::once_flag gResultClassInitFlag;
-std::once_flag gResultCtorInitFlag;
 
 music_life::PitchDetector* fromHandle(jlong handle) {
     if (handle == 0) return nullptr;
@@ -22,26 +19,23 @@ void throwRuntimeException(JNIEnv* env, const char* message) {
     env->DeleteLocalRef(exceptionClass);
 }
 
-jclass getResultClass(JNIEnv* env) {
-    std::call_once(gResultClassInitFlag, [&]() {
-        jclass localClass = env->FindClass("com/musiclife/PitchDetector$Result");
-        if (!localClass) return;
-        gResultClass = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
-        env->DeleteLocalRef(localClass);
-    });
-    return gResultClass;
-}
-
-jmethodID getResultCtor(JNIEnv* env) {
-    std::call_once(gResultCtorInitFlag, [&]() {
-        jclass resultClass = getResultClass(env);
-        if (!resultClass) return;
-        gResultCtor = env->GetMethodID(resultClass, "<init>", "(ZFFIF)V");
-    });
-    return gResultCtor;
-}
-
 } // namespace
+
+extern "C" JNIEXPORT jint JNICALL
+JNI_OnLoad(JavaVM* vm, void* /* reserved */) {
+    JNIEnv* env = nullptr;
+    if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK || !env) {
+        return JNI_ERR;
+    }
+    jclass localClass = env->FindClass("com/musiclife/PitchDetector$Result");
+    if (!localClass) return JNI_ERR;
+    gResultClass = reinterpret_cast<jclass>(env->NewGlobalRef(localClass));
+    env->DeleteLocalRef(localClass);
+    if (!gResultClass) return JNI_ERR;
+    gResultCtor = env->GetMethodID(gResultClass, "<init>", "(ZFFIF)V");
+    if (!gResultCtor) return JNI_ERR;
+    return JNI_VERSION_1_6;
+}
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_musiclife_PitchDetector_nativeCreate(
@@ -132,13 +126,11 @@ Java_com_musiclife_PitchDetector_nativeProcess(
         return nullptr;
     }
 
-    jclass resultClass = getResultClass(env);
-    jmethodID ctor = getResultCtor(env);
-    if (!ctor) return nullptr;
+    if (!gResultClass || !gResultCtor) return nullptr;
 
     return env->NewObject(
-        resultClass,
-        ctor,
+        gResultClass,
+        gResultCtor,
         result.pitched ? JNI_TRUE : JNI_FALSE,
         result.frequency,
         result.probability,
