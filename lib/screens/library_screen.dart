@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -34,10 +36,12 @@ class PracticeLogEntry {
   const PracticeLogEntry({
     required this.date,
     required this.durationMinutes,
+    this.memo = '',
   });
 
   final DateTime date;
   final int durationMinutes;
+  final String memo;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +53,7 @@ List<double> _fakeWaveform(int seed, int count) {
   return List.generate(count, (_) => 0.15 + rng.nextDouble() * 0.85);
 }
 
-final _sampleRecordings = <RecordingEntry>[
+final appRecordings = <RecordingEntry>[
   RecordingEntry(
     id: '1',
     title: '練習セッション',
@@ -87,12 +91,12 @@ final _sampleRecordings = <RecordingEntry>[
   ),
 ];
 
-final _sampleLogs = <PracticeLogEntry>[
-  PracticeLogEntry(date: DateTime(2026, 2, 23), durationMinutes: 45),
-  PracticeLogEntry(date: DateTime(2026, 2, 22), durationMinutes: 60),
-  PracticeLogEntry(date: DateTime(2026, 2, 20), durationMinutes: 30),
-  PracticeLogEntry(date: DateTime(2026, 2, 18), durationMinutes: 75),
-  PracticeLogEntry(date: DateTime(2026, 2, 15), durationMinutes: 90),
+final appPracticeLogs = <PracticeLogEntry>[
+  PracticeLogEntry(date: DateTime(2026, 2, 23), durationMinutes: 45, memo: 'ロングトーン'),
+  PracticeLogEntry(date: DateTime(2026, 2, 22), durationMinutes: 60, memo: 'スケール'),
+  PracticeLogEntry(date: DateTime(2026, 2, 20), durationMinutes: 30, memo: 'コード進行'),
+  PracticeLogEntry(date: DateTime(2026, 2, 18), durationMinutes: 75, memo: '耳コピ'),
+  PracticeLogEntry(date: DateTime(2026, 2, 15), durationMinutes: 90, memo: 'テンポ練習'),
   PracticeLogEntry(date: DateTime(2026, 2, 12), durationMinutes: 40),
   PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 55),
   PracticeLogEntry(date: DateTime(2026, 2, 8), durationMinutes: 30),
@@ -115,6 +119,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  int _recordingCounter = appRecordings.length;
 
   @override
   void initState() {
@@ -133,6 +138,28 @@ class _LibraryScreenState extends State<LibraryScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('ライブラリ'),
+        actions: [
+          IconButton(
+            tooltip: '録音を保存',
+            icon: const Icon(Icons.fiber_manual_record),
+            onPressed: () {
+              if (_tabController.index != 0) return;
+              setState(() {
+                _recordingCounter++;
+                appRecordings.insert(
+                  0,
+                  RecordingEntry(
+                    id: 'rec_$_recordingCounter',
+                    title: '新規録音 $_recordingCounter',
+                    recordedAt: DateTime.now(),
+                    durationSeconds: 120 + (_recordingCounter % 180),
+                    waveformData: _fakeWaveform(_recordingCounter, 40),
+                  ),
+                );
+              });
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -144,8 +171,8 @@ class _LibraryScreenState extends State<LibraryScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _RecordingsTab(recordings: _sampleRecordings),
-          _LogTab(logs: _sampleLogs),
+          _RecordingsTab(recordings: appRecordings),
+          _LogTab(logs: appPracticeLogs),
         ],
       ),
     );
@@ -167,11 +194,57 @@ class _RecordingsTab extends StatefulWidget {
 
 class _RecordingsTabState extends State<_RecordingsTab> {
   String? _playingId;
+  double _positionRatio = 0;
+  DateTime? _playbackStart;
+  Duration _playbackDuration = Duration.zero;
+  Timer? _progressTicker;
+
+  void _startProgressTicker() {
+    _progressTicker?.cancel();
+    _progressTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted || _playingId == null || _playbackStart == null) return;
+      final elapsed = DateTime.now().difference(_playbackStart!);
+      final nextRatio = _playbackDuration.inMilliseconds <= 0
+          ? 0.0
+          : (elapsed.inMilliseconds / _playbackDuration.inMilliseconds).clamp(0, 1);
+      if (nextRatio >= 1) {
+        setState(() {
+          _playingId = null;
+          _positionRatio = 0;
+          _playbackStart = null;
+        });
+        _progressTicker?.cancel();
+        return;
+      }
+      setState(() {
+        _positionRatio = nextRatio;
+      });
+    });
+  }
 
   void _togglePlayback(String id) {
+    final selected = widget.recordings.firstWhere((entry) => entry.id == id);
     setState(() {
-      _playingId = (_playingId == id) ? null : id;
+      if (_playingId == id) {
+        _playingId = null;
+        _positionRatio = 0;
+        _playbackStart = null;
+        _progressTicker?.cancel();
+        return;
+      }
+      _playingId = id;
+      _positionRatio = 0;
+      _playbackStart = DateTime.now();
+      _playbackDuration = Duration(seconds: selected.durationSeconds);
     });
+    _startProgressTicker();
+    SystemSound.play(SystemSoundType.click);
+  }
+
+  @override
+  void dispose() {
+    _progressTicker?.cancel();
+    super.dispose();
   }
 
   @override
@@ -198,6 +271,7 @@ class _RecordingsTabState extends State<_RecordingsTab> {
         return _RecordingTile(
           entry: entry,
           isPlaying: isPlaying,
+          progress: isPlaying ? _positionRatio : 0,
           onPlayPause: () => _togglePlayback(entry.id),
         );
       },
@@ -209,11 +283,13 @@ class _RecordingTile extends StatelessWidget {
   const _RecordingTile({
     required this.entry,
     required this.isPlaying,
+    required this.progress,
     required this.onPlayPause,
   });
 
   final RecordingEntry entry;
   final bool isPlaying;
+  final double progress;
   final VoidCallback onPlayPause;
 
   String _formatDate(DateTime dt) {
@@ -254,10 +330,19 @@ class _RecordingTile extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
-          child: _WaveformView(
-            data: entry.waveformData,
-            isPlaying: isPlaying,
-            color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _WaveformView(
+                data: entry.waveformData,
+                isPlaying: isPlaying,
+                color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
+              ),
+              if (isPlaying) ...[
+                const SizedBox(height: 6),
+                LinearProgressIndicator(value: progress),
+              ],
+            ],
           ),
         ),
       ],

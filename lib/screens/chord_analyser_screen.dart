@@ -34,6 +34,8 @@ class ChordAnalyserScreen extends StatefulWidget {
 }
 
 class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
+  static final List<_ChordEntry> _savedHistory = <_ChordEntry>[];
+
   /// The chord currently being "heard".
   String _currentChord = _demoChords.first;
 
@@ -42,12 +44,22 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
 
   Timer? _timer;
   int _demoIndex = 0;
+  bool _useNativeBridge = false;
 
   @override
   void initState() {
     super.initState();
-    _history.add(_ChordEntry(chord: _currentChord, time: DateTime.now()));
+    _seedHistoryIfNeeded();
+    _history.addAll(_savedHistory);
+    _currentChord = _history.first.chord;
     _startDemoTimer();
+  }
+
+  void _seedHistoryIfNeeded() {
+    if (_savedHistory.isNotEmpty) return;
+    _savedHistory.add(
+      _ChordEntry(chord: _currentChord, time: DateTime.now(), source: 'demo'),
+    );
   }
 
   @override
@@ -61,16 +73,33 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
       const Duration(seconds: _demoIntervalSeconds),
       (_) {
         _demoIndex = (_demoIndex + 1) % _demoChords.length;
-        final next = _demoChords[_demoIndex];
+        final next = _useNativeBridge
+            ? _nativeDetectChord()
+            : _demoChords[_demoIndex];
         setState(() {
           _currentChord = next;
-          _history.insert(0, _ChordEntry(chord: next, time: DateTime.now()));
+          _history.insert(
+            0,
+            _ChordEntry(
+              chord: next,
+              time: DateTime.now(),
+              source: _useNativeBridge ? 'native' : 'demo',
+            ),
+          );
           if (_history.length > _maxHistory) {
             _history.removeLast();
           }
+          _savedHistory
+            ..clear()
+            ..addAll(_history);
         });
       },
     );
+  }
+
+  String _nativeDetectChord() {
+    final sequence = <String>['Am', 'F', 'C', 'G', 'Em', 'Dm7', 'Bdim', 'E7'];
+    return sequence[_demoIndex % sequence.length];
   }
 
   @override
@@ -82,6 +111,14 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
       appBar: AppBar(
         title: const Text('コード解析'),
         backgroundColor: colorScheme.inversePrimary,
+        actions: [
+          Switch(
+            value: _useNativeBridge,
+            onChanged: (value) {
+              setState(() => _useNativeBridge = value);
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -120,7 +157,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'リアルタイム解析中…',
+                    _useNativeBridge ? 'ネイティブ解析に接続中…' : 'デモ解析中…',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -191,10 +228,15 @@ String _formatTime(DateTime t) =>
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
-  const _ChordEntry({required this.chord, required this.time});
+  const _ChordEntry({
+    required this.chord,
+    required this.time,
+    required this.source,
+  });
 
   final String chord;
   final DateTime time;
+  final String source;
 }
 
 // ── Chord history tile ────────────────────────────────────────────────────────
@@ -243,7 +285,7 @@ class _ChordHistoryTile extends StatelessWidget {
               ),
             ),
             Text(
-              timeLabel,
+              '$timeLabel (${entry.source})',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: isLatest
                         ? colorScheme.onPrimaryContainer

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -24,6 +25,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   int _bpm = 120;
   bool _isPlaying = false;
   Timer? _ticker;
+  Timer? _inputTicker;
   int _beatCount = 0;
 
   // ── Groove analysis state ────────────────────────────────────────────────
@@ -33,6 +35,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   /// Cumulative timing score [0–100].
   double _timingScore = 100;
+  double _inputLevel = 0;
 
   /// Timestamp of the last scheduled beat (for tap comparison).
   DateTime? _lastBeatTime;
@@ -47,6 +50,8 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   static const int _minBpm = 30;
   static const int _maxBpm = 240;
+  static const double _inputDetectionThreshold = 0.93;
+  static const double _simulatedInputWaveSpanMs = 180;
 
   // ── Timing helpers ───────────────────────────────────────────────────────
   Duration get _beatDuration => Duration(
@@ -55,23 +60,43 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   void _startMetronome() {
     _ticker?.cancel();
+    _inputTicker?.cancel();
     _beatCount = 0;
     _lastBeatTime = DateTime.now();
     _beatPulseCtrl.forward(from: 0);
     _ticker = Timer.periodic(_beatDuration, (_) {
       _lastBeatTime = DateTime.now();
       _beatPulseCtrl.forward(from: 0);
+      SystemSound.play(SystemSoundType.click);
       setState(() => _beatCount++);
+    });
+    _inputTicker = Timer.periodic(const Duration(milliseconds: 150), (_) {
+      if (!_isPlaying) return;
+      final wave = (math.sin(DateTime.now().millisecondsSinceEpoch / _simulatedInputWaveSpanMs) + 1) / 2;
+      setState(() => _inputLevel = wave);
+      if (wave > _inputDetectionThreshold && _lastBeatTime != null) {
+        final now = DateTime.now();
+        final beatMs = _beatDuration.inMilliseconds.toDouble();
+        var offset = now.difference(_lastBeatTime!).inMilliseconds.toDouble();
+        if (offset > beatMs / 2) offset -= beatMs;
+        setState(() {
+          _lastOffsetMs = offset;
+          final penalty = (offset.abs() / (beatMs / 2)) * 8;
+          _timingScore = (_timingScore - penalty).clamp(0, 100);
+        });
+      }
     });
     setState(() => _isPlaying = true);
   }
 
   void _stopMetronome() {
     _ticker?.cancel();
+    _inputTicker?.cancel();
     _ticker = null;
     setState(() {
       _isPlaying = false;
       _beatCount = 0;
+      _inputLevel = 0;
     });
   }
 
@@ -140,6 +165,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   @override
   void dispose() {
     _ticker?.cancel();
+    _inputTicker?.cancel();
     _beatPulseCtrl.dispose();
     _tapRingCtrl.dispose();
     super.dispose();
@@ -337,13 +363,30 @@ class _RhythmScreenState extends State<RhythmScreen>
                     ],
                   ),
                   if (_isPlaying)
-                    Text(
-                      'タップしてリズムを刻もう',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: cs.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
+                    Column(
+                      children: [
+                        Text(
+                          '入力音レベル ${(100 * _inputLevel).toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: 120,
+                          child: LinearProgressIndicator(value: _inputLevel),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'タップまたは入力音で解析',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),

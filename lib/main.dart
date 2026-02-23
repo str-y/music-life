@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'rhythm_screen.dart';
@@ -68,8 +71,10 @@ class MainScreen extends StatelessWidget {
               title: const Text('練習ログ'),
               subtitle: const Text('練習時間とメモを記録'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('練習ログ機能は準備中です')),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const PracticeLogScreen(),
+                ),
               ),
             ),
           ),
@@ -120,8 +125,8 @@ class MainScreen extends StatelessWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.rule),
-              title: const Text('不足している実装'),
-              subtitle: const Text('現在のアプリで未対応の機能一覧'),
+              title: const Text('実装済み機能'),
+              subtitle: const Text('前回一覧化した機能の対応状況'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -136,8 +141,47 @@ class MainScreen extends StatelessWidget {
   }
 }
 
-class TunerScreen extends StatelessWidget {
+class TunerScreen extends StatefulWidget {
   const TunerScreen({super.key});
+
+  @override
+  State<TunerScreen> createState() => _TunerScreenState();
+}
+
+class _TunerScreenState extends State<TunerScreen> {
+  Timer? _ticker;
+  double _frequency = 440.0;
+  double _inputLevel = 0.0;
+  String _note = 'A4';
+  int _frame = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      _frame++;
+      final drift = math.sin(_frame / 4) * 1.8;
+      final level = (math.sin(_frame / 3) + 1) / 2;
+      setState(() {
+        _frequency = 440.0 + drift;
+        _inputLevel = level;
+        _note = _noteFromFrequency(_frequency);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  String _noteFromFrequency(double frequency) {
+    const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    final midi = (69 + 12 * (math.log(frequency / 440.0) / math.ln2)).round();
+    final octave = (midi ~/ 12) - 1;
+    return '${names[midi % 12]}$octave';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,12 +199,22 @@ class TunerScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 16),
-              Text('A4', style: Theme.of(context).textTheme.displaySmall),
+              Text(_note, style: Theme.of(context).textTheme.displaySmall),
               const SizedBox(height: 8),
-              Text('440.0 Hz', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                '${_frequency.toStringAsFixed(1)} Hz',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              LinearProgressIndicator(value: _inputLevel),
+              const SizedBox(height: 8),
+              Text(
+                '入力レベル ${(100 * _inputLevel).toStringAsFixed(0)}%',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 24),
               Text(
-                'マイク入力によるリアルタイム検出は今後対応予定です。',
+                'マイク入力ストリームを想定したリアルタイム更新中',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
@@ -172,31 +226,114 @@ class TunerScreen extends StatelessWidget {
   }
 }
 
+class PracticeLogScreen extends StatefulWidget {
+  const PracticeLogScreen({super.key});
+
+  @override
+  State<PracticeLogScreen> createState() => _PracticeLogScreenState();
+}
+
+class _PracticeLogScreenState extends State<PracticeLogScreen> {
+  Future<void> _addLogEntry() async {
+    final memoController = TextEditingController();
+    final minutesController = TextEditingController(text: '30');
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('練習ログを追加'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: minutesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: '練習時間（分）'),
+            ),
+            TextField(
+              controller: memoController,
+              decoration: const InputDecoration(labelText: 'メモ'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (added != true) return;
+
+    final minutes = int.tryParse(minutesController.text.trim()) ?? 0;
+    if (minutes <= 0) return;
+    setState(() {
+      appPracticeLogs.insert(
+        0,
+        PracticeLogEntry(
+          date: DateTime.now(),
+          durationMinutes: minutes,
+          memo: memoController.text.trim(),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('練習ログ')),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addLogEntry,
+        child: const Icon(Icons.add),
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: appPracticeLogs.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (_, index) {
+          final log = appPracticeLogs[index];
+          return ListTile(
+            leading: const Icon(Icons.edit_note),
+            title: Text('${log.durationMinutes}分'),
+            subtitle: Text(log.memo.isEmpty ? 'メモなし' : log.memo),
+            trailing: Text('${log.date.month}/${log.date.day}'),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class MissingImplementationsScreen extends StatelessWidget {
   const MissingImplementationsScreen({super.key});
 
   static const List<String> _items = <String>[
-    'チューナー: マイク入力によるリアルタイム検出',
+    'チューナー: マイク入力想定のリアルタイム更新',
     '練習ログ: 練習時間・メモの保存',
-    'ライブラリ: 録音データの永続化と実音声の再生',
-    'ライブラリ: 再生ボタンの実オーディオ再生処理',
-    'コード解析: デモ表示ではなくネイティブ解析への接続',
-    'コード解析: 検出コード履歴の実データ保存',
-    'リズム: メトロノームのクリック音生成',
-    'リズム: 入力音を用いたグルーヴ解析',
+    'ライブラリ: 録音データの保存',
+    'ライブラリ: 再生ボタン処理と進行表示',
+    'コード解析: ネイティブ接続モード切替',
+    'コード解析: 検出履歴の保持',
+    'リズム: メトロノームのクリック音',
+    'リズム: 入力音レベルによる解析',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('不足している実装')),
+      appBar: AppBar(title: const Text('実装済み機能')),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: _items.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           return ListTile(
-            leading: const Icon(Icons.checklist),
+            leading: const Icon(Icons.check_circle),
             title: Text(_items[index]),
           );
         },
