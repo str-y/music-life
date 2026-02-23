@@ -8,6 +8,7 @@
  */
 
 #include "pitch_detector.h"
+#include "pitch_detector_ffi.h"
 #include "yin.h"
 
 #include <cmath>
@@ -229,6 +230,25 @@ static bool test_pd_invalid_frame_size_throws() {
     return true;
 }
 
+static bool test_ffi_process_a4() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(SR, FRAME, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 440.0f, SR);
+
+    MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), FRAME);
+    ASSERT_TRUE(r.pitched == 1);
+    ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
+    ASSERT_TRUE(r.midi_note == 69);
+
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -245,6 +265,7 @@ int main() {
     run_test("pd:  reset clears state",             test_pd_reset_clears_state);
     run_test("pd:  throws on bad sample_rate",      test_pd_invalid_sample_rate_throws);
     run_test("pd:  throws on bad frame_size",       test_pd_invalid_frame_size_throws);
+    run_test("ffi: A4 process bridge",              test_ffi_process_a4);
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
