@@ -30,6 +30,7 @@ PitchDetector::PitchDetector(int sample_rate, int frame_size, float threshold, f
     , frame_size_(frame_size)
     , reference_pitch_hz_(reference_pitch_hz)
     , yin_(std::make_unique<Yin>(sample_rate, frame_size, threshold))
+    , reset_pending_(false)
     , ring_buffer_(frame_size * 2, 0.0f)
     , frame_buffer_(frame_size, 0.0f)
     , yin_workspace_(frame_size / 2, 0.0f)
@@ -49,11 +50,7 @@ PitchDetector::PitchDetector(int sample_rate, int frame_size, float threshold, f
 // ---------------------------------------------------------------------------
 
 void PitchDetector::reset() {
-    std::lock_guard<std::mutex> lock(state_mutex_);
-    std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
-    write_pos_     = 0;
-    samples_ready_ = 0;
-    last_result_   = {};
+    reset_pending_.store(true, std::memory_order_release);
 }
 
 void PitchDetector::set_reference_pitch(float reference_pitch_hz) {
@@ -64,7 +61,12 @@ void PitchDetector::set_reference_pitch(float reference_pitch_hz) {
 }
 
 PitchDetector::Result PitchDetector::process(const float* samples, int num_samples) {
-    std::lock_guard<std::mutex> lock(state_mutex_);
+    if (reset_pending_.exchange(false, std::memory_order_acq_rel)) {
+        std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
+        write_pos_     = 0;
+        samples_ready_ = 0;
+        last_result_   = {};
+    }
 
     // Feed incoming samples into the ring buffer
     for (int i = 0; i < num_samples; ++i) {

@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 
 namespace music_life {
@@ -68,7 +67,7 @@ private:
     std::atomic<float> reference_pitch_hz_;
     std::unique_ptr<Yin> yin_;
 
-    std::mutex         state_mutex_;   ///< Protects ring_buffer_, write_pos_, samples_ready_, and last_result_
+    std::atomic<bool>  reset_pending_;  ///< Set by reset(); consumed lock-free by process()
     std::vector<float> ring_buffer_;
     std::vector<float> frame_buffer_;
     std::vector<float> yin_workspace_;
