@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/app_localizations.dart';
+
 // ---------------------------------------------------------------------------
 // Data models
 // ---------------------------------------------------------------------------
@@ -180,12 +182,12 @@ class _LibraryScreenState extends State<LibraryScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ライブラリ'),
+        title: Text(AppLocalizations.of(context)!.libraryTitle),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.mic), text: '録音'),
-            Tab(icon: Icon(Icons.calendar_month), text: 'ログ'),
+          tabs: [
+            Tab(icon: const Icon(Icons.mic), text: AppLocalizations.of(context)!.recordingsTab),
+            Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.logsTab),
           ],
         ),
       ),
@@ -248,10 +250,10 @@ class _RecordingsTabState extends State<_RecordingsTab> {
   @override
   Widget build(BuildContext context) {
     if (_sorted.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          '録音データがありません',
-          style: TextStyle(color: Colors.grey),
+          AppLocalizations.of(context)!.noRecordings,
+          style: const TextStyle(color: Colors.grey),
         ),
       );
     }
@@ -292,6 +294,7 @@ class _RecordingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -302,7 +305,7 @@ class _RecordingTile extends StatelessWidget {
             iconSize: 40,
             color: colorScheme.primary,
             onPressed: onPlayPause,
-            tooltip: isPlaying ? '一時停止' : '再生',
+            tooltip: isPlaying ? l10n.pause : l10n.play,
           ),
           title: Text(
             entry.title,
@@ -543,22 +546,23 @@ class _MonthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
           icon: const Icon(Icons.chevron_left),
           onPressed: onPrev,
-          tooltip: '前の月',
+          tooltip: l10n.previousMonth,
         ),
         Text(
-          '$year年$month月',
+          l10n.yearMonth(year, month),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           onPressed: onNext,
-          tooltip: '次の月',
+          tooltip: l10n.nextMonth,
         ),
       ],
     );
@@ -576,10 +580,19 @@ class _CalendarGrid extends StatelessWidget {
   final int month;
   final Set<int> practiceDays;
 
-  static const _weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final weekLabels = [
+      l10n.weekdaySun,
+      l10n.weekdayMon,
+      l10n.weekdayTue,
+      l10n.weekdayWed,
+      l10n.weekdayThu,
+      l10n.weekdayFri,
+      l10n.weekdaySat,
+    ];
     final colorScheme = Theme.of(context).colorScheme;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
     // Day-of-week index for the 1st (0 = Sunday)
@@ -592,9 +605,11 @@ class _CalendarGrid extends StatelessWidget {
       children: [
         // Weekday header row
         Row(
-          children: _weekLabels.map((label) {
-            final isSunday = label == '日';
-            final isSaturday = label == '土';
+          children: weekLabels.asMap().entries.map((entry) {
+            final index = entry.key;
+            final label = entry.value;
+            final isSunday = index == 0;
+            final isSaturday = index == 6;
             return Expanded(
               child: Center(
                 child: Padding(
@@ -737,6 +752,7 @@ class _PracticeSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       child: Padding(
@@ -746,14 +762,14 @@ class _PracticeSummary extends StatelessWidget {
           children: [
             _SummaryItem(
               icon: Icons.event_available,
-              value: '$practiceDayCount日',
-              label: '練習日数',
+              value: l10n.practiceDayCount(practiceDayCount),
+              label: l10n.practiceDays,
               color: colorScheme.primary,
             ),
             _SummaryItem(
               icon: Icons.timer,
-              value: '${totalMinutes}分',
-              label: '合計時間',
+              value: l10n.durationMinutes(totalMinutes),
+              label: l10n.totalTime,
               color: colorScheme.secondary,
             ),
           ],

@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'l10n/app_localizations.dart';
+
 /// Rhythm & Metronome screen.
 ///
 /// Features:
@@ -176,7 +178,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('リズム & メトロノーム'),
+        title: Text(AppLocalizations.of(context)!.rhythmTitle),
       ),
       body: Column(
         children: [
@@ -288,6 +290,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   }
 
   Widget _buildGrooveSection(ColorScheme cs) {
+    final l10n = AppLocalizations.of(context)!;
     final scoreRatio = _timingScore / 100.0;
     final offsetLabel = _isPlaying
         ? (_lastOffsetMs >= 0
@@ -307,7 +310,7 @@ class _RhythmScreenState extends State<RhythmScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'グルーヴ解析',
+              l10n.grooveAnalysis,
               style: TextStyle(
                 fontSize: 14,
                 letterSpacing: 2,
@@ -346,7 +349,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                   Column(
                     children: [
                       Text(
-                        'タイミング',
+                        l10n.timing,
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurfaceVariant,
@@ -365,7 +368,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                   Column(
                     children: [
                       Text(
-                        'スコア',
+                        l10n.score,
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurfaceVariant,
@@ -383,7 +386,7 @@ class _RhythmScreenState extends State<RhythmScreen>
                   ),
                   if (_isPlaying)
                     Text(
-                      'タップしてリズムを刻もう',
+                      l10n.tapRhythmHint,
                       style: TextStyle(
                         fontSize: 11,
                         color: cs.onSurfaceVariant,

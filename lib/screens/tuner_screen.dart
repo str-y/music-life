@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
 
 // ── Public widget ─────────────────────────────────────────────────────────────
@@ -82,7 +83,7 @@ class _TunerScreenState extends State<TunerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('チューナー')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
       body: switch (_status) {
         _TunerStatus.loading => const Center(child: CircularProgressIndicator()),
         _TunerStatus.permissionDenied => _PermissionDeniedView(
@@ -109,6 +110,7 @@ class _PermissionDeniedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -122,20 +124,20 @@ class _PermissionDeniedView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'マイクへのアクセス許可が必要です',
+              l10n.micPermissionRequired,
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
               icon: const Icon(Icons.settings),
-              label: const Text('設定を開く'),
+              label: Text(l10n.openSettings),
               onPressed: openAppSettings,
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('再試行'),
+              child: Text(l10n.retry),
             ),
           ],
         ),
@@ -221,14 +223,14 @@ class _TunerBody extends StatelessWidget {
             _ListeningPulse(controller: pulseCtrl, color: cs.primary),
             const SizedBox(height: 8),
             Text(
-              '音を鳴らしてください',
+              AppLocalizations.of(context)!.playSound,
               style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ] else if (inTune) ...[
             const Icon(Icons.check_circle, color: Colors.green, size: 32),
             const SizedBox(height: 4),
             Text(
-              'チューニング OK',
+              AppLocalizations.of(context)!.tuningOk,
               style: tt.bodyMedium?.copyWith(color: Colors.green),
             ),
           ],

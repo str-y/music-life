@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
@@ -77,7 +79,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('コード解析'),
+        title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
         backgroundColor: colorScheme.inversePrimary,
       ),
       body: Column(
@@ -90,7 +92,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '現在のコード',
+                    AppLocalizations.of(context)!.currentChord,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -132,7 +134,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
                 Icon(Icons.history, size: 18, color: colorScheme.secondary),
                 const SizedBox(width: 6),
                 Text(
-                  'コード進行の履歴',
+                  AppLocalizations.of(context)!.chordHistory,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: colorScheme.secondary,
                       ),
@@ -145,7 +147,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
             child: _history.isEmpty
                 ? Center(
                     child: Text(
-                      'まだ履歴がありません',
+                      AppLocalizations.of(context)!.noChordHistory,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),

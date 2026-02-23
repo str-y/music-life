@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'l10n/app_localizations.dart';
 import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
@@ -10,7 +11,6 @@ import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 
-const String _appTitle = 'Music Life';
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 
@@ -107,7 +107,9 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
       settings: _settings,
       onChanged: _updateSettings,
       child: MaterialApp(
-        title: _appTitle,
+        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
@@ -193,17 +195,18 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final entranceCurve = CurvedAnimation(
       parent: _entranceCtrl,
       curve: Curves.easeOutCubic,
     );
     return Scaffold(
       appBar: AppBar(
-        title: const Text(_appTitle),
+        title: Text(l10n.appTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: '設定',
+            tooltip: l10n.settingsTooltip,
             onPressed: () => _openSettings(context),
           ),
         ],
@@ -222,20 +225,20 @@ class _MainScreenState extends State<MainScreen>
             padding: const EdgeInsets.all(16),
             children: <Widget>[
               Text(
-                'ようこそ',
+                l10n.welcomeTitle,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
-                '今日の練習をはじめましょう。',
+                l10n.welcomeSubtitle,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.tune),
-                  title: const Text('チューナー'),
-                  subtitle: const Text('音程をリアルタイムで確認'),
+                  title: Text(l10n.tunerTitle),
+                  subtitle: Text(l10n.tunerSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     _slideUpRoute<void>(
@@ -248,8 +251,8 @@ class _MainScreenState extends State<MainScreen>
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.graphic_eq),
-                  title: const Text('練習ログ'),
-                  subtitle: const Text('練習時間とメモを記録'),
+                  title: Text(l10n.practiceLogTitle),
+                  subtitle: Text(l10n.practiceLogSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     _slideUpRoute<void>(
@@ -262,8 +265,8 @@ class _MainScreenState extends State<MainScreen>
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.library_music),
-                  title: const Text('ライブラリ'),
-                  subtitle: const Text('録音データの再生と練習ログ'),
+                  title: Text(l10n.libraryTitle),
+                  subtitle: Text(l10n.librarySubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     _slideUpRoute<void>(
@@ -276,8 +279,8 @@ class _MainScreenState extends State<MainScreen>
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.av_timer),
-                  title: const Text('リズム & メトロノーム'),
-                  subtitle: const Text('メトロノームとグルーヴ解析'),
+                  title: Text(l10n.rhythmTitle),
+                  subtitle: Text(l10n.rhythmSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     _slideUpRoute<void>(
@@ -290,8 +293,8 @@ class _MainScreenState extends State<MainScreen>
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.piano),
-                  title: const Text('コード解析'),
-                  subtitle: const Text('リアルタイムでコードを解析・表示'),
+                  title: Text(l10n.chordAnalyserTitle),
+                  subtitle: Text(l10n.chordAnalyserSubtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     final status = await Permission.microphone.request();
@@ -299,11 +302,9 @@ class _MainScreenState extends State<MainScreen>
                     if (status.isPermanentlyDenied) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text(
-                            'マイクのアクセスが拒否されています。設定から許可してください。',
-                          ),
+                          content: Text(l10n.micPermissionDenied),
                           action: SnackBarAction(
-                            label: '設定を開く',
+                            label: l10n.openSettings,
                             onPressed: openAppSettings,
                           ),
                         ),
@@ -312,8 +313,8 @@ class _MainScreenState extends State<MainScreen>
                     }
                     if (!status.isGranted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('マイクへのアクセス許可が必要です。'),
+                        SnackBar(
+                          content: Text(l10n.micPermissionRequired),
                         ),
                       );
                       return;
@@ -324,8 +325,8 @@ class _MainScreenState extends State<MainScreen>
                       bridge.dispose();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('マイクへのアクセス許可が必要です'),
+                          SnackBar(
+                            content: Text(l10n.micPermissionRequired),
                           ),
                         );
                       }
@@ -383,6 +384,7 @@ class _SettingsModalState extends State<_SettingsModal> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: EdgeInsets.only(
@@ -406,21 +408,21 @@ class _SettingsModalState extends State<_SettingsModal> {
               ),
             ),
           ),
-          Text('設定', style: textTheme.titleLarge),
+          Text(l10n.settingsTitle, style: textTheme.titleLarge),
           const SizedBox(height: 24),
-          Text('テーマ', style: textTheme.titleSmall),
+          Text(l10n.themeSection, style: textTheme.titleSmall),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('ダークモード'),
+            title: Text(l10n.darkMode),
             value: _local.darkMode,
             onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
           ),
           const Divider(height: 32),
-          Text('キャリブレーション', style: textTheme.titleSmall),
+          Text(l10n.calibration, style: textTheme.titleSmall),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Text('基準ピッチ A ='),
+              Text(l10n.referencePitchLabel),
               const SizedBox(width: 8),
               Text(
                 '${_local.referencePitch.round()} Hz',
@@ -442,7 +444,7 @@ class _SettingsModalState extends State<_SettingsModal> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('プライバシーポリシー'),
+            title: Text(l10n.privacyPolicy),
             trailing: const Icon(Icons.open_in_new),
             onTap: () async {
               final uri = Uri.parse(_privacyPolicyUrl);
@@ -450,8 +452,8 @@ class _SettingsModalState extends State<_SettingsModal> {
                   mode: LaunchMode.externalApplication)) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('プライバシーポリシーを開けませんでした')),
+                    SnackBar(
+                        content: Text(l10n.privacyPolicyOpenError)),
                   );
                 }
               }
