@@ -35,3 +35,19 @@ if(BUILD_TESTING)
     target_link_libraries(test_pitch_detection PRIVATE pitch_detection)
     add_test(NAME pitch_detection_tests COMMAND test_pitch_detection)
 endif()
+
+# -----------------------------------------------------------------------
+# Android JNI Bridge
+# -----------------------------------------------------------------------
+if(ANDROID)
+    add_library(music_life_jni SHARED
+        src/android/PitchDetectorJni.cpp
+    )
+    target_link_libraries(music_life_jni PRIVATE
+        pitch_detection
+        log
+    )
+    target_include_directories(music_life_jni PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pitch_detection
+    )
+endif()
