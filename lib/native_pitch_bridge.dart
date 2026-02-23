@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -49,12 +50,9 @@ typedef _MLProcessDart = MLPitchResult Function(
 
 DynamicLibrary _loadNativeLib() {
   if (Platform.isAndroid) {
-    // The pitch-detection FFI symbols are exported from libpitch_detection.so.
-    // Ensure the CMake target is built as a SHARED library for Android FFI.
     return DynamicLibrary.open('libpitch_detection.so');
   }
   if (Platform.isIOS) {
-    // On iOS the symbols are statically linked into the main binary.
     return DynamicLibrary.process();
   }
   throw UnsupportedError(
@@ -73,146 +71,169 @@ class PitchResult {
     required this.midiNote,
   });
 
-  /// Scientific note name, e.g. "A4" or "C#3".
   final String noteName;
-
-  /// Detected fundamental frequency in Hz.
   final double frequency;
-
-  /// Deviation from the nearest semitone in cents (−50 … +50).
   final double centsOffset;
-
-  /// MIDI note number (0–127).
   final int midiNote;
 }
 
-// ── Chord inference ───────────────────────────────────────────────────────────
+// ── Error handling ────────────────────────────────────────────────────────────
 
-const _kNoteNames = [
-  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
-];
+/// Callback invoked when an unhandled error occurs in the background processing.
+typedef FfiErrorHandler = void Function(Object error, StackTrace stack);
 
-// Pitch classes (relative to C) that belong to the C-major diatonic scale.
-const _kMajorScale = {0, 2, 4, 5, 7, 9, 11};
+// ── Isolate support ───────────────────────────────────────────────────────────
 
-// Diatonic degrees that carry a minor quality (D, E, A).
-const _kMinorDegrees = {2, 4, 9};
+class _IsolateSetup {
+  const _IsolateSetup({
+    required this.resultPort,
+    required this.handle,
+    required this.buffer,
+    required this.frameSize,
+  });
 
-// Pitch class of B, which receives a half-diminished (m7♭5) label.
-const _kHalfDiminishedDegree = 11;
+  final SendPort resultPort;
+  final Pointer<Void> handle;
+  final Pointer<Float> buffer;
+  final int frameSize;
+}
 
-/// Derives a chord label from a single detected MIDI note.
-///
-/// This is a simplified heuristic mapping suitable for monophonic pitch
-/// detection.  Diatonic-scale notes map to maj7 or m7 chords; chromatic
-/// notes map to dominant-7 chords.  Replace with a polyphonic
-/// chord-detection algorithm when multi-note analysis is available.
-String _deriveChordLabel(int midiNote) {
-  final noteClass = midiNote % 12;
-  final root = _kNoteNames[noteClass];
+class _IsolateError {
+  const _IsolateError(this.message, this.stack);
+  final String message;
+  final String stack;
+}
 
-  if (noteClass == _kHalfDiminishedDegree) return '${root}m7♭5'; // B → half-diminished
-  if (_kMajorScale.contains(noteClass)) {
-    return _kMinorDegrees.contains(noteClass) ? '${root}m7' : '${root}maj7';
+/// Entry point for the background isolate.
+void _audioProcessingIsolate(_IsolateSetup setup) {
+  final DynamicLibrary lib;
+  try {
+    lib = _loadNativeLib();
+  } catch (e, stack) {
+    setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
+    return;
   }
-  return '${root}7'; // chromatic → dominant 7
+
+  final process = lib.lookupFunction<_MLProcessNative, _MLProcessDart>(
+      'ml_pitch_detector_process');
+
+  final sampleBuf = <double>[];
+
+  void processFrame(Float32List frame) {
+    try {
+      setup.buffer.asTypedList(frame.length).setAll(0, frame);
+      final result = process(setup.handle, setup.buffer, frame.length);
+      if (result.pitched != 0) {
+        final bytes = <int>[];
+        for (int i = 0; i < 8; i++) {
+          final b = result.noteName[i];
+          if (b == 0) break;
+          bytes.add(b);
+        }
+        setup.resultPort.send(<String, Object>{
+          'noteName': String.fromCharCodes(bytes),
+          'frequency': result.frequency,
+          'centsOffset': result.centsOffset,
+          'midiNote': result.midiNote,
+        });
+      }
+    } catch (e, stack) {
+      setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
+    }
+  }
+
+  final port = ReceivePort();
+  setup.resultPort.send(port.sendPort);
+
+  port.listen((msg) {
+    if (msg == null) {
+      port.close();
+      return;
+    }
+    if (msg is Uint8List) {
+      for (int i = 0; i + 1 < msg.length; i += 2) {
+        int s = msg[i] | (msg[i + 1] << 8);
+        if (s >= 0x8000) s -= 0x10000;
+        sampleBuf.add(s / 32768.0);
+      }
+      while (sampleBuf.length >= setup.frameSize) {
+        processFrame(
+            Float32List.fromList(sampleBuf.sublist(0, setup.frameSize)));
+        sampleBuf.removeRange(0, setup.frameSize);
+      }
+    } else if (msg is Float32List) {
+      processFrame(msg);
+    }
+  });
 }
 
 // ── Bridge ────────────────────────────────────────────────────────────────────
 
 /// Bridges the native C++ pitch-detection engine to a Dart [Stream].
 ///
-/// Create one instance per active recording session.  Feed audio frames via
-/// [processAudioFrame] (called by the platform audio-capture layer), and
-/// listen to [chordStream] to receive chord labels in real time.
-///
-/// Call [dispose] when done to release the native handle and close the stream.
-/// If [dispose] is never called the [NativeFinalizer]s registered at
-/// construction time will still free the native handle and the persistent FFI
-/// buffer once the Dart object becomes unreachable, preventing leaks.
+/// Features:
+/// - **Zero-Jank**: Offloads all native processing to a background Isolate.
+/// - **Memory-Safe**: Uses [NativeFinalizer] and [Finalizable] to prevent leaks.
+/// - **Robust**: Real-time error reporting via [FfiErrorHandler].
 class NativePitchBridge implements Finalizable {
-  /// Default frame size (samples) matching the native detector's default.
   static const int defaultFrameSize = 2048;
-
-  /// Default sample rate matching the native detector's default.
   static const int defaultSampleRate = 44100;
-
-  /// Default YIN probability threshold.
-  ///
-  /// Valid range is 0.0–1.0.  Lower values increase sensitivity (detect more
-  /// pitched frames) but may produce false positives in noisy conditions.
-  /// Higher values require stronger pitch evidence before firing.
   static const double defaultThreshold = 0.10;
 
-  /// Finalizer that calls `ml_pitch_detector_destroy` on the native handle
-  /// when this object is garbage-collected without an explicit [dispose] call.
   final NativeFinalizer _handleFinalizer;
-
-  /// Finalizer that calls `free` on the persistent FFI buffer when this object
-  /// is garbage-collected without an explicit [dispose] call.
   static final NativeFinalizer _bufferFinalizer =
       NativeFinalizer(malloc.nativeFree);
 
   final Pointer<Void> _handle;
-  final _MLProcessDart _nativeProcess;
+  final Pointer<Float> _persistentBuffer;
   final _MLDestroyDart _nativeDestroy;
 
-  /// Persistent native buffer reused across every [processAudioFrame] call.
-  final Pointer<Float> _persistentBuffer;
-
-  /// Number of Float elements that [_persistentBuffer] can hold.
+  final int _sampleRate;
   final int _frameSize;
 
-  /// Set to `true` by [dispose] to guard against use-after-free.
+  SendPort? _audioSendPort;
+  ReceivePort? _resultPort;
+  StreamSubscription<dynamic>? _resultSub;
+  final FfiErrorHandler? _onError;
   bool _disposed = false;
 
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
-
-  /// Emits a chord label each time the native engine detects a pitched note.
   Stream<String> get chordStream => _controller.stream;
 
   final StreamController<PitchResult> _pitchController =
       StreamController<PitchResult>.broadcast();
-
-  /// Emits a [PitchResult] each time the native engine detects a pitched note.
   Stream<PitchResult> get pitchStream => _pitchController.stream;
-
-  // ── Audio capture ──────────────────────────────────────────────────────────
 
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _audioSub;
 
-  /// Partial-frame accumulator for PCM samples between [processAudioFrame] calls.
-  final List<double> _sampleBuffer = [];
-
   NativePitchBridge._({
     required Pointer<Void> handle,
-    required _MLProcessDart nativeProcess,
     required _MLDestroyDart nativeDestroy,
     required Pointer<Float> persistentBuffer,
     required int frameSize,
+    required int sampleRate,
     required NativeFinalizer handleFinalizer,
+    FfiErrorHandler? onError,
   })  : _handle = handle,
-        _nativeProcess = nativeProcess,
         _nativeDestroy = nativeDestroy,
         _persistentBuffer = persistentBuffer,
         _frameSize = frameSize,
-        _handleFinalizer = handleFinalizer {
-    // Attach NativeFinalizers so that native resources are freed even if
-    // dispose() is never called (e.g. due to an unhandled exception or GC).
+        _sampleRate = sampleRate,
+        _handleFinalizer = handleFinalizer,
+        _onError = onError {
     _handleFinalizer.attach(this, handle.cast(), detach: this);
     _bufferFinalizer.attach(this, persistentBuffer.cast(), detach: this);
   }
 
-  /// Creates a [NativePitchBridge] backed by the platform's native library.
   factory NativePitchBridge({
     int sampleRate = defaultSampleRate,
     int frameSize = defaultFrameSize,
     double threshold = defaultThreshold,
+    FfiErrorHandler? onError,
   }) {
     final lib = _loadNativeLib();
-
     final handleFinalizer = NativeFinalizer(
       lib.lookup<NativeFunction<Void Function(Pointer<Void>)>>(
           'ml_pitch_detector_destroy'),
@@ -227,98 +248,129 @@ class NativePitchBridge implements Finalizable {
 
     return NativePitchBridge._(
       handle: handle,
-      nativeProcess: lib.lookupFunction<_MLProcessNative, _MLProcessDart>(
-          'ml_pitch_detector_process'),
       nativeDestroy: lib.lookupFunction<_MLDestroyNative, _MLDestroyDart>(
           'ml_pitch_detector_destroy'),
       persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
       frameSize: frameSize,
+      sampleRate: sampleRate,
       handleFinalizer: handleFinalizer,
+      onError: onError,
     );
   }
 
-  /// Feed a frame of 32-bit float PCM samples to the native pitch detector.
-  ///
-  /// If the engine identifies a pitched note, the corresponding chord label
-  /// is emitted on [chordStream].
   void processAudioFrame(Float32List samples) {
     if (_disposed) return;
     assert(
       samples.length <= _frameSize,
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
-    _persistentBuffer.asTypedList(samples.length).setAll(0, samples);
-    final result = _nativeProcess(_handle, _persistentBuffer, samples.length);
-    if (result.pitched != 0) {
-      _controller.add(_deriveChordLabel(result.midiNote));
-      // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
-      final bytes = <int>[];
-      for (int i = 0; i < 8; i++) {
-        final b = result.noteName[i];
-        if (b == 0) break;
-        bytes.add(b);
-      }
-      _pitchController.add(PitchResult(
-        noteName: String.fromCharCodes(bytes),
-        frequency: result.frequency,
-        centsOffset: result.centsOffset,
-        midiNote: result.midiNote,
-      ));
-    }
+    _audioSendPort?.send(samples);
   }
 
-  /// Requests microphone permission and starts streaming audio from the
-  /// default input device into the native pitch detector.
-  ///
-  /// Returns `true` if capture started successfully, or `false` if microphone
-  /// permission was denied.
   Future<bool> startCapture() async {
     if (!await _recorder.hasPermission()) return false;
-    final stream = await _recorder.startStream(
-      const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: defaultSampleRate,
-        numChannels: 1,
-      ),
-    );
-    _audioSub = stream.listen(_onAudioChunk);
-    return true;
+
+    final resultPort = ReceivePort();
+    _resultPort = resultPort;
+
+    try {
+      await Isolate.spawn(
+        _audioProcessingIsolate,
+        _IsolateSetup(
+          resultPort: resultPort.sendPort,
+          handle: _handle,
+          buffer: _persistentBuffer,
+          frameSize: _frameSize,
+        ),
+        onError: resultPort.sendPort,
+      );
+    } catch (e, stack) {
+      _onError?.call(e, stack);
+      return false;
+    }
+
+    final completer = Completer<bool>();
+    _resultSub = resultPort.listen((msg) {
+      if (!completer.isCompleted) {
+        if (msg is SendPort) {
+          _audioSendPort = msg;
+          completer.complete(true);
+        } else if (msg is _IsolateError) {
+          _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+          completer.complete(false);
+        } else {
+          completer.complete(false);
+        }
+        return;
+      }
+      if (msg is Map) {
+        _onPitchResult(msg);
+      } else if (msg is _IsolateError) {
+        _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+      }
+    });
+
+    final ready = await completer.future;
+    if (!ready) {
+      _resultSub?.cancel();
+      _resultSub = null;
+      resultPort.close();
+      _resultPort = null;
+      return false;
+    }
+
+    try {
+      final stream = await _recorder.startStream(
+        RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: _sampleRate,
+          numChannels: 1,
+        ),
+      );
+      _audioSub = stream.listen(_onAudioChunk, onError: _onError);
+      return true;
+    } catch (e, stack) {
+      _onError?.call(e, stack);
+      return false;
+    }
   }
 
-  /// Converts an incoming PCM-16 little-endian [chunk] to float samples,
-  /// buffers them, and dispatches complete [_frameSize]-sample frames to
-  /// [processAudioFrame].
   void _onAudioChunk(Uint8List chunk) {
     if (_disposed) return;
-    for (int i = 0; i + 1 < chunk.length; i += 2) {
-      int s = chunk[i] | (chunk[i + 1] << 8);
-      if (s >= 0x8000) s -= 0x10000; // sign-extend int16
-      _sampleBuffer.add(s / 32768.0);
-    }
-    while (_sampleBuffer.length >= _frameSize) {
-      processAudioFrame(
-        Float32List.fromList(_sampleBuffer.sublist(0, _frameSize)),
-      );
-      _sampleBuffer.removeRange(0, _frameSize);
-    }
+    _audioSendPort?.send(chunk);
   }
 
-  /// Releases the native handle and closes [chordStream].
+  void _onPitchResult(Map<dynamic, dynamic> msg) {
+    if (_controller.isClosed) return;
+    final noteName = msg['noteName'];
+    if (noteName is! String) return;
+    _controller.add(noteName);
+    _pitchController.add(PitchResult(
+      noteName: noteName,
+      frequency: msg['frequency'],
+      centsOffset: msg['centsOffset'],
+      midiNote: msg['midiNote'],
+    ));
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    // Detach finalizers first so they don't double-free after explicit cleanup.
     _handleFinalizer.detach(this);
     _bufferFinalizer.detach(this);
     _audioSub?.cancel();
     _audioSub = null;
     _recorder.stop().ignore();
     _recorder.dispose();
-    _sampleBuffer.clear();
+    _audioSendPort?.send(null);
+    _audioSendPort = null;
+    _resultSub?.cancel();
+    _resultSub = null;
+    _resultPort?.close();
+    _resultPort = null;
     _nativeDestroy(_handle);
     malloc.free(_persistentBuffer);
     _controller.close();
     _pitchController.close();
   }
-
 }

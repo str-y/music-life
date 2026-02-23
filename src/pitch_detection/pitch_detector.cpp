@@ -38,6 +38,10 @@ static const char* const kNoteTable[128] = {
 // gives comfortable headroom.
 static char s_note_name_buf[128][6];
 
+static const char* const kNoteNames[12] = {
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+};
+
 static bool init_note_name_table() {
     for (int i = 0; i < 128; ++i) {
         int octave = (i / 12) - 1;
@@ -169,6 +173,7 @@ float PitchDetector::cents_between(float reference_hz, float actual_hz) {
     return 1200.0f * std::log2(actual_hz / reference_hz);
 }
 
+const char* PitchDetector::midi_to_note_name(int midi_note) {
     return s_note_name_buf[midi_note];
 }
 

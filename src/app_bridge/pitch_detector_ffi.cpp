@@ -2,6 +2,7 @@
 
 #include "pitch_detector.h"
 
+#include <cstdio>
 #include <cstring>
 #include <memory>
 
@@ -22,7 +23,11 @@ MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_
             std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz)
         };
         return handle;
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_create: exception: %s\n", e.what());
+        return nullptr;
     } catch (...) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_create: unknown exception\n");
         return nullptr;
     }
 }
@@ -42,7 +47,11 @@ int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float r
     try {
         handle->detector->set_reference_pitch(reference_pitch_hz);
         return 1;
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_set_reference_pitch: exception: %s\n", e.what());
+        return 0;
     } catch (...) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_set_reference_pitch: unknown exception\n");
         return 0;
     }
 }
@@ -60,7 +69,11 @@ MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const flo
         out.cents_offset = result.cents_offset;
         std::strncpy(out.note_name, result.note_name, sizeof(out.note_name) - 1);
         out.note_name[sizeof(out.note_name) - 1] = '\0';
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_process: exception: %s\n", e.what());
+        return out;
     } catch (...) {
+        std::fprintf(stderr, "[music-life] ml_pitch_detector_process: unknown exception\n");
         return out;
     }
     return out;
