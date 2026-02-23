@@ -26,10 +26,14 @@ public:
     /**
      * Estimate the fundamental frequency of the given audio samples.
      *
-     * @param samples  Mono audio buffer (buffer_size samples, range [-1, 1]).
+     * @param samples    Mono audio buffer (buffer_size samples, range [-1, 1]).
+     * @param workspace  Caller-supplied scratch buffer (size >= buffer_size / 2).
+     *                   Providing this per-call buffer makes detect() safe for
+     *                   concurrent use from multiple real-time threads as long as
+     *                   each thread passes its own workspace.
      * @return Fundamental frequency in Hz, or -1 if no pitch is detected.
      */
-    float detect(const float* samples) const;
+    float detect(const float* samples, std::vector<float>& workspace);
 
     /** Probability of the last detected pitch (0–1). */
     float probability() const { return probability_; }
@@ -40,8 +44,7 @@ private:
     float threshold_;
     int   half_buffer_;
 
-    mutable float probability_;
-    mutable std::vector<float> df_buffer_;
+    float probability_;
 
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;
