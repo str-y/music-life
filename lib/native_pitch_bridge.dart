@@ -119,6 +119,17 @@ String _deriveChordLabel(int midiNote) {
   return '${root}7'; // chromatic → dominant 7
 }
 
+// ── Error handling ────────────────────────────────────────────────────────────
+
+/// Callback invoked when an unhandled error crosses the FFI boundary or
+/// occurs inside the audio-capture stream.
+///
+/// Integrate with a crash-reporting service (e.g. Firebase Crashlytics,
+/// Sentry) by forwarding [error] and [stack] to the service inside this
+/// callback.  The callback is always invoked on the same isolate that
+/// encountered the error.
+typedef FfiErrorHandler = void Function(Object error, StackTrace stack);
+
 // ── Isolate support ───────────────────────────────────────────────────────────
 
 /// Configuration passed to the background audio-processing isolate on spawn.
@@ -138,23 +149,20 @@ class _IsolateSetup {
   final double threshold;
 }
 
+/// Simple error representation passed between isolates.
+class _IsolateError {
+  const _IsolateError(this.message, this.stack);
+  final String message;
+  final String stack;
+}
+
 /// Entry point for the background isolate that owns all FFI resources.
-///
-/// Protocol (background → main):
-/// - First message: own [SendPort] (ready), or `null` (initialisation failed).
-/// - Subsequent messages: `Map<String, Object>` with keys
-///   `noteName`, `frequency`, `centsOffset`, `midiNote`.
-///
-/// Protocol (main → background, via the returned [SendPort]):
-/// - [Uint8List]: raw PCM-16 LE audio chunk to convert and process.
-/// - [Float32List]: pre-converted float frame to process directly.
-/// - `null`: shutdown signal — free native resources and exit.
 void _audioProcessingIsolate(_IsolateSetup setup) {
   final DynamicLibrary lib;
   try {
     lib = _loadNativeLib();
-  } catch (_) {
-    setup.resultPort.send(null);
+  } catch (e, stack) {
+    setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
     return;
   }
 
@@ -165,35 +173,46 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
   final destroy = lib.lookupFunction<_MLDestroyNative, _MLDestroyDart>(
       'ml_pitch_detector_destroy');
 
-  final handle = create(setup.sampleRate, setup.frameSize, setup.threshold);
-  if (handle == nullptr) {
-    setup.resultPort.send(null);
+  final Pointer<Void> handle;
+  final Pointer<Float> buffer;
+
+  try {
+    handle = create(setup.sampleRate, setup.frameSize, setup.threshold);
+    if (handle == nullptr) {
+      setup.resultPort.send(const _IsolateError('FFI Error: create returned nullptr', ''));
+      return;
+    }
+    buffer = malloc.allocate<Float>(setup.frameSize * sizeOf<Float>());
+  } catch (e, stack) {
+    setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
     return;
   }
-
-  final buffer = malloc.allocate<Float>(setup.frameSize * sizeOf<Float>());
 
   /// Accumulator for partial PCM-16 frames between incoming chunks.
   final sampleBuf = <double>[];
 
   /// Runs the native detector on [frame] and forwards any pitch result.
   void processFrame(Float32List frame) {
-    buffer.asTypedList(frame.length).setAll(0, frame);
-    final result = process(handle, buffer, frame.length);
-    if (result.pitched != 0) {
-      // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
-      final bytes = <int>[];
-      for (int i = 0; i < 8; i++) {
-        final b = result.noteName[i];
-        if (b == 0) break;
-        bytes.add(b);
+    try {
+      buffer.asTypedList(frame.length).setAll(0, frame);
+      final result = process(handle, buffer, frame.length);
+      if (result.pitched != 0) {
+        // Decode null-terminated ASCII note name (e.g. "A4\0\0\0\0\0\0").
+        final bytes = <int>[];
+        for (int i = 0; i < 8; i++) {
+          final b = result.noteName[i];
+          if (b == 0) break;
+          bytes.add(b);
+        }
+        setup.resultPort.send(<String, Object>{
+          'noteName': String.fromCharCodes(bytes),
+          'frequency': result.frequency,
+          'centsOffset': result.centsOffset,
+          'midiNote': result.midiNote,
+        });
       }
-      setup.resultPort.send(<String, Object>{
-        'noteName': String.fromCharCodes(bytes),
-        'frequency': result.frequency,
-        'centsOffset': result.centsOffset,
-        'midiNote': result.midiNote,
-      });
+    } catch (e, stack) {
+      setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
     }
   }
 
@@ -203,8 +222,12 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
   port.listen((msg) {
     if (msg == null) {
       // Graceful shutdown: free native resources then let the isolate exit.
-      destroy(handle);
-      malloc.free(buffer);
+      try {
+        destroy(handle);
+        malloc.free(buffer);
+      } catch (e, stack) {
+        setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
+      }
       port.close();
       return;
     }
@@ -237,6 +260,9 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
 /// isolate so the UI thread is never blocked.  Listen to [chordStream] or
 /// [pitchStream] to receive results in real time.
 ///
+/// Supply [onError] to receive any exception that escapes the FFI boundary
+/// or the audio-capture stream.
+///
 /// Call [dispose] when done to shut down the background isolate and close the
 /// streams.
 class NativePitchBridge {
@@ -247,10 +273,6 @@ class NativePitchBridge {
   static const int defaultSampleRate = 44100;
 
   /// Default YIN probability threshold.
-  ///
-  /// Valid range is 0.0–1.0.  Lower values increase sensitivity (detect more
-  /// pitched frames) but may produce false positives in noisy conditions.
-  /// Higher values require stronger pitch evidence before firing.
   static const double defaultThreshold = 0.10;
 
   final int _sampleRate;
@@ -261,6 +283,9 @@ class NativePitchBridge {
   SendPort? _audioSendPort;
   ReceivePort? _resultPort;
   StreamSubscription<dynamic>? _resultSub;
+
+  /// Optional callback for FFI-boundary and audio-stream errors.
+  final FfiErrorHandler? _onError;
 
   final StreamController<String> _controller =
       StreamController<String>.broadcast();
@@ -279,19 +304,21 @@ class NativePitchBridge {
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _audioSub;
 
+  /// Creates a [NativePitchBridge].
   NativePitchBridge({
     int sampleRate = defaultSampleRate,
     int frameSize = defaultFrameSize,
     double threshold = defaultThreshold,
+    FfiErrorHandler? onError,
   })  : _sampleRate = sampleRate,
         _frameSize = frameSize,
-        _threshold = threshold;
+        _threshold = threshold,
+        _onError = onError;
 
   /// Feed a frame of 32-bit float PCM samples to the native pitch detector.
   ///
   /// The call returns immediately; all processing is performed on the
-  /// background isolate.  If the engine identifies a pitched note, the
-  /// corresponding chord label is emitted on [chordStream].
+  /// background isolate.
   void processAudioFrame(Float32List samples) {
     assert(
       !_controller.isClosed,
@@ -315,37 +342,48 @@ class NativePitchBridge {
     final resultPort = ReceivePort();
     _resultPort = resultPort;
 
-    _processingIsolate = await Isolate.spawn(
-      _audioProcessingIsolate,
-      _IsolateSetup(
-        resultPort: resultPort.sendPort,
-        sampleRate: _sampleRate,
-        frameSize: _frameSize,
-        threshold: _threshold,
-      ),
-    );
+    try {
+      _processingIsolate = await Isolate.spawn(
+        _audioProcessingIsolate,
+        _IsolateSetup(
+          resultPort: resultPort.sendPort,
+          sampleRate: _sampleRate,
+          frameSize: _frameSize,
+          threshold: _threshold,
+        ),
+        onError: resultPort.sendPort, // Map top-level isolate errors.
+      );
+    } catch (e, stack) {
+      _onError?.call(e, stack);
+      return false;
+    }
 
-    // Wait for the background isolate to confirm it is ready.  The first
-    // message is its SendPort (success) or null (initialisation failure).
+    // Wait for the background isolate to confirm it is ready.
     final completer = Completer<bool>();
     _resultSub = resultPort.listen((msg) {
       if (!completer.isCompleted) {
         if (msg is SendPort) {
           _audioSendPort = msg;
           completer.complete(true);
+        } else if (msg is _IsolateError) {
+          _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+          completer.complete(false);
         } else {
           completer.complete(false);
         }
         return;
       }
-      // Subsequent messages are pitch results from the background isolate.
-      if (msg is Map) _onPitchResult(msg);
+
+      // Subsequent messages.
+      if (msg is Map) {
+        _onPitchResult(msg);
+      } else if (msg is _IsolateError) {
+        _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+      }
     });
 
     final ready = await completer.future;
     if (!ready) {
-      // The isolate has already exited cleanly (no active ports left after
-      // sending the failure signal), so no kill() is needed.
       _processingIsolate = null;
       _resultSub?.cancel();
       _resultSub = null;
@@ -354,15 +392,23 @@ class NativePitchBridge {
       return false;
     }
 
-    final stream = await _recorder.startStream(
-      RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: _sampleRate,
-        numChannels: 1,
-      ),
-    );
-    _audioSub = stream.listen(_onAudioChunk);
-    return true;
+    try {
+      final stream = await _recorder.startStream(
+        RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: _sampleRate,
+          numChannels: 1,
+        ),
+      );
+      _audioSub = stream.listen(
+        _onAudioChunk,
+        onError: _onError,
+      );
+      return true;
+    } catch (e, stack) {
+      _onError?.call(e, stack);
+      return false;
+    }
   }
 
   /// Forwards a raw PCM-16 [chunk] to the background isolate for processing.
@@ -398,7 +444,6 @@ class NativePitchBridge {
     _audioSub = null;
     _recorder.stop().ignore();
     _recorder.dispose();
-    // Send the shutdown signal; the isolate will free native resources and exit.
     _audioSendPort?.send(null);
     _audioSendPort = null;
     _resultSub?.cancel();
