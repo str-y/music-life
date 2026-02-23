@@ -14,7 +14,9 @@ namespace music_life {
 namespace {
 
 // In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
-void fft_inplace(std::vector<std::complex<float>>& x) {
+// twiddle must contain n/2 pre-computed factors: twiddle[k] = exp(-2pi*i*k/n).
+void fft_inplace(std::vector<std::complex<float>>& x,
+                 const std::vector<std::complex<float>>& twiddle) {
     const int n = static_cast<int>(x.size());
 
     // Bit-reversal permutation
@@ -25,27 +27,28 @@ void fft_inplace(std::vector<std::complex<float>>& x) {
         if (i < j) std::swap(x[i], x[j]);
     }
 
-    // Butterfly passes
+    // Butterfly passes – twiddle factor for butterfly j in stage len is
+    // W_len^j = W_n^(j*n/len) = twiddle[j * (n/len)].
+    // No transcendental calls in the hot path.
     for (int len = 2; len <= n; len <<= 1) {
-        const float ang = -2.0f * static_cast<float>(M_PI) / static_cast<float>(len);
-        const std::complex<float> wlen(std::cos(ang), std::sin(ang));
+        const int step = n / len;
         for (int i = 0; i < n; i += len) {
-            std::complex<float> w(1.0f, 0.0f);
             for (int j = 0; j < len / 2; ++j) {
+                const std::complex<float> w = twiddle[j * step];
                 const std::complex<float> u = x[i + j];
                 const std::complex<float> v = x[i + j + len / 2] * w;
                 x[i + j]           = u + v;
                 x[i + j + len / 2] = u - v;
-                w *= wlen;
             }
         }
     }
 }
 
 // In-place IFFT via conjugate trick.
-void ifft_inplace(std::vector<std::complex<float>>& x) {
+void ifft_inplace(std::vector<std::complex<float>>& x,
+                  const std::vector<std::complex<float>>& twiddle) {
     for (auto& c : x) c = std::conj(c);
-    fft_inplace(x);
+    fft_inplace(x, twiddle);
     const float inv_n = 1.0f / static_cast<float>(x.size());
     for (auto& c : x) c = std::conj(c) * inv_n;
 }
@@ -76,7 +79,18 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
     , fft_F_(fft_size_, {0.0f, 0.0f})
     , fft_G_(fft_size_, {0.0f, 0.0f})
     , sq_prefix_(buffer_size + 1, 0.0f)
-{}
+    , twiddle_(fft_size_ / 2)
+{
+    // Pre-compute twiddle factors: twiddle_[k] = exp(-2pi*i*k / fft_size_).
+    // These are computed once here so the real-time audio path is free of
+    // any std::cos / std::sin calls during FFT butterfly passes.
+    const float two_pi_over_n =
+        -2.0f * static_cast<float>(M_PI) / static_cast<float>(fft_size_);
+    for (int k = 0; k < fft_size_ / 2; ++k) {
+        const float ang = two_pi_over_n * static_cast<float>(k);
+        twiddle_[k] = {std::cos(ang), std::sin(ang)};
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Public interface
@@ -125,12 +139,12 @@ void Yin::difference(const float* samples, std::vector<float>& df) const {
     // g = x[0..buffer_size_-1], zero-padded to fft_size_
     for (int j = 0; j < buffer_size_; ++j) fft_G_[j] = {samples[j], 0.0f};
 
-    fft_inplace(fft_F_);
-    fft_inplace(fft_G_);
+    fft_inplace(fft_F_, twiddle_);
+    fft_inplace(fft_G_, twiddle_);
 
     // Cross-correlation in frequency domain: conj(F) * G
     for (int i = 0; i < fft_size_; ++i) fft_F_[i] = std::conj(fft_F_[i]) * fft_G_[i];
-    ifft_inplace(fft_F_);  // fft_F_[tau].real() == r(tau)
+    ifft_inplace(fft_F_, twiddle_);  // fft_F_[tau].real() == r(tau)
 
     // Prefix sums of squares for A and B(tau)
     sq_prefix_[0] = 0.0f;

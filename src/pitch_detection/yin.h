@@ -54,6 +54,11 @@ private:
     mutable std::vector<std::complex<float>> fft_G_;
     mutable std::vector<float>               sq_prefix_;
 
+    // Pre-computed twiddle factors: twiddle_[k] = exp(-2pi*i*k / fft_size_)
+    // for k = 0 ... fft_size_/2 - 1.  Computed once in the constructor so the
+    // hot audio path never calls std::cos / std::sin.
+    std::vector<std::complex<float>> twiddle_;
+
     /** Step 2: Difference function. */
     void  difference(const float* samples, std::vector<float>& df) const;
 
