@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
@@ -199,11 +200,18 @@ class MainScreen extends StatelessWidget {
               title: const Text('コード解析'),
               subtitle: const Text('リアルタイムでコードを解析・表示'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ChordAnalyserScreen(),
-                ),
-              ),
+              onTap: () async {
+                final bridge = NativePitchBridge();
+                // Await the route so we can dispose the bridge only after the
+                // screen's own dispose() has already cancelled the subscription.
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        ChordAnalyserScreen(chordStream: bridge.chordStream),
+                  ),
+                );
+                bridge.dispose();
+              },
             ),
           ),
         ],
