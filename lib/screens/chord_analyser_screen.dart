@@ -1,17 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
+import '../native_pitch_bridge.dart';
+import '../widgets/mic_permission_denied_view.dart';
 
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
-class ChordAnalyserScreen extends StatefulWidget {
-  const ChordAnalyserScreen({super.key, required this.chordStream});
+enum _ChordAnalyserStatus { loading, permissionDenied, running }
 
-  /// Stream of chord labels emitted by the native pitch-detection engine.
-  final Stream<String> chordStream;
+class ChordAnalyserScreen extends StatefulWidget {
+  const ChordAnalyserScreen({super.key});
 
   @override
   State<ChordAnalyserScreen> createState() => _ChordAnalyserScreenState();
@@ -19,6 +21,10 @@ class ChordAnalyserScreen extends StatefulWidget {
 
 class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
     with SingleTickerProviderStateMixin {
+  NativePitchBridge? _bridge;
+
+  _ChordAnalyserStatus _status = _ChordAnalyserStatus.loading;
+
   /// The chord currently being detected.
   String _currentChord = '---';
 
@@ -40,8 +46,31 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
+    _startCapture();
+  }
 
-    _subscription = widget.chordStream.listen((chord) {
+  Future<void> _startCapture() async {
+    final status = await Permission.microphone.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      setState(() => _status = _ChordAnalyserStatus.permissionDenied);
+      return;
+    }
+
+    final bridge = NativePitchBridge();
+    final started = await bridge.startCapture();
+    if (!mounted) {
+      bridge.dispose();
+      return;
+    }
+    if (!started) {
+      bridge.dispose();
+      setState(() => _status = _ChordAnalyserStatus.permissionDenied);
+      return;
+    }
+
+    _bridge = bridge;
+    _subscription = bridge.chordStream.listen((chord) {
       if (!mounted) return;
       setState(() => _currentChord = chord);
       _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
@@ -63,11 +92,13 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
         );
       }
     });
+    setState(() => _status = _ChordAnalyserStatus.running);
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _bridge?.dispose();
     _listeningCtrl.dispose();
     super.dispose();
   }
@@ -82,98 +113,134 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
         title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
         backgroundColor: colorScheme.inversePrimary,
       ),
-      body: Column(
-        children: [
-          // ── Current chord ──────────────────────────────────────────
-          Expanded(
-            flex: 5,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.currentChord,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    ),
-                    child: Text(
-                      _currentChord,
-                      key: ValueKey(_currentChord),
-                      style: Theme.of(context)
-                          .textTheme
-                          .displayLarge
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                            fontSize: 80,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _ListeningIndicator(controller: _listeningCtrl),
-                ],
-              ),
-            ),
+      body: switch (_status) {
+        _ChordAnalyserStatus.loading =>
+          const Center(child: CircularProgressIndicator()),
+        _ChordAnalyserStatus.permissionDenied => MicPermissionDeniedView(
+            onRetry: () async {
+              setState(() => _status = _ChordAnalyserStatus.loading);
+              await _startCapture();
+            },
           ),
+        _ChordAnalyserStatus.running => _ChordAnalyserBody(
+            currentChord: _currentChord,
+            history: _history,
+            listKey: _listKey,
+            listeningCtrl: _listeningCtrl,
+            colorScheme: colorScheme,
+          ),
+      },
+    );
+  }
+}
 
-          const Divider(height: 1),
+// ── Chord analyser body ───────────────────────────────────────────────────────
 
-          // ── Chord history timeline ──────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+class _ChordAnalyserBody extends StatelessWidget {
+  const _ChordAnalyserBody({
+    required this.currentChord,
+    required this.history,
+    required this.listKey,
+    required this.listeningCtrl,
+    required this.colorScheme,
+  });
+
+  final String currentChord;
+  final List<_ChordEntry> history;
+  final GlobalKey<AnimatedListState> listKey;
+  final AnimationController listeningCtrl;
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Current chord ──────────────────────────────────────────
+        Expanded(
+          flex: 5,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.history, size: 18, color: colorScheme.secondary),
-                const SizedBox(width: 6),
                 Text(
-                  AppLocalizations.of(context)!.chordHistory,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: colorScheme.secondary,
+                  AppLocalizations.of(context)!.currentChord,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
                 ),
+                const SizedBox(height: 12),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) => ScaleTransition(
+                    scale: animation,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: Text(
+                    currentChord,
+                    key: ValueKey(currentChord),
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                          fontSize: 80,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _ListeningIndicator(controller: listeningCtrl),
               ],
             ),
           ),
-          Expanded(
-            flex: 4,
-            child: _history.isEmpty
-                ? Center(
-                    child: Text(
-                      AppLocalizations.of(context)!.noChordHistory,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+        ),
+
+        const Divider(height: 1),
+
+        // ── Chord history timeline ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(Icons.history, size: 18, color: colorScheme.secondary),
+              const SizedBox(width: 6),
+              Text(
+                AppLocalizations.of(context)!.chordHistory,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colorScheme.secondary,
                     ),
-                  )
-                : AnimatedList(
-                    key: _listKey,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 4),
-                    initialItemCount: _history.length,
-                    itemBuilder: (context, index, animation) {
-                      final entry = _history[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: _ChordHistoryTile(
-                          entry: entry,
-                          isLatest: index == 0,
-                          colorScheme: colorScheme,
-                          animation: animation,
-                        ),
-                      );
-                    },
-                  ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          flex: 4,
+          child: history.isEmpty
+              ? Center(
+                  child: Text(
+                    AppLocalizations.of(context)!.noChordHistory,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                )
+              : AnimatedList(
+                  key: listKey,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  initialItemCount: history.length,
+                  itemBuilder: (context, index, animation) {
+                    final entry = history[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _ChordHistoryTile(
+                        entry: entry,
+                        isLatest: index == 0,
+                        colorScheme: colorScheme,
+                        animation: animation,
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

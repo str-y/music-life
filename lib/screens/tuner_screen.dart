@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
+import '../widgets/mic_permission_denied_view.dart';
 
 class TunerScreen extends StatefulWidget {
   const TunerScreen({super.key});
@@ -84,7 +85,7 @@ class _TunerScreenState extends State<TunerScreen>
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
       body: switch (_status) {
         _TunerStatus.loading => const Center(child: CircularProgressIndicator()),
-        _TunerStatus.permissionDenied => _PermissionDeniedView(
+        _TunerStatus.permissionDenied => MicPermissionDeniedView(
             onRetry: () async {
               setState(() => _status = _TunerStatus.loading);
               await _startCapture();
@@ -95,51 +96,6 @@ class _TunerScreenState extends State<TunerScreen>
             pulseCtrl: _pulseCtrl,
           ),
       },
-    );
-  }
-}
-
-// ── Permission denied ─────────────────────────────────────────────────────────
-
-class _PermissionDeniedView extends StatelessWidget {
-  const _PermissionDeniedView({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.mic_off,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.micPermissionRequired,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.settings),
-              label: Text(l10n.openSettings),
-              onPressed: openAppSettings,
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(l10n.retry),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
