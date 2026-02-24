@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/app_database.dart';
 import '../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
@@ -82,55 +83,135 @@ class PracticeLogEntry {
 }
 
 // ---------------------------------------------------------------------------
-// Repository – persists recording metadata and practice logs via
-// SharedPreferences using JSON encoding.
+// Repository – persists recording metadata and practice logs via SQLite.
+// A one-time migration from the legacy SharedPreferences JSON store is
+// performed automatically on the first access after upgrading.
 // ---------------------------------------------------------------------------
 
 class RecordingRepository {
   static const _recordingsKey = 'recordings_v1';
   static const _logsKey = 'practice_logs_v1';
+  static const _migratedKey = 'db_migrated_v1';
+
+  /// Cached in memory so the SharedPreferences lookup only happens once.
+  static bool _migrated = false;
+
+  Future<void> _migrateIfNeeded() async {
+    if (_migrated) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_migratedKey) == true) {
+      _migrated = true;
+      return;
+    }
+
+    // Migrate recordings
+    final recStr = prefs.getString(_recordingsKey);
+    if (recStr != null) {
+      try {
+        final list = jsonDecode(recStr) as List<dynamic>;
+        final entries = list
+            .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
+            .toList();
+        await AppDatabase.instance.replaceAllRecordings(
+          entries
+              .map((e) => {
+                    'id': e.id,
+                    'title': e.title,
+                    'recorded_at': e.recordedAt.toIso8601String(),
+                    'duration_seconds': e.durationSeconds,
+                    'waveform_data': jsonEncode(e.waveformData),
+                  })
+              .toList(),
+        );
+      } catch (e, st) {
+        assert(() {
+          debugPrint('RecordingRepository: recording migration failed: $e\n$st');
+          return true;
+        }());
+      }
+    }
+
+    // Migrate practice logs
+    final logStr = prefs.getString(_logsKey);
+    if (logStr != null) {
+      try {
+        final list = jsonDecode(logStr) as List<dynamic>;
+        final entries = list
+            .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
+            .toList();
+        await AppDatabase.instance.replaceAllPracticeLogs(
+          entries
+              .map((e) => {
+                    'date': e.date.toIso8601String(),
+                    'duration_minutes': e.durationMinutes,
+                    'memo': e.memo,
+                  })
+              .toList(),
+        );
+      } catch (e, st) {
+        assert(() {
+          debugPrint('RecordingRepository: practice log migration failed: $e\n$st');
+          return true;
+        }());
+      }
+    }
+
+    await prefs.setBool(_migratedKey, true);
+    _migrated = true;
+  }
 
   Future<List<RecordingEntry>> loadRecordings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_recordingsKey);
-    if (jsonStr == null) return [];
-    try {
-      final list = jsonDecode(jsonStr) as List<dynamic>;
-      return list
-          .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    await _migrateIfNeeded();
+    final rows = await AppDatabase.instance.queryAllRecordings();
+    return rows
+        .map((row) => RecordingEntry(
+              id: row['id'] as String,
+              title: row['title'] as String,
+              recordedAt: DateTime.parse(row['recorded_at'] as String),
+              durationSeconds: row['duration_seconds'] as int,
+              waveformData:
+                  (jsonDecode(row['waveform_data'] as String) as List)
+                      .map((e) => (e as num).toDouble())
+                      .toList(),
+            ))
+        .toList();
   }
 
   Future<void> saveRecordings(List<RecordingEntry> recordings) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _recordingsKey,
-      jsonEncode(recordings.map((e) => e.toJson()).toList()),
+    await AppDatabase.instance.replaceAllRecordings(
+      recordings
+          .map((e) => {
+                'id': e.id,
+                'title': e.title,
+                'recorded_at': e.recordedAt.toIso8601String(),
+                'duration_seconds': e.durationSeconds,
+                'waveform_data': jsonEncode(e.waveformData),
+              })
+          .toList(),
     );
   }
 
   Future<List<PracticeLogEntry>> loadPracticeLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_logsKey);
-    if (jsonStr == null) return [];
-    try {
-      final list = jsonDecode(jsonStr) as List<dynamic>;
-      return list
-          .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    await _migrateIfNeeded();
+    final rows = await AppDatabase.instance.queryAllPracticeLogs();
+    return rows
+        .map((row) => PracticeLogEntry(
+              date: DateTime.parse(row['date'] as String),
+              durationMinutes: row['duration_minutes'] as int,
+              memo: row['memo'] as String? ?? '',
+            ))
+        .toList();
   }
 
   Future<void> savePracticeLogs(List<PracticeLogEntry> logs) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _logsKey,
-      jsonEncode(logs.map((e) => e.toJson()).toList()),
+    await AppDatabase.instance.replaceAllPracticeLogs(
+      logs
+          .map((e) => {
+                'date': e.date.toIso8601String(),
+                'duration_minutes': e.durationMinutes,
+                'memo': e.memo,
+              })
+          .toList(),
     );
   }
 }

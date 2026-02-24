@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/app_database.dart';
 import '../l10n/app_localizations.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
@@ -43,6 +44,10 @@ class PracticeLogScreen extends StatefulWidget {
 class _PracticeLogScreenState extends State<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
   static const _kPrefKey = 'practice_log_entries';
+  static const _kMigratedKey = 'practice_log_entries_db_migrated';
+
+  /// Cached in memory so the SharedPreferences lookup only happens once.
+  static bool _migrated = false;
 
   List<_LogEntry> _entries = [];
   bool _loading = true;
@@ -66,33 +71,64 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
 
   // ── Persistence ───────────────────────────────────────────────────────────
 
-  Future<void> _loadEntries() async {
+  Future<void> _migrateIfNeeded() async {
+    if (_migrated) return;
     final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_kMigratedKey) == true) {
+      _migrated = true;
+      return;
+    }
+
     final raw = prefs.getStringList(_kPrefKey) ?? [];
+    if (raw.isNotEmpty) {
+      try {
+        for (final s in raw) {
+          final e = _LogEntry.fromJson(jsonDecode(s) as Map<String, dynamic>);
+          await AppDatabase.instance.insertPracticeLogEntry({
+            'date': e.date.toIso8601String(),
+            'duration_minutes': e.durationMinutes,
+            'note': e.note,
+          });
+        }
+      } catch (e, st) {
+        assert(() {
+          debugPrint('PracticeLogScreen: migration failed: $e\n$st');
+          return true;
+        }());
+      }
+    }
+
+    await prefs.setBool(_kMigratedKey, true);
+    _migrated = true;
+  }
+
+  Future<void> _loadEntries() async {
+    await _migrateIfNeeded();
+    final rows = await AppDatabase.instance.queryAllPracticeLogEntries();
     if (!mounted) return;
     setState(() {
-      _entries = raw
-          .map((s) => _LogEntry.fromJson(jsonDecode(s) as Map<String, dynamic>))
+      _entries = rows
+          .map((row) => _LogEntry(
+                date: DateTime.parse(row['date'] as String),
+                durationMinutes: row['duration_minutes'] as int,
+                note: row['note'] as String? ?? '',
+              ))
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
       _loading = false;
     });
   }
 
-  Future<void> _saveEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _kPrefKey,
-      _entries.map((e) => jsonEncode(e.toJson())).toList(),
-    );
-  }
-
   Future<void> _addEntry(_LogEntry entry) async {
+    await AppDatabase.instance.insertPracticeLogEntry({
+      'date': entry.date.toIso8601String(),
+      'duration_minutes': entry.durationMinutes,
+      'note': entry.note,
+    });
     setState(() {
       _entries = [entry, ..._entries]
         ..sort((a, b) => b.date.compareTo(a.date));
     });
-    await _saveEntries();
   }
 
   // ── Add-entry dialog ──────────────────────────────────────────────────────
