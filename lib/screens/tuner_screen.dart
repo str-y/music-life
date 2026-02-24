@@ -31,6 +31,10 @@ class _TunerScreenState extends State<TunerScreen>
   /// detected, and for animating the cents needle.
   late final AnimationController _pulseCtrl;
 
+  /// Timer used to stop [_pulseCtrl] after [_idleTimeout] of no audio input.
+  Timer? _idleTimer;
+  static const Duration _idleTimeout = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +42,16 @@ class _TunerScreenState extends State<TunerScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    _scheduleIdleStop();
     _startCapture();
+  }
+
+  /// Schedules [_pulseCtrl] to stop after [_idleTimeout] of no audio activity.
+  void _scheduleIdleStop() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(_idleTimeout, () {
+      if (mounted) _pulseCtrl.stop();
+    });
   }
 
   Future<void> _startCapture() async {
@@ -64,6 +77,10 @@ class _TunerScreenState extends State<TunerScreen>
     _bridge = bridge;
     _sub = bridge.pitchStream.listen((result) {
       if (!mounted) return;
+      if (!_pulseCtrl.isAnimating) {
+        _pulseCtrl.repeat(reverse: true);
+      }
+      _scheduleIdleStop();
       setState(() => _latest = result);
     });
     setState(() => _status = _TunerStatus.running);
@@ -71,6 +88,7 @@ class _TunerScreenState extends State<TunerScreen>
 
   @override
   void dispose() {
+    _idleTimer?.cancel();
     _sub?.cancel();
     _bridge?.dispose();
     _pulseCtrl.dispose();
