@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'l10n/app_localizations.dart';
-import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
+import 'service_locator.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ServiceLocator.initialize();
   runApp(const MusicLifeApp());
 }
 
@@ -84,7 +84,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     if (!mounted) return;
     setState(() {
       _settings = _AppSettings(
@@ -96,7 +96,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
 
   Future<void> _updateSettings(_AppSettings updated) async {
     setState(() => _settings = updated);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     await prefs.setBool(_kDarkMode, updated.darkMode);
     await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }
@@ -319,7 +319,8 @@ class _MainScreenState extends State<MainScreen>
                       );
                       return;
                     }
-                    final bridge = NativePitchBridge();
+                    final bridge =
+                        ServiceLocator.instance.pitchBridgeFactory();
                     final hasPermission = await bridge.startCapture();
                     if (!hasPermission) {
                       bridge.dispose();

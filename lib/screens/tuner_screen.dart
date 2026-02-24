@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
+import '../service_locator.dart';
 
 class TunerScreen extends StatefulWidget {
   const TunerScreen({super.key});
@@ -48,7 +49,7 @@ class _TunerScreenState extends State<TunerScreen>
       return;
     }
 
-    final bridge = NativePitchBridge();
+    final bridge = ServiceLocator.instance.pitchBridgeFactory();
     final started = await bridge.startCapture();
     if (!mounted) {
       bridge.dispose();

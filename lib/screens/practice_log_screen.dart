@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../service_locator.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   // ── Persistence ───────────────────────────────────────────────────────────
 
   Future<void> _loadEntries() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     final raw = prefs.getStringList(_kPrefKey) ?? [];
     if (!mounted) return;
     setState(() {
@@ -80,7 +80,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   }
 
   Future<void> _saveEntries() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     await prefs.setStringList(
       _kPrefKey,
       _entries.map((e) => jsonEncode(e.toJson())).toList(),
