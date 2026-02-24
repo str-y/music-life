@@ -302,8 +302,8 @@ class _RhythmScreenState extends State<RhythmScreen>
     final scoreColor = Color.lerp(cs.error, cs.primary, scoreRatio)!;
 
     return Semantics(
-      label: 'Groove Target',
-      onTapHint: 'Tap to rhythm',
+      label: l10n.grooveTargetSemanticLabel,
+      onTapHint: l10n.grooveTargetTapHint,
       child: GestureDetector(
         onTap: _onGrooveTap,
         child: Container(

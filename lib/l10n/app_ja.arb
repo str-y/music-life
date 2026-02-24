@@ -64,5 +64,9 @@
   "yearMonth": "{year}年{month}月",
   "practiceDayCount": "{count}日",
   "durationMinutes": "{minutes}分",
-  "practiceDurationLabel": "練習時間: {minutes} 分"
+  "practiceDurationLabel": "練習時間: {minutes} 分",
+  "loadingLibrary": "録音データと練習ログを読み込み中",
+  "waveformSemanticLabel": "録音の波形表示",
+  "grooveTargetSemanticLabel": "グルーヴターゲット",
+  "grooveTargetTapHint": "タップしてリズムを刻もう"
 }

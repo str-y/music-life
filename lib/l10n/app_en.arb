@@ -318,5 +318,25 @@
     "placeholders": {
       "minutes": { "type": "int" }
     }
+  },
+
+  "loadingLibrary": "Loading recordings and practice logs",
+  "@loadingLibrary": {
+    "description": "Semantics label for the loading indicator on the Library screen"
+  },
+
+  "waveformSemanticLabel": "Visual waveform representation of the recording",
+  "@waveformSemanticLabel": {
+    "description": "Accessibility label for the waveform visualisation widget"
+  },
+
+  "grooveTargetSemanticLabel": "Groove Target",
+  "@grooveTargetSemanticLabel": {
+    "description": "Accessibility label for the groove target area in the Rhythm screen"
+  },
+
+  "grooveTargetTapHint": "Tap to rhythm",
+  "@grooveTargetTapHint": {
+    "description": "Accessibility tap hint for the groove target area in the Rhythm screen"
   }
 }

@@ -209,9 +209,9 @@ class _LibraryScreenState extends State<LibraryScreen>
         ),
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(
-                semanticsLabel: 'Loading recordings and practice logs',
+                semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
               ),
             )
           : TabBarView(
@@ -467,7 +467,7 @@ class _WaveformViewState extends State<_WaveformView>
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Visual waveform representation of the recording',
+      label: AppLocalizations.of(context)!.waveformSemanticLabel,
       excludeSemantics: true,
       child: SizedBox(
         height: 48,

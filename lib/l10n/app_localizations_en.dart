@@ -187,6 +187,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekdaySat => 'Sat';
 
   @override
+  String get loadingLibrary => 'Loading recordings and practice logs';
+
+  @override
+  String get waveformSemanticLabel =>
+      'Visual waveform representation of the recording';
+
+  @override
+  String get grooveTargetSemanticLabel => 'Groove Target';
+
+  @override
+  String get grooveTargetTapHint => 'Tap to rhythm';
+
+  @override
   String yearMonth(int year, int month) => '$year/$month';
 
   @override
