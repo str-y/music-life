@@ -68,5 +68,8 @@
   "loadingLibrary": "録音データと練習ログを読み込み中",
   "waveformSemanticLabel": "録音の波形表示",
   "grooveTargetSemanticLabel": "グルーヴターゲット",
-  "grooveTargetTapHint": "タップしてリズムを刻もう"
+  "grooveTargetTapHint": "タップしてリズムを刻もう",
+  "bpmLabel": "BPM",
+  "metronomePlayTooltip": "メトロノームを開始",
+  "metronomeStopTooltip": "メトロノームを停止"
 }

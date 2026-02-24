@@ -199,6 +199,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get grooveTargetTapHint => 'タップしてリズムを刻もう';
 
   @override
+  String get bpmLabel => 'BPM';
+
+  @override
+  String get metronomePlayTooltip => 'メトロノームを開始';
+
+  @override
+  String get metronomeStopTooltip => 'メトロノームを停止';
+
+  @override
   String yearMonth(int year, int month) => '$year年$month月';
 
   @override

@@ -123,6 +123,9 @@ abstract class AppLocalizations {
   String get waveformSemanticLabel;
   String get grooveTargetSemanticLabel;
   String get grooveTargetTapHint;
+  String get bpmLabel;
+  String get metronomePlayTooltip;
+  String get metronomeStopTooltip;
 
   // ── Parameterized methods ───────────────────────────────────────────────────
 
