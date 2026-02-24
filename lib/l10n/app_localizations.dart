@@ -124,12 +124,36 @@ abstract class AppLocalizations {
   String get grooveTargetSemanticLabel;
   String get grooveTargetTapHint;
 
+  // ── Composition Helper ───────────────────────────────────────────────────────
+
+  String get compositionHelperTitle;
+  String get compositionHelperSubtitle;
+  String get compositionPalette;
+  String get compositionEmpty;
+  String get compositionPlay;
+  String get compositionStop;
+  String get compositionSave;
+  String get compositionLoad;
+  String get compositionTitle;
+  String get compositionSavedSuccess;
+  String get compositionNoSaved;
+  String get compositionDelete;
+  String get compositionClear;
+  String get compositionDeleteProject;
+  String get compositionAddChord;
+  String get compositionUntitled;
+
   // ── Parameterized methods ───────────────────────────────────────────────────
 
   String yearMonth(int year, int month);
   String practiceDayCount(int count);
   String durationMinutes(int minutes);
   String practiceDurationLabel(int minutes);
+  String compositionSequence(int count);
+  String compositionBpmLabel(int bpm);
+  String compositionLoadSuccess(String title);
+  String compositionChordCount(int count);
+  String compositionDefaultName(int number);
 }
 
 class _AppLocalizationsDelegate

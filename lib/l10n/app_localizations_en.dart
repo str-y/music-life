@@ -200,6 +200,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get grooveTargetTapHint => 'Tap to rhythm';
 
   @override
+  String get compositionHelperTitle => 'Composition Helper';
+
+  @override
+  String get compositionHelperSubtitle => 'Build and preview chord sequences';
+
+  @override
+  String get compositionPalette => 'Chord Palette';
+
+  @override
+  String get compositionEmpty =>
+      'Tap a chord above to add it to your sequence';
+
+  @override
+  String get compositionPlay => 'Play';
+
+  @override
+  String get compositionStop => 'Stop';
+
+  @override
+  String get compositionSave => 'Save Composition';
+
+  @override
+  String get compositionLoad => 'Load Composition';
+
+  @override
+  String get compositionTitle => 'Composition Name';
+
+  @override
+  String get compositionSavedSuccess => 'Composition saved';
+
+  @override
+  String get compositionNoSaved => 'No saved compositions';
+
+  @override
+  String get compositionDelete => 'Remove chord';
+
+  @override
+  String get compositionClear => 'Clear';
+
+  @override
+  String get compositionDeleteProject => 'Delete composition';
+
+  @override
+  String get compositionAddChord => 'Add chord';
+
+  @override
+  String get compositionUntitled => 'Untitled';
+
+  @override
   String yearMonth(int year, int month) => '$year/$month';
 
   @override
@@ -210,4 +259,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String practiceDurationLabel(int minutes) => 'Practice time: $minutes min';
+
+  @override
+  String compositionSequence(int count) => 'Chord Sequence ($count)';
+
+  @override
+  String compositionBpmLabel(int bpm) => 'BPM: $bpm';
+
+  @override
+  String compositionLoadSuccess(String title) => 'Loaded: $title';
+
+  @override
+  String compositionChordCount(int count) => '$count chords';
+
+  @override
+  String compositionDefaultName(int number) => 'Composition $number';
 }

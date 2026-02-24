@@ -199,6 +199,54 @@ class AppLocalizationsJa extends AppLocalizations {
   String get grooveTargetTapHint => 'タップしてリズムを刻もう';
 
   @override
+  String get compositionHelperTitle => '作曲ヘルパー';
+
+  @override
+  String get compositionHelperSubtitle => 'コード進行を組み立てプレビュー';
+
+  @override
+  String get compositionPalette => 'コードパレット';
+
+  @override
+  String get compositionEmpty => '上のコードをタップしてシーケンスに追加しよう';
+
+  @override
+  String get compositionPlay => '再生';
+
+  @override
+  String get compositionStop => '停止';
+
+  @override
+  String get compositionSave => '作曲を保存';
+
+  @override
+  String get compositionLoad => '作曲を読み込む';
+
+  @override
+  String get compositionTitle => '作曲名';
+
+  @override
+  String get compositionSavedSuccess => '作曲を保存しました';
+
+  @override
+  String get compositionNoSaved => '保存された作曲がありません';
+
+  @override
+  String get compositionDelete => 'コードを削除';
+
+  @override
+  String get compositionClear => 'クリア';
+
+  @override
+  String get compositionDeleteProject => '作曲を削除';
+
+  @override
+  String get compositionAddChord => 'コードを追加';
+
+  @override
+  String get compositionUntitled => '無題';
+
+  @override
   String yearMonth(int year, int month) => '$year年$month月';
 
   @override
@@ -209,4 +257,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String practiceDurationLabel(int minutes) => '練習時間: $minutes 分';
+
+  @override
+  String compositionSequence(int count) => 'コード進行 ($count)';
+
+  @override
+  String compositionBpmLabel(int bpm) => 'BPM: $bpm';
+
+  @override
+  String compositionLoadSuccess(String title) => '読み込みました: $title';
+
+  @override
+  String compositionChordCount(int count) => '$countコード';
+
+  @override
+  String compositionDefaultName(int number) => '作曲 $number';
 }
