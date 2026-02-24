@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
+import '../widgets/listening_indicator.dart';
 
 class TunerScreen extends StatefulWidget {
   const TunerScreen({super.key});
@@ -218,7 +219,7 @@ class _TunerBody extends StatelessWidget {
 
           // ── Listening indicator ───────────────────────────────────
           if (latest == null) ...[
-            _ListeningPulse(controller: pulseCtrl, color: cs.primary),
+            ListeningIndicator(controller: pulseCtrl, color: cs.primary),
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.playSound,
@@ -348,38 +349,4 @@ class _CentsMeterPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CentsMeterPainter old) =>
       old.cents != cents || old.needleColor != needleColor;
-}
-
-// ── Listening pulse ───────────────────────────────────────────────────────────
-
-class _ListeningPulse extends StatelessWidget {
-  const _ListeningPulse({required this.controller, required this.color});
-
-  final AnimationController controller;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) => Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(3, (i) {
-          final interval =
-              Interval(i * 0.15, 0.55 + i * 0.15, curve: Curves.easeInOut);
-          final t = interval.transform(controller.value);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            width: 4,
-            height: 6 + t * 10,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.35 + t * 0.65),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          );
-        }),
-      ),
-    );
-  }
 }
