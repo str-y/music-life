@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../widgets/listening_indicator.dart';
 
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
@@ -118,7 +119,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _ListeningIndicator(controller: _listeningCtrl),
+                  ListeningIndicator(controller: _listeningCtrl),
                 ],
               ),
             ),
@@ -184,45 +185,6 @@ String _formatTime(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:'
     '${t.minute.toString().padLeft(2, '0')}:'
     '${t.second.toString().padLeft(2, '0')}';
-
-// ── Pulsing listening indicator ───────────────────────────────────────────────
-
-class _ListeningIndicator extends StatelessWidget {
-  const _ListeningIndicator({required this.controller});
-
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(3, (i) {
-            final interval = Interval(
-              i * 0.15,
-              0.55 + i * 0.15,
-              curve: Curves.easeInOut,
-            );
-            final t = interval.transform(controller.value);
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              width: 4,
-              height: 6 + t * 10,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.35 + t * 0.65),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-}
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
