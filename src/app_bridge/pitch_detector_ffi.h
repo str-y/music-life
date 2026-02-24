@@ -4,6 +4,11 @@
 extern "C" {
 #endif
 
+/** Maximum number of bytes (including null terminator) reserved for a note name
+ *  in MLPitchResult.  Sized to hold the longest possible name (e.g. "C#-1")
+ *  with comfortable headroom for future extensions. */
+#define ML_PITCH_NOTE_NAME_SIZE 8
+
 typedef struct MLPitchDetectorHandle MLPitchDetectorHandle;
 
 typedef struct {
@@ -12,7 +17,7 @@ typedef struct {
     float probability;
     int   midi_note;
     float cents_offset;
-    char  note_name[8];
+    char  note_name[ML_PITCH_NOTE_NAME_SIZE];
 } MLPitchResult;
 
 MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold);
