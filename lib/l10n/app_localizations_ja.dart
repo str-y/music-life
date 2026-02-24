@@ -187,6 +187,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get weekdaySat => '土';
 
   @override
+  String get loadingLibrary => '録音データと練習ログを読み込み中';
+
+  @override
+  String get waveformSemanticLabel => '録音の波形表示';
+
+  @override
+  String get grooveTargetSemanticLabel => 'グルーヴターゲット';
+
+  @override
+  String get grooveTargetTapHint => 'タップしてリズムを刻もう';
+
+  @override
   String yearMonth(int year, int month) => '$year年$month月';
 
   @override

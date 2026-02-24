@@ -117,6 +117,13 @@ abstract class AppLocalizations {
   String get weekdayFri;
   String get weekdaySat;
 
+  // ── Accessibility / semantics ────────────────────────────────────────────────
+
+  String get loadingLibrary;
+  String get waveformSemanticLabel;
+  String get grooveTargetSemanticLabel;
+  String get grooveTargetTapHint;
+
   // ── Parameterized methods ───────────────────────────────────────────────────
 
   String yearMonth(int year, int month);
