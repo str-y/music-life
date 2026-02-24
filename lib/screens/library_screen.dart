@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -99,7 +100,12 @@ class RecordingRepository {
       return list
           .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load recordings from storage',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return [];
     }
   }
@@ -121,7 +127,12 @@ class RecordingRepository {
       return list
           .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load practice logs from storage',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return [];
     }
   }
