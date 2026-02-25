@@ -119,6 +119,7 @@ abstract class AppLocalizations {
 
   // ── Accessibility / semantics ────────────────────────────────────────────────
 
+  String get loadDataError;
   String get loadingLibrary;
   String get waveformSemanticLabel;
   String get grooveTargetSemanticLabel;

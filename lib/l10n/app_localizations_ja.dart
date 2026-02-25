@@ -187,6 +187,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get weekdaySat => '土';
 
   @override
+  String get loadDataError =>
+      'データを読み込めませんでした。もう一度お試しください。';
+
+  @override
   String get loadingLibrary => '録音データと練習ログを読み込み中';
 
   @override

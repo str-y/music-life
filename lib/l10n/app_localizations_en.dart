@@ -187,6 +187,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekdaySat => 'Sat';
 
   @override
+  String get loadDataError =>
+      'Could not load data. Please try again.';
+
+  @override
   String get loadingLibrary => 'Loading recordings and practice logs';
 
   @override
