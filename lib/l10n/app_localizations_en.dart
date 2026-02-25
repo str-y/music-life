@@ -200,6 +200,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get grooveTargetTapHint => 'Tap to rhythm';
 
   @override
+  String get bpmLabel => 'BPM';
+
+  @override
+  String get metronomePlayTooltip => 'Start metronome';
+
+  @override
+  String get metronomeStopTooltip => 'Stop metronome';
+
+  @override
   String yearMonth(int year, int month) => '$year/$month';
 
   @override
