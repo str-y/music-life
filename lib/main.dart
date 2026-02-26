@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'l10n/app_localizations.dart';
-import 'native_pitch_bridge.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
@@ -297,58 +295,11 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.chordAnalyserTitle),
                   subtitle: Text(l10n.chordAnalyserSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    final status = await Permission.microphone.request();
-                    if (!context.mounted) return;
-                    if (status.isPermanentlyDenied) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.micPermissionDenied),
-                          action: SnackBarAction(
-                            label: l10n.openSettings,
-                            onPressed: openAppSettings,
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    if (!status.isGranted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.micPermissionRequired),
-                        ),
-                      );
-                      return;
-                    }
-                    final bridge = NativePitchBridge();
-                    final hasPermission = await bridge.startCapture();
-                    if (!hasPermission) {
-                      bridge.dispose();
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.micPermissionRequired),
-                          ),
-                        );
-                      }
-                      return;
-                    }
-                    if (!context.mounted) {
-                      bridge.dispose();
-                      return;
-                    }
-                    // Await the route so we can dispose the bridge only after
-                    // the screen's own dispose() has already cancelled the
-                    // subscription.
-                    await Navigator.of(context).push(
-                      _slideUpRoute<void>(
-                        builder: (_) => ChordAnalyserScreen(
-                          chordStream: bridge.chordStream,
-                        ),
-                      ),
-                    );
-                    bridge.dispose();
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const ChordAnalyserScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

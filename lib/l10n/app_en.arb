@@ -320,6 +320,11 @@
     }
   },
 
+  "loadDataError": "Could not load data. Please try again.",
+  "@loadDataError": {
+    "description": "Error message shown on the Library screen when data fails to load"
+  },
+
   "loadingLibrary": "Loading recordings and practice logs",
   "@loadingLibrary": {
     "description": "Semantics label for the loading indicator on the Library screen"
@@ -458,5 +463,20 @@
   "compositionUntitled": "Untitled",
   "@compositionUntitled": {
     "description": "Fallback title used when the user saves a composition with an empty name"
+  },
+
+  "bpmLabel": "BPM",
+  "@bpmLabel": {
+    "description": "Label displayed beneath the BPM number on the Rhythm screen"
+  },
+
+  "metronomePlayTooltip": "Start metronome",
+  "@metronomePlayTooltip": {
+    "description": "Tooltip for the play/start button on the Rhythm screen"
+  },
+
+  "metronomeStopTooltip": "Stop metronome",
+  "@metronomeStopTooltip": {
+    "description": "Tooltip for the stop button on the Rhythm screen"
   }
 }

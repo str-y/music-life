@@ -65,11 +65,11 @@
   "practiceDayCount": "{count}日",
   "durationMinutes": "{minutes}分",
   "practiceDurationLabel": "練習時間: {minutes} 分",
+  "loadDataError": "データを読み込めませんでした。もう一度お試しください。",
   "loadingLibrary": "録音データと練習ログを読み込み中",
   "waveformSemanticLabel": "録音の波形表示",
   "grooveTargetSemanticLabel": "グルーヴターゲット",
   "grooveTargetTapHint": "タップしてリズムを刻もう",
-
   "compositionHelperTitle": "作曲ヘルパー",
   "compositionHelperSubtitle": "コード進行を組み立てプレビュー",
   "compositionPalette": "コードパレット",
@@ -90,5 +90,8 @@
   "compositionAddChord": "コードを追加",
   "compositionChordCount": "{count}コード",
   "compositionDefaultName": "作曲 {number}",
-  "compositionUntitled": "無題"
+  "compositionUntitled": "無題",
+  "bpmLabel": "BPM",
+  "metronomePlayTooltip": "メトロノームを開始",
+  "metronomeStopTooltip": "メトロノームを停止"
 }
