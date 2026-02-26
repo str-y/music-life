@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -19,7 +22,7 @@ class AppDatabase {
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE recordings (
@@ -27,7 +30,7 @@ class AppDatabase {
             title TEXT NOT NULL,
             recorded_at TEXT NOT NULL,
             duration_seconds INTEGER NOT NULL,
-            waveform_data TEXT NOT NULL
+            waveform_data BLOB NOT NULL
           )
         ''');
         await db.execute('''
@@ -46,6 +49,42 @@ class AppDatabase {
             note TEXT NOT NULL DEFAULT ''
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Migrate waveform_data from JSON TEXT to binary BLOB.
+          await db.execute('''
+            CREATE TABLE recordings_new (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              recorded_at TEXT NOT NULL,
+              duration_seconds INTEGER NOT NULL,
+              waveform_data BLOB NOT NULL
+            )
+          ''');
+          final rows = await db.query('recordings');
+          for (final row in rows) {
+            final jsonStr = row['waveform_data'] as String;
+            final doubles = (jsonDecode(jsonStr) as List)
+                .map((e) => (e as num).toDouble())
+                .toList();
+            // Encoding matches _waveformToBlob in recording_repository.dart.
+            final byteData = ByteData(doubles.length * 8);
+            for (var i = 0; i < doubles.length; i++) {
+              byteData.setFloat64(i * 8, doubles[i], Endian.little);
+            }
+            await db.insert('recordings_new', {
+              'id': row['id'],
+              'title': row['title'],
+              'recorded_at': row['recorded_at'],
+              'duration_seconds': row['duration_seconds'],
+              'waveform_data': byteData.buffer.asUint8List(),
+            });
+          }
+          await db.execute('DROP TABLE recordings');
+          await db.execute(
+              'ALTER TABLE recordings_new RENAME TO recordings');
+        }
       },
     );
   }

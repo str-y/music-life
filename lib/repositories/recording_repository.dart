@@ -1,9 +1,29 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/app_database.dart';
+
+// ---------------------------------------------------------------------------
+// Waveform binary encoding helpers
+// ---------------------------------------------------------------------------
+
+/// Encodes a list of [double] amplitude values as a packed IEEE 754 BLOB.
+Uint8List _waveformToBlob(List<double> data) {
+  final bytes = ByteData(data.length * 8);
+  for (var i = 0; i < data.length; i++) {
+    bytes.setFloat64(i * 8, data[i], Endian.little);
+  }
+  return bytes.buffer.asUint8List();
+}
+
+/// Decodes a packed IEEE 754 BLOB back to a list of [double] values.
+List<double> _blobToWaveform(Uint8List blob) {
+  final bytes = ByteData.sublistView(blob);
+  return List.generate(blob.length ~/ 8, (i) => bytes.getFloat64(i * 8, Endian.little));
+}
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -122,7 +142,7 @@ class RecordingRepository {
                     'title': e.title,
                     'recorded_at': e.recordedAt.toIso8601String(),
                     'duration_seconds': e.durationSeconds,
-                    'waveform_data': jsonEncode(e.waveformData),
+                    'waveform_data': _waveformToBlob(e.waveformData),
                   })
               .toList(),
         );
@@ -168,9 +188,7 @@ class RecordingRepository {
               recordedAt: DateTime.parse(row['recorded_at'] as String),
               durationSeconds: row['duration_seconds'] as int,
               waveformData:
-                  (jsonDecode(row['waveform_data'] as String) as List)
-                      .map((e) => (e as num).toDouble())
-                      .toList(),
+                  _blobToWaveform(row['waveform_data'] as Uint8List),
             ))
         .toList();
   }
@@ -183,7 +201,7 @@ class RecordingRepository {
                 'title': e.title,
                 'recorded_at': e.recordedAt.toIso8601String(),
                 'duration_seconds': e.durationSeconds,
-                'waveform_data': jsonEncode(e.waveformData),
+                'waveform_data': _waveformToBlob(e.waveformData),
               })
           .toList(),
     );
