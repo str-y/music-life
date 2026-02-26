@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
-import 'models.dart';
+import '../../repositories/recording_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Recordings tab

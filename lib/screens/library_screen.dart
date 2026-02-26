@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../repositories/recording_repository.dart';
+import '../service_locator.dart';
 import 'library/log_tab.dart';
-import 'library/models.dart';
 import 'library/recordings_tab.dart';
-import 'library/repository.dart';
-
-export 'library/models.dart';
-export 'library/repository.dart';
 
 // ---------------------------------------------------------------------------
 // LibraryScreen
@@ -23,28 +20,32 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final _repository = RecordingRepository();
+  late final RecordingRepository _repository;
 
   List<RecordingEntry> _recordings = [];
   List<PracticeLogEntry> _logs = [];
   bool _loading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _repository = ServiceLocator.instance.recordingRepository;
     _loadData();
   }
 
   Future<void> _loadData() async {
     try {
-      final recordings = await _repository.loadRecordings();
-      final logs = await _repository.loadPracticeLogs();
+      final recordings = _repository.loadRecordings();
+      final logs = _repository.loadPracticeLogs();
       if (!mounted) return;
       setState(() {
         _recordings = recordings;
         _logs = logs;
       });
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -72,12 +73,39 @@ class _LibraryScreenState extends State<LibraryScreen>
         ),
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(
-                semanticsLabel: 'Loading recordings and practice logs',
+                semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
               ),
             )
-          : TabBarView(
+          : _hasError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        AppLocalizations.of(context)!.loadDataError,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _loading = true;
+                            _hasError = false;
+                          });
+                          _loadData();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: Text(AppLocalizations.of(context)!.retry),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
               controller: _tabController,
               children: [
                 RecordingsTab(recordings: _recordings),

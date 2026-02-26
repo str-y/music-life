@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import 'models.dart';
+import '../../repositories/recording_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Log (Calendar) tab
