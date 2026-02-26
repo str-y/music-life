@@ -84,6 +84,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tuningOk => 'チューニング OK';
 
   @override
+  String get centsMeterSemanticLabel => 'セント数メーター';
+
+  @override
   String get practiceLogTitle => '練習ログ';
 
   @override

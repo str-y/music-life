@@ -155,7 +155,11 @@ class _TunerBody extends StatelessWidget {
           const SizedBox(height: 32),
 
           // ── Cents meter ───────────────────────────────────────────
-          _CentsMeter(cents: cents, hasReading: latest != null),
+          Semantics(
+            label: AppLocalizations.of(context)!.centsMeterSemanticLabel,
+            value: '$centsText cents',
+            child: _CentsMeter(cents: cents, hasReading: latest != null),
+          ),
           const SizedBox(height: 8),
           Text(
             '$centsText cents',
