@@ -2,29 +2,39 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
 import '../widgets/listening_indicator.dart';
+import '../widgets/mic_permission_gate.dart';
 
-class TunerScreen extends StatefulWidget {
+class TunerScreen extends StatelessWidget {
   const TunerScreen({super.key});
 
   @override
-  State<TunerScreen> createState() => _TunerScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
+      body: const MicPermissionGate(child: _TunerBodyWrapper()),
+    );
+  }
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── Internal body wrapper (handles bridge & state) ───────────────────────────
 
-enum _TunerStatus { loading, permissionDenied, running }
+class _TunerBodyWrapper extends StatefulWidget {
+  const _TunerBodyWrapper();
 
-class _TunerScreenState extends State<TunerScreen>
+  @override
+  State<_TunerBodyWrapper> createState() => _TunerBodyWrapperState();
+}
+
+class _TunerBodyWrapperState extends State<_TunerBodyWrapper>
     with SingleTickerProviderStateMixin {
   NativePitchBridge? _bridge;
   StreamSubscription<PitchResult>? _sub;
 
-  _TunerStatus _status = _TunerStatus.loading;
+  bool _loading = true;
   PitchResult? _latest;
 
   /// Controller for the "listening" pulse animation shown before a note is
@@ -55,12 +65,7 @@ class _TunerScreenState extends State<TunerScreen>
   }
 
   Future<void> _startCapture() async {
-    final status = await Permission.microphone.request();
-    if (!mounted) return;
-    if (!status.isGranted) {
-      setState(() => _status = _TunerStatus.permissionDenied);
-      return;
-    }
+    setState(() => _loading = true);
 
     final bridge = NativePitchBridge();
     final started = await bridge.startCapture();
@@ -70,7 +75,7 @@ class _TunerScreenState extends State<TunerScreen>
     }
     if (!started) {
       bridge.dispose();
-      setState(() => _status = _TunerStatus.permissionDenied);
+      setState(() => _loading = false);
       return;
     }
 
@@ -83,7 +88,7 @@ class _TunerScreenState extends State<TunerScreen>
       _scheduleIdleStop();
       setState(() => _latest = result);
     });
-    setState(() => _status = _TunerStatus.running);
+    setState(() => _loading = false);
   }
 
   @override
@@ -95,70 +100,19 @@ class _TunerScreenState extends State<TunerScreen>
     super.dispose();
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
-      body: switch (_status) {
-        _TunerStatus.loading => const Center(child: CircularProgressIndicator()),
-        _TunerStatus.permissionDenied => _PermissionDeniedView(
-            onRetry: () async {
-              setState(() => _status = _TunerStatus.loading);
-              await _startCapture();
-            },
-          ),
-        _TunerStatus.running => _TunerBody(
-            latest: _latest,
-            pulseCtrl: _pulseCtrl,
-          ),
-      },
-    );
-  }
-}
+    if (_loading) return const Center(child: CircularProgressIndicator());
 
-// ── Permission denied ─────────────────────────────────────────────────────────
+    if (_bridge == null) {
+      return MicPermissionDeniedView(
+        onRetry: () => _startCapture(),
+      );
+    }
 
-class _PermissionDeniedView extends StatelessWidget {
-  const _PermissionDeniedView({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.mic_off,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.micPermissionRequired,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.settings),
-              label: Text(l10n.openSettings),
-              onPressed: openAppSettings,
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(l10n.retry),
-            ),
-          ],
-        ),
-      ),
+    return _TunerBody(
+      latest: _latest,
+      pulseCtrl: _pulseCtrl,
     );
   }
 }

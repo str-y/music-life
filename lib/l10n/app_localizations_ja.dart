@@ -1,5 +1,8 @@
-// ignore_for_file: type=lint
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
 
 /// The translations for Japanese (`ja`).
 class AppLocalizationsJa extends AppLocalizations {
@@ -21,8 +24,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get micPermissionRequired => 'マイクへのアクセス許可が必要です。';
 
   @override
-  String get micPermissionDenied =>
-      'マイクのアクセスが拒否されています。設定から許可してください。';
+  String get micPermissionDenied => 'マイクのアクセスが拒否されています。設定から許可してください。';
 
   @override
   String get privacyPolicy => 'プライバシーポリシー';
@@ -154,13 +156,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chordAnalyserTitle => 'コード解析';
 
   @override
-  String get chordAnalyserSubtitle => 'リアルタイムでコードを解析・表示';
+  String get chordAnalyserSubtitle => 'リアルタイムで音をモノフォニック検出・表示';
 
   @override
-  String get currentChord => '現在のコード';
+  String get currentChord => '検出中の音';
 
   @override
-  String get chordHistory => 'コード進行の履歴';
+  String get chordHistory => '音の履歴';
 
   @override
   String get noChordHistory => 'まだ履歴がありません';
@@ -187,6 +189,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get weekdaySat => '土';
 
   @override
+  String yearMonth(int year, int month) {
+    return '$year年$month月';
+  }
+
+  @override
+  String practiceDayCount(int count) {
+    return '$count日';
+  }
+
+  @override
+  String durationMinutes(int minutes) {
+    return '$minutes分';
+  }
+
+  @override
+  String practiceDurationLabel(int minutes) {
+    return '練習時間: $minutes 分';
+  }
+
+  @override
+  String get loadDataError => 'データを読み込めませんでした。もう一度お試しください。';
+
+  @override
   String get loadingLibrary => '録音データと練習ログを読み込み中';
 
   @override
@@ -199,14 +224,84 @@ class AppLocalizationsJa extends AppLocalizations {
   String get grooveTargetTapHint => 'タップしてリズムを刻もう';
 
   @override
-  String yearMonth(int year, int month) => '$year年$month月';
+  String get compositionHelperTitle => '作曲ヘルパー';
 
   @override
-  String practiceDayCount(int count) => '$count日';
+  String get compositionHelperSubtitle => 'コード進行を組み立てプレビュー';
 
   @override
-  String durationMinutes(int minutes) => '$minutes分';
+  String get compositionPalette => 'コードパレット';
 
   @override
-  String practiceDurationLabel(int minutes) => '練習時間: $minutes 分';
+  String compositionSequence(int count) {
+    return 'コード進行 ($count)';
+  }
+
+  @override
+  String get compositionEmpty => '上のコードをタップしてシーケンスに追加しよう';
+
+  @override
+  String get compositionPlay => '再生';
+
+  @override
+  String get compositionStop => '停止';
+
+  @override
+  String get compositionSave => '作曲を保存';
+
+  @override
+  String get compositionLoad => '作曲を読み込む';
+
+  @override
+  String get compositionTitle => '作曲名';
+
+  @override
+  String get compositionSavedSuccess => '作曲を保存しました';
+
+  @override
+  String get compositionNoSaved => '保存された作曲がありません';
+
+  @override
+  String compositionBpmLabel(int bpm) {
+    return 'BPM: $bpm';
+  }
+
+  @override
+  String get compositionDelete => 'コードを削除';
+
+  @override
+  String get compositionClear => 'クリア';
+
+  @override
+  String get compositionDeleteProject => '作曲を削除';
+
+  @override
+  String compositionLoadSuccess(String title) {
+    return '読み込みました: $title';
+  }
+
+  @override
+  String get compositionAddChord => 'コードを追加';
+
+  @override
+  String compositionChordCount(int count) {
+    return '$countコード';
+  }
+
+  @override
+  String compositionDefaultName(int number) {
+    return '作曲 $number';
+  }
+
+  @override
+  String get compositionUntitled => '無題';
+
+  @override
+  String get bpmLabel => 'BPM';
+
+  @override
+  String get metronomePlayTooltip => 'メトロノームを開始';
+
+  @override
+  String get metronomeStopTooltip => 'メトロノームを停止';
 }

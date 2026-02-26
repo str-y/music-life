@@ -1,5 +1,8 @@
-// ignore_for_file: type=lint
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
 
 /// The translations for English (`en`).
 class AppLocalizationsEn extends AppLocalizations {
@@ -67,7 +70,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get welcomeTitle => 'Welcome';
 
   @override
-  String get welcomeSubtitle => "Let's start today's practice.";
+  String get welcomeSubtitle => 'Let\'s start today\'s practice.';
 
   @override
   String get tunerTitle => 'Tuner';
@@ -154,13 +157,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chordAnalyserTitle => 'Chord Analyser';
 
   @override
-  String get chordAnalyserSubtitle => 'Analyze and display chords in real-time';
+  String get chordAnalyserSubtitle =>
+      'Detect and display notes in real-time (monophonic)';
 
   @override
-  String get currentChord => 'Current Chord';
+  String get currentChord => 'Detected Note';
 
   @override
-  String get chordHistory => 'Chord progression history';
+  String get chordHistory => 'Note history';
 
   @override
   String get noChordHistory => 'No history yet';
@@ -187,6 +191,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weekdaySat => 'Sat';
 
   @override
+  String yearMonth(int year, int month) {
+    return '$year/$month';
+  }
+
+  @override
+  String practiceDayCount(int count) {
+    return '$count days';
+  }
+
+  @override
+  String durationMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String practiceDurationLabel(int minutes) {
+    return 'Practice time: $minutes min';
+  }
+
+  @override
+  String get loadDataError => 'Could not load data. Please try again.';
+
+  @override
   String get loadingLibrary => 'Loading recordings and practice logs';
 
   @override
@@ -200,14 +227,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String get grooveTargetTapHint => 'Tap to rhythm';
 
   @override
-  String yearMonth(int year, int month) => '$year/$month';
+  String get compositionHelperTitle => 'Composition Helper';
 
   @override
-  String practiceDayCount(int count) => '$count days';
+  String get compositionHelperSubtitle => 'Build and preview chord sequences';
 
   @override
-  String durationMinutes(int minutes) => '$minutes min';
+  String get compositionPalette => 'Chord Palette';
 
   @override
-  String practiceDurationLabel(int minutes) => 'Practice time: $minutes min';
+  String compositionSequence(int count) {
+    return 'Chord Sequence ($count)';
+  }
+
+  @override
+  String get compositionEmpty => 'Tap a chord above to add it to your sequence';
+
+  @override
+  String get compositionPlay => 'Play';
+
+  @override
+  String get compositionStop => 'Stop';
+
+  @override
+  String get compositionSave => 'Save Composition';
+
+  @override
+  String get compositionLoad => 'Load Composition';
+
+  @override
+  String get compositionTitle => 'Composition Name';
+
+  @override
+  String get compositionSavedSuccess => 'Composition saved';
+
+  @override
+  String get compositionNoSaved => 'No saved compositions';
+
+  @override
+  String compositionBpmLabel(int bpm) {
+    return 'BPM: $bpm';
+  }
+
+  @override
+  String get compositionDelete => 'Remove chord';
+
+  @override
+  String get compositionClear => 'Clear';
+
+  @override
+  String get compositionDeleteProject => 'Delete composition';
+
+  @override
+  String compositionLoadSuccess(String title) {
+    return 'Loaded: $title';
+  }
+
+  @override
+  String get compositionAddChord => 'Add chord';
+
+  @override
+  String compositionChordCount(int count) {
+    return '$count chords';
+  }
+
+  @override
+  String compositionDefaultName(int number) {
+    return 'Composition $number';
+  }
+
+  @override
+  String get compositionUntitled => 'Untitled';
+
+  @override
+  String get bpmLabel => 'BPM';
+
+  @override
+  String get metronomePlayTooltip => 'Start metronome';
+
+  @override
+  String get metronomeStopTooltip => 'Stop metronome';
 }
