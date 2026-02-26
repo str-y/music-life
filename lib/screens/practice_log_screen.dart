@@ -43,7 +43,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
 
   Future<void> _loadEntries() async {
     try {
-      final entries = _repository.loadPracticeLogs();
+      final entries = await _repository.loadPracticeLogs();
       if (!mounted) return;
       setState(() {
         _entries = entries..sort((a, b) => b.date.compareTo(a.date));

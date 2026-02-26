@@ -500,6 +500,12 @@ abstract class AppLocalizations {
   /// **'Visual waveform representation of the recording'**
   String get waveformSemanticLabel;
 
+  /// Accessibility value for the waveform widget, describing the recording duration
+  ///
+  /// In en, this message translates to:
+  /// **'Recording length: {duration}'**
+  String waveformSemanticValue(String duration);
+
   /// Accessibility label for the groove target area in the Rhythm screen
   ///
   /// In en, this message translates to:

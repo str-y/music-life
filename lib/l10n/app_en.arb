@@ -335,6 +335,14 @@
     "description": "Accessibility label for the waveform visualisation widget"
   },
 
+  "waveformSemanticValue": "Recording length: {duration}",
+  "@waveformSemanticValue": {
+    "description": "Accessibility value for the waveform widget, describing the recording duration",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+
   "grooveTargetSemanticLabel": "Groove Target",
   "@grooveTargetSemanticLabel": {
     "description": "Accessibility label for the groove target area in the Rhythm screen"
@@ -479,30 +487,27 @@
   "@metronomeStopTooltip": {
     "description": "Tooltip for the stop button on the Rhythm screen"
   },
-
   "newRecording": "New Recording",
   "@newRecording": {
     "description": "FAB tooltip and dialog title for adding a new recording entry"
   },
-
   "recordingTitleLabel": "Title",
   "@recordingTitleLabel": {
     "description": "Label for the title field in the add-recording dialog"
   },
-
   "recordingTitleHint": "e.g. Session 1",
   "@recordingTitleHint": {
     "description": "Hint text for the title field in the add-recording dialog"
   },
-
   "recordingDurationLabel": "Duration: {seconds} sec",
   "@recordingDurationLabel": {
     "description": "Label showing selected duration in the add-recording dialog",
     "placeholders": {
-      "seconds": { "type": "int" }
+      "seconds": {
+        "type": "int"
+      }
     }
   },
-
   "recordingSavedSuccess": "Recording saved to library",
   "@recordingSavedSuccess": {
     "description": "SnackBar message shown after a recording is successfully saved"
