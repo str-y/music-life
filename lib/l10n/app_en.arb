@@ -486,5 +486,30 @@
   "metronomeStopTooltip": "Stop metronome",
   "@metronomeStopTooltip": {
     "description": "Tooltip for the stop button on the Rhythm screen"
+  },
+  "newRecording": "New Recording",
+  "@newRecording": {
+    "description": "FAB tooltip and dialog title for adding a new recording entry"
+  },
+  "recordingTitleLabel": "Title",
+  "@recordingTitleLabel": {
+    "description": "Label for the title field in the add-recording dialog"
+  },
+  "recordingTitleHint": "e.g. Session 1",
+  "@recordingTitleHint": {
+    "description": "Hint text for the title field in the add-recording dialog"
+  },
+  "recordingDurationLabel": "Duration: {seconds} sec",
+  "@recordingDurationLabel": {
+    "description": "Label showing selected duration in the add-recording dialog",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "recordingSavedSuccess": "Recording saved to library",
+  "@recordingSavedSuccess": {
+    "description": "SnackBar message shown after a recording is successfully saved"
   }
 }

@@ -94,5 +94,10 @@
   "compositionUntitled": "無題",
   "bpmLabel": "BPM",
   "metronomePlayTooltip": "メトロノームを開始",
-  "metronomeStopTooltip": "メトロノームを停止"
+  "metronomeStopTooltip": "メトロノームを停止",
+  "newRecording": "新しい録音",
+  "recordingTitleLabel": "タイトル",
+  "recordingTitleHint": "例: セッション 1",
+  "recordingDurationLabel": "長さ: {seconds} 秒",
+  "recordingSavedSuccess": "録音をライブラリに保存しました"
 }

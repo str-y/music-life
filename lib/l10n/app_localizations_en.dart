@@ -312,4 +312,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get metronomeStopTooltip => 'Stop metronome';
+
+  @override
+  String get newRecording => 'New Recording';
+
+  @override
+  String get recordingTitleLabel => 'Title';
+
+  @override
+  String get recordingTitleHint => 'e.g. Session 1';
+
+  @override
+  String recordingDurationLabel(int seconds) {
+    return 'Duration: $seconds sec';
+  }
+
+  @override
+  String get recordingSavedSuccess => 'Recording saved to library';
 }
