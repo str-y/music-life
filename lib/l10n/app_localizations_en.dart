@@ -221,6 +221,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Visual waveform representation of the recording';
 
   @override
+  String waveformSemanticValue(String duration) {
+    return 'Recording length: $duration';
+  }
+
+  @override
   String get grooveTargetSemanticLabel => 'Groove Target';
 
   @override
@@ -307,4 +312,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get metronomeStopTooltip => 'Stop metronome';
+
+  @override
+  String get newRecording => 'New Recording';
+
+  @override
+  String get recordingTitleLabel => 'Title';
+
+  @override
+  String get recordingTitleHint => 'e.g. Session 1';
+
+  @override
+  String recordingDurationLabel(int seconds) {
+    return 'Duration: $seconds sec';
+  }
+
+  @override
+  String get recordingSavedSuccess => 'Recording saved to library';
 }

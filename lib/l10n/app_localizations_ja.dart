@@ -218,6 +218,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get waveformSemanticLabel => '録音の波形表示';
 
   @override
+  String waveformSemanticValue(String duration) {
+    return '録音の長さ: $duration';
+  }
+
+  @override
   String get grooveTargetSemanticLabel => 'グルーヴターゲット';
 
   @override
@@ -304,4 +309,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get metronomeStopTooltip => 'メトロノームを停止';
+
+  @override
+  String get newRecording => '新しい録音';
+
+  @override
+  String get recordingTitleLabel => 'タイトル';
+
+  @override
+  String get recordingTitleHint => '例: セッション 1';
+
+  @override
+  String recordingDurationLabel(int seconds) {
+    return '長さ: $seconds 秒';
+  }
+
+  @override
+  String get recordingSavedSuccess => '録音をライブラリに保存しました';
 }

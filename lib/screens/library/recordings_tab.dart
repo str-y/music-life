@@ -179,6 +179,7 @@ class RecordingTile extends StatelessWidget {
             children: [
               WaveformView(
                 data: entry.waveformData,
+                durationSeconds: entry.durationSeconds,
                 isPlaying: isPlaying,
                 color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
               ),
@@ -202,11 +203,13 @@ class WaveformView extends StatefulWidget {
   const WaveformView({
     super.key,
     required this.data,
+    required this.durationSeconds,
     required this.isPlaying,
     required this.color,
   });
 
   final List<double> data;
+  final int durationSeconds;
   final bool isPlaying;
   final Color color;
 
@@ -249,8 +252,14 @@ class _WaveformViewState extends State<WaveformView>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final m = widget.durationSeconds ~/ 60;
+    final s = widget.durationSeconds % 60;
+    final durationStr = '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+
     return Semantics(
-      label: 'Visual waveform representation of the recording',
+      label: l10n.waveformSemanticLabel,
+      value: l10n.waveformSemanticValue(durationStr),
       excludeSemantics: true,
       child: SizedBox(
         height: 48,

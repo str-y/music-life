@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'dart:math' as math;
+import 'package:flutter/services.dart';
+
 import '../l10n/app_localizations.dart';
 import '../repositories/recording_repository.dart';
 import '../service_locator.dart';
@@ -50,6 +53,32 @@ class _LibraryScreenState extends State<LibraryScreen>
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<void> _addRecording(RecordingEntry entry) async {
+    final updated = [entry, ..._recordings];
+    setState(() => _recordings = updated);
+    await _repository.saveRecordings(updated);
+
+    if (mounted) {
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showAddDialog() async {
+    final result = await showDialog<RecordingEntry>(
+      context: context,
+      builder: (_) => const _AddRecordingDialog(),
+    );
+    if (result != null) {
+      await _addRecording(result);
     }
   }
 
@@ -112,6 +141,100 @@ class _LibraryScreenState extends State<LibraryScreen>
                 LogTab(logs: _logs),
               ],
             ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: _showAddDialog,
+              tooltip: AppLocalizations.of(context)!.newRecording,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Add recording dialog
+// ---------------------------------------------------------------------------
+
+class _AddRecordingDialog extends StatefulWidget {
+  const _AddRecordingDialog();
+
+  @override
+  State<_AddRecordingDialog> createState() => _AddRecordingDialogState();
+}
+
+class _AddRecordingDialogState extends State<_AddRecordingDialog> {
+  final _titleCtrl = TextEditingController();
+  int _durationSeconds = 60;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  List<double> _generateWaveform() {
+    final random = math.Random();
+    return List.generate(40, (_) => 0.1 + random.nextDouble() * 0.9);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.newRecording),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.recordingTitleLabel,
+                hintText: l10n.recordingTitleHint,
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              l10n.recordingDurationLabel(_durationSeconds),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            Slider(
+              min: 5,
+              max: 300,
+              divisions: 59,
+              label: '${_durationSeconds}s',
+              value: _durationSeconds.toDouble(),
+              onChanged: (v) => setState(() => _durationSeconds = v.round()),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            final title = _titleCtrl.text.trim().isEmpty
+                ? l10n.newRecording
+                : _titleCtrl.text.trim();
+            Navigator.of(context).pop(
+              RecordingEntry(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                title: title,
+                recordedAt: DateTime.now(),
+                durationSeconds: _durationSeconds,
+                waveformData: _generateWaveform(),
+              ),
+            );
+          },
+          child: Text(l10n.save),
+        ),
+      ],
+    );
+  }
+}
+
