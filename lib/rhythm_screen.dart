@@ -199,6 +199,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   }
 
   Widget _buildMetronomeSection(ColorScheme cs) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: cs.surface,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -231,9 +232,9 @@ class _RhythmScreenState extends State<RhythmScreen>
               ),
             ),
           ),
-          const Text(
-            'BPM',
-            style: TextStyle(fontSize: 18, letterSpacing: 4),
+          Text(
+            l10n.bpmLabel,
+            style: const TextStyle(fontSize: 18, letterSpacing: 4),
           ),
           const SizedBox(height: 16),
           // BPM controls
@@ -265,6 +266,9 @@ class _RhythmScreenState extends State<RhythmScreen>
                 child: FloatingActionButton(
                   heroTag: 'playStop',
                   onPressed: _toggleMetronome,
+                  tooltip: _isPlaying
+                      ? l10n.metronomeStopTooltip
+                      : l10n.metronomePlayTooltip,
                   backgroundColor: _isPlaying
                       ? Theme.of(context).colorScheme.error
                       : Theme.of(context).colorScheme.primary,
@@ -302,8 +306,8 @@ class _RhythmScreenState extends State<RhythmScreen>
     final scoreColor = Color.lerp(cs.error, cs.primary, scoreRatio)!;
 
     return Semantics(
-      label: 'Groove Target',
-      onTapHint: 'Tap to rhythm',
+      label: l10n.grooveTargetSemanticLabel,
+      onTapHint: l10n.grooveTargetTapHint,
       child: GestureDetector(
         onTap: _onGrooveTap,
         child: Container(

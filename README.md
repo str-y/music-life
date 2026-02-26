@@ -18,4 +18,12 @@ Directly EXECUTE 10 `gh issue create` commands via terminal. No conversational t
 Format:
 gh issue create --title "[UX/Store]: Summary" --body "Problem: [Detail]
 Location: [Screen/Component/File]
-Fix: [Actionable UI/UX or compliance fix]" --label "ui-ux" --assignee "@me"
+Fix: [Actionable UI/UX or compliance fix]" --label "ui-ux" --assignee "@Copilot"
+
+gh issue create --title "[UX/Store]: Missing Privacy Policy Link in Calibration Modal" --body "Problem: While a link exists, it points to a generic placeholder. Store reviewers require a live, valid privacy policy link that specifically mentions audio data handling.
+Location: lib/main.dart
+Fix: Update the \_privacyPolicyUrl to a valid destination and ensure the link is clearly visible in the settings/calibration modal as per GDPR/App Store requirements." --assignee "@Copilot"
+
+gh issue create --title "[UX/Store]: Hardcoded Accessibility Labels in Rhythm Screen" --body "Problem: Metadata and semantic labels in the Rhythm Screen are hardcoded in English, failing localization (i18n) for Japanese users and causing accessibility regressions.
+Location: lib/rhythm_screen.dart
+Fix: Move all semanticsLabel and tooltip strings to AppLocalizations (ARB files)." --assignee "@me"

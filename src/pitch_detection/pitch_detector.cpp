@@ -18,6 +18,12 @@ static constexpr float kMaxFrequency = 4200.0f; // Hz
 static constexpr float kMinReferencePitch = 430.0f;
 static constexpr float kMaxReferencePitch = 450.0f;
 
+/** Buffer size (bytes, including null terminator) for each entry in the
+ *  pre-built note-name lookup table.  Sized to hold the longest possible
+ *  name ("C#-1" = 4 chars) plus a null terminator, with comfortable
+ *  headroom. */
+static constexpr int   kNoteNameBufSize   = 6;
+
 static const char* const kNoteTable[128] = {
     "C-1","C#-1","D-1","D#-1","E-1","F-1","F#-1","G-1","G#-1","A-1","A#-1","B-1",
     "C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0",
@@ -36,7 +42,7 @@ static const char* const kNoteTable[128] = {
 // Populated once at static-initialization time so the audio thread never
 // allocates.  Longest entry is "C#-1" (4 chars) + null = 5 bytes; 6 chars
 // gives comfortable headroom.
-static char s_note_name_buf[128][6];
+static char s_note_name_buf[128][kNoteNameBufSize];
 
 static const char* const kNoteNames[12] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
