@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'l10n/app_localizations.dart';
@@ -16,7 +17,7 @@ const String _privacyPolicyUrl =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ServiceLocator.initialize();
-  runApp(const MusicLifeApp());
+  runApp(const ProviderScope(child: MusicLifeApp()));
 }
 
 class _AppSettings {
