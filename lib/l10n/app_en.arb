@@ -345,6 +345,126 @@
     "description": "Accessibility tap hint for the groove target area in the Rhythm screen"
   },
 
+  "compositionHelperTitle": "Composition Helper",
+  "@compositionHelperTitle": {
+    "description": "Title of the Composition Helper screen"
+  },
+
+  "compositionHelperSubtitle": "Build and preview chord sequences",
+  "@compositionHelperSubtitle": {
+    "description": "Subtitle for the Composition Helper card on the main screen"
+  },
+
+  "compositionPalette": "Chord Palette",
+  "@compositionPalette": {
+    "description": "Section header for the chord palette in the Composition Helper"
+  },
+
+  "compositionSequence": "Chord Sequence ({count})",
+  "@compositionSequence": {
+    "description": "Section header for the chord sequence in the Composition Helper",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "compositionEmpty": "Tap a chord above to add it to your sequence",
+  "@compositionEmpty": {
+    "description": "Empty state message shown when the chord sequence is empty"
+  },
+
+  "compositionPlay": "Play",
+  "@compositionPlay": {
+    "description": "Label for the play button in the Composition Helper"
+  },
+
+  "compositionStop": "Stop",
+  "@compositionStop": {
+    "description": "Label for the stop button in the Composition Helper"
+  },
+
+  "compositionSave": "Save Composition",
+  "@compositionSave": {
+    "description": "Tooltip and dialog title for saving a composition"
+  },
+
+  "compositionLoad": "Load Composition",
+  "@compositionLoad": {
+    "description": "Tooltip and sheet title for loading a saved composition"
+  },
+
+  "compositionTitle": "Composition Name",
+  "@compositionTitle": {
+    "description": "Label for the name field in the save composition dialog"
+  },
+
+  "compositionSavedSuccess": "Composition saved",
+  "@compositionSavedSuccess": {
+    "description": "Snackbar message shown after a composition is saved successfully"
+  },
+
+  "compositionNoSaved": "No saved compositions",
+  "@compositionNoSaved": {
+    "description": "Empty state message in the load composition sheet"
+  },
+
+  "compositionBpmLabel": "BPM: {bpm}",
+  "@compositionBpmLabel": {
+    "description": "Label showing the current BPM value in the playback controls",
+    "placeholders": {
+      "bpm": { "type": "int" }
+    }
+  },
+
+  "compositionDelete": "Remove chord",
+  "@compositionDelete": {
+    "description": "Tooltip for the remove-chord button in the sequence list"
+  },
+
+  "compositionClear": "Clear",
+  "@compositionClear": {
+    "description": "Label for the clear-sequence button"
+  },
+
+  "compositionDeleteProject": "Delete composition",
+  "@compositionDeleteProject": {
+    "description": "Tooltip for the delete button in the load composition sheet"
+  },
+
+  "compositionLoadSuccess": "Loaded: {title}",
+  "@compositionLoadSuccess": {
+    "description": "Snackbar message shown after a composition is loaded",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+
+  "compositionAddChord": "Add chord",
+  "@compositionAddChord": {
+    "description": "Prefix for the tooltip on palette chord chips"
+  },
+
+  "compositionChordCount": "{count} chords",
+  "@compositionChordCount": {
+    "description": "Subtitle in the load sheet showing how many chords a composition has",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "compositionDefaultName": "Composition {number}",
+  "@compositionDefaultName": {
+    "description": "Default name pre-filled in the save composition dialog",
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+
+  "compositionUntitled": "Untitled",
+  "@compositionUntitled": {
+    "description": "Fallback title used when the user saves a composition with an empty name"
+  },
+
   "bpmLabel": "BPM",
   "@bpmLabel": {
     "description": "Label displayed beneath the BPM number on the Rhythm screen"
