@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
@@ -128,102 +129,94 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
     }
 
     return Column(
-          children: [
-            // ── Current chord ────────────────────────────────────────
-            Expanded(
-              flex: 5,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.currentChord,
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                    ),
-                    const SizedBox(height: 12),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation,
-                        child:
-                            FadeTransition(opacity: animation, child: child),
+      children: [
+        // ── Current chord ──────────────────────────────────────────
+        Expanded(
+          flex: 5,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.currentChord,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      child: Text(
-                        _currentChord,
-                        key: ValueKey(_currentChord),
-                        style: Theme.of(context)
-                            .textTheme
-                            .displayLarge
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                              fontSize: 80,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ListeningIndicator(controller: _listeningCtrl),
-                  ],
                 ),
-              ),
-            ),
-
-            const Divider(height: 1),
-
-            // ── Chord history timeline ────────────────────────────────
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.history,
-                      size: 18, color: colorScheme.secondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    AppLocalizations.of(context)!.chordHistory,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: colorScheme.secondary,
+                const SizedBox(height: 12),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) => ScaleTransition(
+                    scale: animation,
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
+                  child: Text(
+                    _currentChord,
+                    key: ValueKey(_currentChord),
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                          fontSize: 80,
                         ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                ListeningIndicator(controller: _listeningCtrl),
+              ],
             ),
-            Expanded(
-              flex: 4,
-              child: _history.isEmpty
-                  ? Center(
-                      child: Text(
-                        AppLocalizations.of(context)!.noChordHistory,
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                      ),
-                    )
-                  : AnimatedList(
-                      key: _listKey,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 4),
-                      initialItemCount: _history.length,
-                      itemBuilder: (context, index, animation) {
-                        final entry = _history[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: _ChordHistoryTile(
-                            entry: entry,
-                            isLatest: index == 0,
-                            colorScheme: colorScheme,
-                            animation: animation,
-                          ),
-                        );
-                      },
+          ),
+        ),
+
+        const Divider(height: 1),
+
+        // ── Chord history timeline ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Icon(Icons.history, size: 18, color: colorScheme.secondary),
+              const SizedBox(width: 6),
+              Text(
+                AppLocalizations.of(context)!.chordHistory,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colorScheme.secondary,
                     ),
-            ),
-          ],
-        );
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 4,
+          child: _history.isEmpty
+              ? Center(
+                  child: Text(
+                    AppLocalizations.of(context)!.noChordHistory,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                )
+              : AnimatedList(
+                  key: _listKey,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  initialItemCount: _history.length,
+                  itemBuilder: (context, index, animation) {
+                    final entry = _history[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _ChordHistoryTile(
+                        entry: entry,
+                        isLatest: index == 0,
+                        colorScheme: colorScheme,
+                        animation: animation,
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
   }
 }
 
