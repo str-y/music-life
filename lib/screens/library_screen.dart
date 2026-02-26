@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 
@@ -141,13 +140,19 @@ class _LibraryScreenState extends State<LibraryScreen>
                 LogTab(logs: _logs),
               ],
             ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton(
-              onPressed: _showAddDialog,
-              tooltip: AppLocalizations.of(context)!.newRecording,
-              child: const Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton: ListenableBuilder(
+        listenable: _tabController,
+        builder: (context, _) {
+          if (_tabController.index != 0 || _loading || _hasError) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton(
+            onPressed: _showAddDialog,
+            tooltip: AppLocalizations.of(context)!.newRecording,
+            child: const Icon(Icons.add),
+          );
+        },
+      ),
     );
   }
 }
@@ -237,4 +242,3 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
     );
   }
 }
-
