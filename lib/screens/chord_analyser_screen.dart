@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
@@ -55,6 +54,10 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
   /// Controller for the pulsing "listening" indicator.
   late final AnimationController _listeningCtrl;
 
+  /// Timer used to stop [_listeningCtrl] after [_idleTimeout] of no audio input.
+  Timer? _idleTimer;
+  static const Duration _idleTimeout = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +66,7 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _startCapture();
+    _scheduleIdleStop();
   }
 
   Future<void> _startCapture() async {
@@ -84,6 +88,10 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
     _bridge = bridge;
     _subscription = bridge.chordStream.listen((chord) {
       if (!mounted) return;
+      if (!_listeningCtrl.isAnimating) {
+        _listeningCtrl.repeat(reverse: true);
+      }
+      _scheduleIdleStop();
       setState(() => _currentChord = chord);
       _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
       _listKey.currentState?.insertItem(
@@ -107,8 +115,17 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
     setState(() => _loading = false);
   }
 
+  /// Schedules [_listeningCtrl] to stop after [_idleTimeout] of no audio activity.
+  void _scheduleIdleStop() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(_idleTimeout, () {
+      if (mounted) _listeningCtrl.stop();
+    });
+  }
+
   @override
   void dispose() {
+    _idleTimer?.cancel();
     _subscription?.cancel();
     _bridge?.dispose();
     _listeningCtrl.dispose();
