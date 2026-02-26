@@ -149,4 +149,15 @@ class AppDatabase {
     final db = await database;
     await db.insert('practice_log_entries', row);
   }
+
+  /// Closes the underlying SQLite connection and resets the lazy future so that
+  /// the database can be re-opened on the next access.  Call this when the app
+  /// is disposed to release the file handle promptly.
+  Future<void> close() async {
+    if (_dbFuture != null) {
+      final db = await _dbFuture!;
+      await db.close();
+      _dbFuture = null;
+    }
+  }
 }
