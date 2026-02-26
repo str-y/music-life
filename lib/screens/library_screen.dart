@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,6 +55,38 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
   }
 
+  Future<void> _showAddRecordingDialog() async {
+    final result = await showDialog<RecordingEntry>(
+      context: context,
+      builder: (_) => const _AddRecordingDialog(),
+    );
+    if (result != null) {
+      await _saveRecording(result);
+    }
+  }
+
+  Future<void> _saveRecording(RecordingEntry entry) async {
+    final updated = [entry, ..._recordings];
+    try {
+      await _repository.saveRecordings(updated);
+      if (!mounted) return;
+      setState(() => _recordings = updated);
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.loadDataError),
+        ),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -72,6 +105,19 @@ class _LibraryScreenState extends State<LibraryScreen>
             Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.logsTab),
           ],
         ),
+      ),
+      floatingActionButton: ListenableBuilder(
+        listenable: _tabController,
+        builder: (context, _) {
+          if (_tabController.index != 0 || _loading || _hasError) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton(
+            onPressed: _showAddRecordingDialog,
+            tooltip: AppLocalizations.of(context)!.newRecording,
+            child: const Icon(Icons.mic),
+          );
+        },
       ),
       body: _loading
           ? Center(
@@ -825,6 +871,94 @@ class _SummaryItem extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add recording dialog
+// ---------------------------------------------------------------------------
+
+class _AddRecordingDialog extends StatefulWidget {
+  const _AddRecordingDialog();
+
+  @override
+  State<_AddRecordingDialog> createState() => _AddRecordingDialogState();
+}
+
+class _AddRecordingDialogState extends State<_AddRecordingDialog> {
+  final _titleCtrl = TextEditingController();
+  int _durationSeconds = 60;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  List<double> _generateWaveform() {
+    final rng = math.Random();
+    return List.generate(40, (_) => 0.2 + rng.nextDouble() * 0.8);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return AlertDialog(
+      title: Text(l10n.newRecording),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _titleCtrl,
+              decoration: InputDecoration(
+                labelText: l10n.recordingTitleLabel,
+                hintText: l10n.recordingTitleHint,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.recordingDurationLabel(_durationSeconds),
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            Slider(
+              min: 5,
+              max: 300,
+              divisions: 59,
+              label: l10n.recordingDurationLabel(_durationSeconds),
+              value: _durationSeconds.toDouble(),
+              onChanged: (v) =>
+                  setState(() => _durationSeconds = v.round()),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () {
+            final title = _titleCtrl.text.trim().isEmpty
+                ? l10n.newRecording
+                : _titleCtrl.text.trim();
+            Navigator.of(context).pop(
+              RecordingEntry(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                title: title,
+                recordedAt: DateTime.now(),
+                durationSeconds: _durationSeconds,
+                waveformData: _generateWaveform(),
+              ),
+            );
+          },
+          child: Text(l10n.save),
         ),
       ],
     );

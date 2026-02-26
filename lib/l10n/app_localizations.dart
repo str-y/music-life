@@ -655,6 +655,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stop metronome'**
   String get metronomeStopTooltip;
+
+  /// FAB tooltip and dialog title for adding a new recording entry
+  ///
+  /// In en, this message translates to:
+  /// **'New Recording'**
+  String get newRecording;
+
+  /// Label for the title field in the add-recording dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get recordingTitleLabel;
+
+  /// Hint text for the title field in the add-recording dialog
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Session 1'**
+  String get recordingTitleHint;
+
+  /// Label showing selected duration in the add-recording dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Duration: {seconds} sec'**
+  String recordingDurationLabel(int seconds);
+
+  /// SnackBar message shown after a recording is successfully saved
+  ///
+  /// In en, this message translates to:
+  /// **'Recording saved to library'**
+  String get recordingSavedSuccess;
 }
 
 class _AppLocalizationsDelegate
