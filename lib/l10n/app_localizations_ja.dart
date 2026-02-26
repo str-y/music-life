@@ -218,6 +218,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get waveformSemanticLabel => '録音の波形表示';
 
   @override
+  String waveformSemanticValue(String duration) {
+    return '録音の長さ: $duration';
+  }
+
+  @override
   String get grooveTargetSemanticLabel => 'グルーヴターゲット';
 
   @override

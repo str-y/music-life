@@ -221,6 +221,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Visual waveform representation of the recording';
 
   @override
+  String waveformSemanticValue(String duration) {
+    return 'Recording length: $duration';
+  }
+
+  @override
   String get grooveTargetSemanticLabel => 'Groove Target';
 
   @override
