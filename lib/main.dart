@@ -8,6 +8,7 @@ import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
+import 'screens/composition_helper_screen.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
@@ -297,6 +298,20 @@ class _MainScreenState extends State<MainScreen>
                   onTap: () => Navigator.of(context).push(
                     _slideUpRoute<void>(
                       builder: (_) => const ChordAnalyserScreen(),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.piano_outlined),
+                  title: Text(l10n.compositionHelperTitle),
+                  subtitle: Text(l10n.compositionHelperSubtitle),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    _slideUpRoute<void>(
+                      builder: (_) => const CompositionHelperScreen(),
                     ),
                   ),
                 ),

@@ -5,25 +5,43 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
-import '../widgets/mic_permission_denied_view.dart';
+import '../widgets/listening_indicator.dart';
+import '../widgets/mic_permission_gate.dart';
 
 /// Maximum number of historical chord entries shown in the timeline.
 const int _maxHistory = 12;
 
-enum _ChordAnalyserStatus { loading, permissionDenied, running }
-
-class ChordAnalyserScreen extends StatefulWidget {
+class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key});
 
   @override
-  State<ChordAnalyserScreen> createState() => _ChordAnalyserScreenState();
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
+        backgroundColor: colorScheme.inversePrimary,
+      ),
+      body: const MicPermissionGate(child: _ChordAnalyserBody()),
+    );
+  }
 }
 
-class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
+// ── Internal body (shown only after permission is granted) ────────────────────
+
+class _ChordAnalyserBody extends StatefulWidget {
+  const _ChordAnalyserBody();
+
+  @override
+  State<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
+}
+
+class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
     with SingleTickerProviderStateMixin {
   NativePitchBridge? _bridge;
-
-  _ChordAnalyserStatus _status = _ChordAnalyserStatus.loading;
+  StreamSubscription<String>? _subscription;
+  bool _loading = true;
 
   /// The chord currently being detected.
   String _currentChord = '---';
@@ -33,8 +51,6 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
 
   /// Key for the animated history list.
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-
-  StreamSubscription<String>? _subscription;
 
   /// Controller for the pulsing "listening" indicator.
   late final AnimationController _listeningCtrl;
@@ -50,12 +66,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
   }
 
   Future<void> _startCapture() async {
-    final status = await Permission.microphone.request();
-    if (!mounted) return;
-    if (!status.isGranted) {
-      setState(() => _status = _ChordAnalyserStatus.permissionDenied);
-      return;
-    }
+    setState(() => _loading = true);
 
     final bridge = NativePitchBridge();
     final started = await bridge.startCapture();
@@ -64,8 +75,9 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
       return;
     }
     if (!started) {
+      // Permission may have been revoked after MicPermissionGate confirmed it.
       bridge.dispose();
-      setState(() => _status = _ChordAnalyserStatus.permissionDenied);
+      setState(() => _loading = false); // _bridge stays null → shows denied UI
       return;
     }
 
@@ -92,7 +104,7 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
         );
       }
     });
-    setState(() => _status = _ChordAnalyserStatus.running);
+    setState(() => _loading = false);
   }
 
   @override
@@ -107,52 +119,15 @@ class _ChordAnalyserScreenState extends State<ChordAnalyserScreen>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
-        backgroundColor: colorScheme.inversePrimary,
-      ),
-      body: switch (_status) {
-        _ChordAnalyserStatus.loading =>
-          const Center(child: CircularProgressIndicator()),
-        _ChordAnalyserStatus.permissionDenied => MicPermissionDeniedView(
-            onRetry: () async {
-              setState(() => _status = _ChordAnalyserStatus.loading);
-              await _startCapture();
-            },
-          ),
-        _ChordAnalyserStatus.running => _ChordAnalyserBody(
-            currentChord: _currentChord,
-            history: _history,
-            listKey: _listKey,
-            listeningCtrl: _listeningCtrl,
-            colorScheme: colorScheme,
-          ),
-      },
-    );
-  }
-}
+    if (_loading) return const Center(child: CircularProgressIndicator());
 
-// ── Chord analyser body ───────────────────────────────────────────────────────
+    // Bridge failed to start (e.g. permission revoked after the gate check).
+    if (_bridge == null) {
+      return MicPermissionDeniedView(
+        onRetry: () => _startCapture(),
+      );
+    }
 
-class _ChordAnalyserBody extends StatelessWidget {
-  const _ChordAnalyserBody({
-    required this.currentChord,
-    required this.history,
-    required this.listKey,
-    required this.listeningCtrl,
-    required this.colorScheme,
-  });
-
-  final String currentChord;
-  final List<_ChordEntry> history;
-  final GlobalKey<AnimatedListState> listKey;
-  final AnimationController listeningCtrl;
-  final ColorScheme colorScheme;
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
       children: [
         // ── Current chord ──────────────────────────────────────────
@@ -176,8 +151,8 @@ class _ChordAnalyserBody extends StatelessWidget {
                     child: FadeTransition(opacity: animation, child: child),
                   ),
                   child: Text(
-                    currentChord,
-                    key: ValueKey(currentChord),
+                    _currentChord,
+                    key: ValueKey(_currentChord),
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
@@ -186,7 +161,7 @@ class _ChordAnalyserBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _ListeningIndicator(controller: listeningCtrl),
+                ListeningIndicator(controller: _listeningCtrl),
               ],
             ),
           ),
@@ -212,7 +187,7 @@ class _ChordAnalyserBody extends StatelessWidget {
         ),
         Expanded(
           flex: 4,
-          child: history.isEmpty
+          child: _history.isEmpty
               ? Center(
                   child: Text(
                     AppLocalizations.of(context)!.noChordHistory,
@@ -222,12 +197,12 @@ class _ChordAnalyserBody extends StatelessWidget {
                   ),
                 )
               : AnimatedList(
-                  key: listKey,
+                  key: _listKey,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  initialItemCount: history.length,
+                  initialItemCount: _history.length,
                   itemBuilder: (context, index, animation) {
-                    final entry = history[index];
+                    final entry = _history[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _ChordHistoryTile(
@@ -251,45 +226,6 @@ String _formatTime(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:'
     '${t.minute.toString().padLeft(2, '0')}:'
     '${t.second.toString().padLeft(2, '0')}';
-
-// ── Pulsing listening indicator ───────────────────────────────────────────────
-
-class _ListeningIndicator extends StatelessWidget {
-  const _ListeningIndicator({required this.controller});
-
-  final AnimationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(3, (i) {
-            final interval = Interval(
-              i * 0.15,
-              0.55 + i * 0.15,
-              curve: Curves.easeInOut,
-            );
-            final t = interval.transform(controller.value);
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              width: 4,
-              height: 6 + t * 10,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.35 + t * 0.65),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-}
 
 // ── Data model ────────────────────────────────────────────────────────────────
 

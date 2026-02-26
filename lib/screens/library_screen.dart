@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -99,8 +100,13 @@ class RecordingRepository {
       return list
           .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
-      return [];
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load recordings from storage',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
   }
 
@@ -121,8 +127,13 @@ class RecordingRepository {
       return list
           .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-    } catch (_) {
-      return [];
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load practice logs from storage',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
   }
 
@@ -154,6 +165,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   List<RecordingEntry> _recordings = [];
   List<PracticeLogEntry> _logs = [];
   bool _loading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -171,6 +183,8 @@ class _LibraryScreenState extends State<LibraryScreen>
         _recordings = recordings;
         _logs = logs;
       });
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -198,12 +212,39 @@ class _LibraryScreenState extends State<LibraryScreen>
         ),
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(
-                semanticsLabel: 'Loading recordings and practice logs',
+                semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
               ),
             )
-          : TabBarView(
+          : _hasError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                      const SizedBox(height: 12),
+                      Text(
+                        AppLocalizations.of(context)!.loadDataError,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _loading = true;
+                            _hasError = false;
+                          });
+                          _loadData();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: Text(AppLocalizations.of(context)!.retry),
+                      ),
+                    ],
+                  ),
+                )
+              : TabBarView(
               controller: _tabController,
               children: [
                 _RecordingsTab(recordings: _recordings),
@@ -424,12 +465,22 @@ class _WaveformViewState extends State<_WaveformView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _breathCtrl;
 
+  /// Persistent painter instance – its internal geometry cache survives
+  /// across animation frames and is only invalidated when [data] or the
+  /// canvas size changes.
+  late _WaveformPainter _painter;
+
   @override
   void initState() {
     super.initState();
     _breathCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
+    );
+    _painter = _WaveformPainter(
+      data: widget.data,
+      color: widget.color,
+      breathAnimation: _breathCtrl,
     );
     if (widget.isPlaying) _breathCtrl.repeat(reverse: true);
   }
@@ -445,6 +496,16 @@ class _WaveformViewState extends State<_WaveformView>
         _breathCtrl.value = 0;
       }
     }
+    // Recreate the painter only when static properties change so that the
+    // geometry cache built up during previous frames is kept alive as long
+    // as the waveform data and colour stay the same.
+    if (!identical(widget.data, old.data) || widget.color != old.color) {
+      _painter = _WaveformPainter(
+        data: widget.data,
+        color: widget.color,
+        breathAnimation: _breathCtrl,
+      );
+    }
   }
 
   @override
@@ -456,20 +517,15 @@ class _WaveformViewState extends State<_WaveformView>
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Visual waveform representation of the recording',
+      label: AppLocalizations.of(context)!.waveformSemanticLabel,
       excludeSemantics: true,
       child: SizedBox(
         height: 48,
-        child: AnimatedBuilder(
-          animation: _breathCtrl,
-          builder: (_, __) => CustomPaint(
-            painter: _WaveformPainter(
-              data: widget.data,
-              color: widget.color,
-              breathPhase: _breathCtrl.value,
-            ),
-            size: Size.infinite,
-          ),
+        // No AnimatedBuilder needed – the painter re-draws itself via the
+        // repaint notifier (breathAnimation) passed to CustomPainter.
+        child: CustomPaint(
+          painter: _painter,
+          size: Size.infinite,
         ),
       ),
     );
@@ -480,47 +536,74 @@ class _WaveformPainter extends CustomPainter {
   _WaveformPainter({
     required this.data,
     required this.color,
-    this.breathPhase = 0.0,
-  });
+    required Animation<double> breathAnimation,
+  })  : _breathAnimation = breathAnimation,
+        super(repaint: breathAnimation);
 
   final List<double> data;
   final Color color;
-  final double breathPhase;
+  final Animation<double> _breathAnimation;
+
+  // ── Geometry cache ──────────────────────────────────────────────────────
+  // Recomputed only when [data] or the canvas [Size] changes; untouched by
+  // the per-frame breath animation.
+  List<double>? _cachedXPositions;
+  List<double>? _cachedBaseHeights;
+  double? _cachedCenterY;
+  Size? _cachedSize;
+  List<double>? _cachedData;
+
+  void _rebuildGeometry(Size size) {
+    final barCount = data.length;
+    final barWidth = size.width / (barCount * 1.6);
+    final gap = barWidth * 0.6;
+    final step = barWidth + gap;
+    final centerY = size.height / 2;
+    _cachedXPositions =
+        List.generate(barCount, (i) => i * step + barWidth / 2);
+    _cachedBaseHeights =
+        List.generate(barCount, (i) => data[i] * centerY);
+    _cachedCenterY = centerY;
+    _cachedSize = size;
+    _cachedData = data;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
+
+    // Rebuild the layout cache only when the waveform data or canvas size
+    // has changed; the breathing animation alone does not trigger this.
+    if (!identical(_cachedData, data) || _cachedSize != size) {
+      _rebuildGeometry(size);
+    }
 
     final paint = Paint()
       ..color = color
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 2.5;
 
+    final centerY = _cachedCenterY!;
+    final breathScale = 1.0 + _breathAnimation.value * 0.22;
+    final xs = _cachedXPositions!;
+    final baseHeights = _cachedBaseHeights!;
     final barCount = data.length;
-    final totalSpacing = size.width;
-    final barWidth = totalSpacing / (barCount * 1.6);
-    final gap = barWidth * 0.6;
-    final step = barWidth + gap;
-    final centerY = size.height / 2;
-    final breathScale = 1.0 + breathPhase * 0.22;
 
     for (var i = 0; i < barCount; i++) {
-      final x = i * step + barWidth / 2;
-      final halfHeight =
-          (data[i] * centerY * breathScale).clamp(2.0, centerY);
+      final halfHeight = (baseHeights[i] * breathScale).clamp(2.0, centerY);
       canvas.drawLine(
-        Offset(x, centerY - halfHeight),
-        Offset(x, centerY + halfHeight),
+        Offset(xs[i], centerY - halfHeight),
+        Offset(xs[i], centerY + halfHeight),
         paint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.color != color ||
-      oldDelegate.data != data ||
-      oldDelegate.breathPhase != breathPhase;
+  // [data] is treated as an immutable list: callers must pass a new list
+  // reference rather than mutating in place to trigger a cache rebuild.
+  bool shouldRepaint(_WaveformPainter old) =>
+      old.color != color || !identical(old.data, data);
 }
 
 // ---------------------------------------------------------------------------

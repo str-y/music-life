@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../utils/app_logger.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -70,11 +71,20 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_kPrefKey) ?? [];
     if (!mounted) return;
+    final entries = <_LogEntry>[];
+    for (final s in raw) {
+      try {
+        entries.add(_LogEntry.fromJson(jsonDecode(s) as Map<String, dynamic>));
+      } catch (e, stackTrace) {
+        AppLogger.reportError(
+          'Failed to decode a practice log entry: $s',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
     setState(() {
-      _entries = raw
-          .map((s) => _LogEntry.fromJson(jsonDecode(s) as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      _entries = entries..sort((a, b) => b.date.compareTo(a.date));
       _loading = false;
     });
   }

@@ -6,25 +6,36 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
-import '../widgets/mic_permission_denied_view.dart';
+import '../widgets/listening_indicator.dart';
+import '../widgets/mic_permission_gate.dart';
 
-class TunerScreen extends StatefulWidget {
+class TunerScreen extends StatelessWidget {
   const TunerScreen({super.key});
 
   @override
-  State<TunerScreen> createState() => _TunerScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
+      body: const MicPermissionGate(child: _TunerBodyWrapper()),
+    );
+  }
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── Internal body wrapper (handles bridge & state) ───────────────────────────
 
-enum _TunerStatus { loading, permissionDenied, running }
+class _TunerBodyWrapper extends StatefulWidget {
+  const _TunerBodyWrapper();
 
-class _TunerScreenState extends State<TunerScreen>
+  @override
+  State<_TunerBodyWrapper> createState() => _TunerBodyWrapperState();
+}
+
+class _TunerBodyWrapperState extends State<_TunerBodyWrapper>
     with SingleTickerProviderStateMixin {
   NativePitchBridge? _bridge;
   StreamSubscription<PitchResult>? _sub;
 
-  _TunerStatus _status = _TunerStatus.loading;
+  bool _loading = true;
   PitchResult? _latest;
 
   /// Controller for the "listening" pulse animation shown before a note is
@@ -42,12 +53,7 @@ class _TunerScreenState extends State<TunerScreen>
   }
 
   Future<void> _startCapture() async {
-    final status = await Permission.microphone.request();
-    if (!mounted) return;
-    if (!status.isGranted) {
-      setState(() => _status = _TunerStatus.permissionDenied);
-      return;
-    }
+    setState(() => _loading = true);
 
     final bridge = NativePitchBridge();
     final started = await bridge.startCapture();
@@ -57,7 +63,7 @@ class _TunerScreenState extends State<TunerScreen>
     }
     if (!started) {
       bridge.dispose();
-      setState(() => _status = _TunerStatus.permissionDenied);
+      setState(() => _loading = false);
       return;
     }
 
@@ -66,7 +72,7 @@ class _TunerScreenState extends State<TunerScreen>
       if (!mounted) return;
       setState(() => _latest = result);
     });
-    setState(() => _status = _TunerStatus.running);
+    setState(() => _loading = false);
   }
 
   @override
@@ -77,25 +83,19 @@ class _TunerScreenState extends State<TunerScreen>
     super.dispose();
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
-      body: switch (_status) {
-        _TunerStatus.loading => const Center(child: CircularProgressIndicator()),
-        _TunerStatus.permissionDenied => MicPermissionDeniedView(
-            onRetry: () async {
-              setState(() => _status = _TunerStatus.loading);
-              await _startCapture();
-            },
-          ),
-        _TunerStatus.running => _TunerBody(
-            latest: _latest,
-            pulseCtrl: _pulseCtrl,
-          ),
-      },
+    if (_loading) return const Center(child: CircularProgressIndicator());
+
+    if (_bridge == null) {
+      return MicPermissionDeniedView(
+        onRetry: () => _startCapture(),
+      );
+    }
+
+    return _TunerBody(
+      latest: _latest,
+      pulseCtrl: _pulseCtrl,
     );
   }
 }
@@ -174,7 +174,7 @@ class _TunerBody extends StatelessWidget {
 
           // ── Listening indicator ───────────────────────────────────
           if (latest == null) ...[
-            _ListeningPulse(controller: pulseCtrl, color: cs.primary),
+            ListeningIndicator(controller: pulseCtrl, color: cs.primary),
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.playSound,
@@ -304,38 +304,4 @@ class _CentsMeterPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CentsMeterPainter old) =>
       old.cents != cents || old.needleColor != needleColor;
-}
-
-// ── Listening pulse ───────────────────────────────────────────────────────────
-
-class _ListeningPulse extends StatelessWidget {
-  const _ListeningPulse({required this.controller, required this.color});
-
-  final AnimationController controller;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) => Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: List.generate(3, (i) {
-          final interval =
-              Interval(i * 0.15, 0.55 + i * 0.15, curve: Curves.easeInOut);
-          final t = interval.transform(controller.value);
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            width: 4,
-            height: 6 + t * 10,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.35 + t * 0.65),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          );
-        }),
-      ),
-    );
-  }
 }
