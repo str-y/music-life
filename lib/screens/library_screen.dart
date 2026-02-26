@@ -37,8 +37,8 @@ class _LibraryScreenState extends State<LibraryScreen>
 
   Future<void> _loadData() async {
     try {
-      final recordings = _repository.loadRecordings();
-      final logs = _repository.loadPracticeLogs();
+      final recordings = await _repository.loadRecordings();
+      final logs = await _repository.loadPracticeLogs();
       if (!mounted) return;
       setState(() {
         _recordings = recordings;
