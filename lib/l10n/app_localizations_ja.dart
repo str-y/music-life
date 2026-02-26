@@ -326,4 +326,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => '録音をライブラリに保存しました';
+
+  @override
+  String get tapToRecord => 'タップして録音';
+
+  @override
+  String get tapToStop => 'タップして停止';
+
+  @override
+  String get micPermissionNeeded => '録音するにはマイクのアクセス許可が必要です。';
 }

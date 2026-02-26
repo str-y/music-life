@@ -329,4 +329,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => 'Recording saved to library';
+
+  @override
+  String get tapToRecord => 'Tap to record';
+
+  @override
+  String get tapToStop => 'Tap to stop';
+
+  @override
+  String get micPermissionNeeded =>
+      'Microphone permission is required to record.';
 }

@@ -691,6 +691,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recording saved to library'**
   String get recordingSavedSuccess;
+
+  /// Hint shown on the record button before recording starts
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to record'**
+  String get tapToRecord;
+
+  /// Hint shown on the stop button while recording is in progress
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to stop'**
+  String get tapToStop;
+
+  /// Message shown in the recording dialog when microphone permission is not granted
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is required to record.'**
+  String get micPermissionNeeded;
 }
 
 class _AppLocalizationsDelegate
