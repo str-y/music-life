@@ -126,6 +126,8 @@ class RecordingRepository {
       return;
     }
 
+    var migrationSucceeded = true;
+
     // Migrate recordings
     final recStr = _prefs.getString(_recordingsKey);
     if (recStr != null) {
@@ -148,6 +150,7 @@ class RecordingRepository {
         );
       } catch (e, st) {
         debugPrint('RecordingRepository: recording migration failed: $e\n$st');
+        migrationSucceeded = false;
       }
     }
 
@@ -171,11 +174,14 @@ class RecordingRepository {
         );
       } catch (e, st) {
         debugPrint('RecordingRepository: practice log migration failed: $e\n$st');
+        migrationSucceeded = false;
       }
     }
 
-    await _prefs.setBool(_migratedKey, true);
-    _migrated = true;
+    if (migrationSucceeded) {
+      await _prefs.setBool(_migratedKey, true);
+      _migrated = true;
+    }
   }
 
   Future<List<RecordingEntry>> loadRecordings() async {
