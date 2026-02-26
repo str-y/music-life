@@ -1,36 +1,10 @@
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
+import '../repositories/recording_repository.dart';
+import '../service_locator.dart';
 import '../utils/app_logger.dart';
-
-// ── Data model ────────────────────────────────────────────────────────────────
-
-class _LogEntry {
-  const _LogEntry({
-    required this.date,
-    required this.durationMinutes,
-    this.note = '',
-  });
-
-  final DateTime date;
-  final int durationMinutes;
-  final String note;
-
-  Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String(),
-        'durationMinutes': durationMinutes,
-        'note': note,
-      };
-
-  factory _LogEntry.fromJson(Map<String, dynamic> json) => _LogEntry(
-        date: DateTime.parse(json['date'] as String),
-        durationMinutes: json['durationMinutes'] as int,
-        note: json['note'] as String? ?? '',
-      );
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -43,9 +17,8 @@ class PracticeLogScreen extends StatefulWidget {
 
 class _PracticeLogScreenState extends State<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
-  static const _kPrefKey = 'practice_log_entries';
-
-  List<_LogEntry> _entries = [];
+  late final RecordingRepository _repository;
+  List<PracticeLogEntry> _entries = [];
   bool _loading = true;
   late DateTime _displayMonth;
   late final TabController _tabController;
@@ -53,6 +26,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   @override
   void initState() {
     super.initState();
+    _repository = ServiceLocator.instance.recordingRepository;
     _tabController = TabController(length: 2, vsync: this);
     final now = DateTime.now();
     _displayMonth = DateTime(now.year, now.month);
@@ -68,36 +42,28 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   // ── Persistence ───────────────────────────────────────────────────────────
 
   Future<void> _loadEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_kPrefKey) ?? [];
-    if (!mounted) return;
-    final entries = <_LogEntry>[];
-    for (final s in raw) {
-      try {
-        entries.add(_LogEntry.fromJson(jsonDecode(s) as Map<String, dynamic>));
-      } catch (e, stackTrace) {
-        AppLogger.reportError(
-          'Failed to decode a practice log entry: $s',
-          error: e,
-          stackTrace: stackTrace,
-        );
-      }
+    try {
+      final entries = _repository.loadPracticeLogs();
+      if (!mounted) return;
+      setState(() {
+        _entries = entries..sort((a, b) => b.date.compareTo(a.date));
+        _loading = false;
+      });
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load practice logs',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (mounted) setState(() => _loading = false);
     }
-    setState(() {
-      _entries = entries..sort((a, b) => b.date.compareTo(a.date));
-      _loading = false;
-    });
   }
 
   Future<void> _saveEntries() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _kPrefKey,
-      _entries.map((e) => jsonEncode(e.toJson())).toList(),
-    );
+    await _repository.savePracticeLogs(_entries);
   }
 
-  Future<void> _addEntry(_LogEntry entry) async {
+  Future<void> _addEntry(PracticeLogEntry entry) async {
     setState(() {
       _entries = [entry, ..._entries]
         ..sort((a, b) => b.date.compareTo(a.date));
@@ -108,7 +74,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   // ── Add-entry dialog ──────────────────────────────────────────────────────
 
   Future<void> _showAddDialog() async {
-    final result = await showDialog<_LogEntry>(
+    final result = await showDialog<PracticeLogEntry>(
       context: context,
       builder: (_) => const _AddEntryDialog(),
     );
@@ -460,7 +426,7 @@ class _SummaryItem extends StatelessWidget {
 class _ListTab extends StatelessWidget {
   const _ListTab({required this.entries});
 
-  final List<_LogEntry> entries;
+  final List<PracticeLogEntry> entries;
 
   String _formatDate(DateTime dt) =>
       '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
@@ -516,7 +482,7 @@ class _ListTab extends StatelessWidget {
             _formatDate(e.date),
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          subtitle: e.note.isNotEmpty ? Text(e.note) : null,
+          subtitle: e.memo.isNotEmpty ? Text(e.memo) : null,
           trailing: Text(
             l10n.durationMinutes(e.durationMinutes),
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -542,11 +508,11 @@ class _AddEntryDialog extends StatefulWidget {
 class _AddEntryDialogState extends State<_AddEntryDialog> {
   DateTime _date = DateTime.now();
   int _durationMinutes = 30;
-  final _noteCtrl = TextEditingController();
+  final _memoCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _noteCtrl.dispose();
+    _memoCtrl.dispose();
     super.dispose();
   }
 
@@ -600,7 +566,7 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
             const SizedBox(height: 4),
             // Optional note
             TextField(
-              controller: _noteCtrl,
+              controller: _memoCtrl,
               decoration: InputDecoration(
                 labelText: l10n.notesOptional,
                 hintText: l10n.notesHint,
@@ -618,10 +584,10 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
-            _LogEntry(
+            PracticeLogEntry(
               date: DateTime(_date.year, _date.month, _date.day),
               durationMinutes: _durationMinutes,
-              note: _noteCtrl.text.trim(),
+              memo: _memoCtrl.text.trim(),
             ),
           ),
           child: Text(l10n.save),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../native_pitch_bridge.dart';
+import '../service_locator.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
@@ -67,7 +68,7 @@ class _TunerBodyWrapperState extends State<_TunerBodyWrapper>
   Future<void> _startCapture() async {
     setState(() => _loading = true);
 
-    final bridge = NativePitchBridge();
+    final bridge = ServiceLocator.instance.pitchBridgeFactory();
     final started = await bridge.startCapture();
     if (!mounted) {
       bridge.dispose();

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'l10n/app_localizations.dart';
@@ -8,6 +7,7 @@ import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
+import 'service_locator.dart';
 import 'screens/composition_helper_screen.dart';
 
 const String _privacyPolicyUrl =
@@ -15,6 +15,7 @@ const String _privacyPolicyUrl =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ServiceLocator.initialize();
   runApp(const MusicLifeApp());
 }
 
@@ -83,7 +84,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     if (!mounted) return;
     setState(() {
       _settings = _AppSettings(
@@ -95,7 +96,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
 
   Future<void> _updateSettings(_AppSettings updated) async {
     setState(() => _settings = updated);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ServiceLocator.instance.prefs;
     await prefs.setBool(_kDarkMode, updated.darkMode);
     await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }

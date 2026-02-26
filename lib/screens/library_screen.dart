@@ -1,150 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
-import '../utils/app_logger.dart';
-
-// ---------------------------------------------------------------------------
-// Data models
-// ---------------------------------------------------------------------------
-
-class RecordingEntry {
-  const RecordingEntry({
-    required this.id,
-    required this.title,
-    required this.recordedAt,
-    required this.durationSeconds,
-    required this.waveformData,
-  });
-
-  final String id;
-  final String title;
-  final DateTime recordedAt;
-  final int durationSeconds;
-
-  /// Normalised amplitude values in [0.0, 1.0] used for waveform preview.
-  final List<double> waveformData;
-
-  String get formattedDuration {
-    final m = durationSeconds ~/ 60;
-    final s = durationSeconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'recordedAt': recordedAt.toIso8601String(),
-        'durationSeconds': durationSeconds,
-        'waveformData': waveformData,
-      };
-
-  factory RecordingEntry.fromJson(Map<String, dynamic> json) {
-    return RecordingEntry(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      recordedAt: DateTime.parse(json['recordedAt'] as String),
-      durationSeconds: json['durationSeconds'] as int,
-      waveformData: (json['waveformData'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-    );
-  }
-}
-
-class PracticeLogEntry {
-  const PracticeLogEntry({
-    required this.date,
-    required this.durationMinutes,
-    this.memo = '',
-  });
-
-  final DateTime date;
-  final int durationMinutes;
-  final String memo;
-
-  Map<String, dynamic> toJson() => {
-        'date': date.toIso8601String(),
-        'durationMinutes': durationMinutes,
-        'memo': memo,
-      };
-
-  factory PracticeLogEntry.fromJson(Map<String, dynamic> json) {
-    return PracticeLogEntry(
-      date: DateTime.parse(json['date'] as String),
-      durationMinutes: json['durationMinutes'] as int,
-      memo: json['memo'] as String? ?? '',
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Repository – persists recording metadata and practice logs via
-// SharedPreferences using JSON encoding.
-// ---------------------------------------------------------------------------
-
-class RecordingRepository {
-  static const _recordingsKey = 'recordings_v1';
-  static const _logsKey = 'practice_logs_v1';
-
-  Future<List<RecordingEntry>> loadRecordings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_recordingsKey);
-    if (jsonStr == null) return [];
-    try {
-      final list = jsonDecode(jsonStr) as List<dynamic>;
-      return list
-          .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to load recordings from storage',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> saveRecordings(List<RecordingEntry> recordings) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _recordingsKey,
-      jsonEncode(recordings.map((e) => e.toJson()).toList()),
-    );
-  }
-
-  Future<List<PracticeLogEntry>> loadPracticeLogs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_logsKey);
-    if (jsonStr == null) return [];
-    try {
-      final list = jsonDecode(jsonStr) as List<dynamic>;
-      return list
-          .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to load practice logs from storage',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      rethrow;
-    }
-  }
-
-  Future<void> savePracticeLogs(List<PracticeLogEntry> logs) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _logsKey,
-      jsonEncode(logs.map((e) => e.toJson()).toList()),
-    );
-  }
-}
+import '../repositories/recording_repository.dart';
+import '../service_locator.dart';
 
 // ---------------------------------------------------------------------------
 // LibraryScreen
@@ -160,7 +21,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final _repository = RecordingRepository();
+  late final RecordingRepository _repository;
 
   List<RecordingEntry> _recordings = [];
   List<PracticeLogEntry> _logs = [];
@@ -171,13 +32,14 @@ class _LibraryScreenState extends State<LibraryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _repository = ServiceLocator.instance.recordingRepository;
     _loadData();
   }
 
   Future<void> _loadData() async {
     try {
-      final recordings = await _repository.loadRecordings();
-      final logs = await _repository.loadPracticeLogs();
+      final recordings = _repository.loadRecordings();
+      final logs = _repository.loadPracticeLogs();
       if (!mounted) return;
       setState(() {
         _recordings = recordings;
