@@ -403,19 +403,54 @@ class NativePitchBridge implements Finalizable {
     _audioSub = null;
     _recorder.stop().ignore();
     _recorder.dispose();
+    // Signal the isolate to stop processing and close its receive port.
     _audioSendPort?.send(null);
     _audioSendPort = null;
-    _isolate?.kill(priority: Isolate.immediate);
-    _isolate = null;
     _resultSub?.cancel();
     _resultSub = null;
     _resultPort?.close();
     _resultPort = null;
-    _exitPort?.close();
-    _exitPort = null;
-    _nativeDestroy(_handle);
-    malloc.free(_persistentBuffer);
     _controller.close();
     _pitchController.close();
+
+    final isolate = _isolate;
+    _isolate = null;
+    final exitPort = _exitPort;
+    _exitPort = null;
+
+    if (isolate == null || exitPort == null) {
+      // No isolate was started; free native resources immediately.
+      _nativeDestroy(_handle);
+      malloc.free(_persistentBuffer);
+      return;
+    }
+
+    // Defer native-resource teardown until the isolate confirms it has exited.
+    // This prevents a use-after-free if the isolate is mid-frame when
+    // dispose() is called: the isolate is single-threaded, so it finishes its
+    // current message (including any in-flight native call) before processing
+    // the null shutdown signal and exiting.
+    bool freed = false;
+    StreamSubscription<dynamic>? exitSub;
+    Timer? forceKillTimer;
+    void freeNativeResources() {
+      if (freed) return;
+      freed = true;
+      forceKillTimer?.cancel();
+      exitSub?.cancel();
+      exitPort.close();
+      _nativeDestroy(_handle);
+      malloc.free(_persistentBuffer);
+    }
+
+    exitSub = exitPort.listen((_) => freeNativeResources());
+
+    // Safety net: if the isolate does not exit gracefully within 5 seconds,
+    // force-kill it. The Dart VM sends the exit-port notification after the
+    // kill completes, so freeNativeResources() will still be called exactly
+    // once even in this path.
+    forceKillTimer = Timer(const Duration(seconds: 5), () {
+      isolate.kill(priority: Isolate.immediate);
+    });
   }
 }
