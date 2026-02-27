@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'data/app_database.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
@@ -82,6 +83,12 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
   void initState() {
     super.initState();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    AppDatabase.instance.close();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
