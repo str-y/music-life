@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'l10n/app_localizations.dart';
+import 'app_constants.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -55,9 +56,6 @@ class _RhythmScreenState extends State<RhythmScreen>
   /// Animation controller for the user-tap impact ring.
   late final AnimationController _tapRingCtrl;
   late final Animation<double> _tapRingAnim;
-
-  static const int _minBpm = 30;
-  static const int _maxBpm = 240;
 
   // ── Timing helpers ───────────────────────────────────────────────────────
   Duration get _beatDuration => Duration(
@@ -113,7 +111,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   void _changeBpm(int delta) {
     setState(() {
-      _bpm = (_bpm + delta).clamp(_minBpm, _maxBpm);
+      _bpm = (_bpm + delta).clamp(AppConstants.metronomeMinBpm, AppConstants.metronomeMaxBpm);
     });
     if (_isPlaying) {
       _startMetronome(); // restart at new tempo

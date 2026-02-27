@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:record/record.dart';
 
+import 'app_constants.dart';
+
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
 /// Mirrors the C struct `MLPitchResult` from `pitch_detector_ffi.h`.
@@ -176,9 +178,9 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
 /// - **Memory-Safe**: Uses [NativeFinalizer] and [Finalizable] to prevent leaks.
 /// - **Robust**: Real-time error reporting via [FfiErrorHandler].
 class NativePitchBridge implements Finalizable {
-  static const int defaultFrameSize = 2048;
-  static const int defaultSampleRate = 44100;
-  static const double defaultThreshold = 0.10;
+  static const int defaultFrameSize = AppConstants.audioFrameSize;
+  static const int defaultSampleRate = AppConstants.audioSampleRate;
+  static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
 
   final NativeFinalizer _handleFinalizer;
   static final NativeFinalizer _bufferFinalizer =
