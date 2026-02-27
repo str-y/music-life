@@ -85,6 +85,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tuningOk => 'Tuning OK';
 
   @override
+  String get centsMeterSemanticLabel => 'Cents meter';
+
+  @override
   String get practiceLogTitle => 'Practice Log';
 
   @override

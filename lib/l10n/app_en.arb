@@ -126,6 +126,11 @@
     "description": "Message shown when the note is in tune"
   },
 
+  "centsMeterSemanticLabel": "Cents meter",
+  "@centsMeterSemanticLabel": {
+    "description": "Accessibility label for the tuner cents arc meter"
+  },
+
   "practiceLogTitle": "Practice Log",
   "@practiceLogTitle": {
     "description": "Title of the Practice Log screen"

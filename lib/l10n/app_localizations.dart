@@ -248,6 +248,12 @@ abstract class AppLocalizations {
   /// **'Tuning OK'**
   String get tuningOk;
 
+  /// Accessibility label for the tuner cents arc meter
+  ///
+  /// In en, this message translates to:
+  /// **'Cents meter'**
+  String get centsMeterSemanticLabel;
+
   /// Title of the Practice Log screen
   ///
   /// In en, this message translates to:

@@ -26,6 +26,7 @@
   "tunerSubtitle": "音程をリアルタイムで確認",
   "playSound": "音を鳴らしてください",
   "tuningOk": "チューニング OK",
+  "centsMeterSemanticLabel": "セント数メーター",
   "practiceLogTitle": "練習ログ",
   "practiceLogSubtitle": "練習時間とメモを記録",
   "calendarTab": "カレンダー",
