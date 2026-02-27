@@ -143,6 +143,26 @@ class AppDatabase {
     });
   }
 
+  /// Atomically replaces all recordings **and** practice logs in a single
+  /// transaction so that both data sets move together or not at all.
+  /// Used during the one-time SharedPreferences → SQLite migration.
+  Future<void> replaceAllData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('recordings');
+      for (final row in recordings) {
+        await txn.insert('recordings', row);
+      }
+      await txn.delete('practice_logs');
+      for (final row in practiceLogs) {
+        await txn.insert('practice_logs', row);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Practice log entries (PracticeLogScreen)
   // ---------------------------------------------------------------------------
