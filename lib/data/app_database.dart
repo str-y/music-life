@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -15,9 +16,15 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
 
-  Future<Database>? _dbFuture;
+  Completer<Database>? _completer;
 
-  Future<Database> get database => _dbFuture ??= _open();
+  Future<Database> get database {
+    if (_completer == null) {
+      _completer = Completer<Database>();
+      _open().then(_completer!.complete, onError: _completer!.completeError);
+    }
+    return _completer!.future;
+  }
 
   Future<Database> _open() async {
     return openDatabase(
