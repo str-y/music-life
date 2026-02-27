@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/app_database.dart';
+import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Waveform binary encoding helpers
@@ -149,7 +149,11 @@ class RecordingRepository {
               .toList(),
         );
       } catch (e, st) {
-        debugPrint('RecordingRepository: recording migration failed: $e\n$st');
+        AppLogger.reportError(
+          'RecordingRepository: recording migration failed',
+          error: e,
+          stackTrace: st,
+        );
         migrationSucceeded = false;
       }
     }
@@ -173,7 +177,11 @@ class RecordingRepository {
               .toList(),
         );
       } catch (e, st) {
-        debugPrint('RecordingRepository: practice log migration failed: $e\n$st');
+        AppLogger.reportError(
+          'RecordingRepository: practice log migration failed',
+          error: e,
+          stackTrace: st,
+        );
         migrationSucceeded = false;
       }
     }
