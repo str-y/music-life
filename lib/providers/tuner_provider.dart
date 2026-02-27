@@ -43,7 +43,7 @@ class TunerState {
 // Notifier
 // ---------------------------------------------------------------------------
 
-class TunerNotifier extends AutoDisposeNotifier<TunerState> {
+class TunerNotifier extends Notifier<TunerState> {
   NativePitchBridge? _bridge;
   StreamSubscription<PitchResult>? _sub;
 

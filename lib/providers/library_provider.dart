@@ -40,7 +40,7 @@ class LibraryState {
 // Notifier
 // ---------------------------------------------------------------------------
 
-class LibraryNotifier extends AutoDisposeNotifier<LibraryState> {
+class LibraryNotifier extends Notifier<LibraryState> {
   @override
   LibraryState build() {
     _load();
