@@ -61,6 +61,10 @@ pubspec.lock # Optional, but often ignored in libraries; usually kept in apps.
 _agents/
 _agent/
 
+# Generated Flutter/iOS files
+ios/Runner/GeneratedPluginRegistrant.*
+lib/l10n/app_localizations*.dart
+
 # CMake build directories
 build/
 CMakeFiles/
