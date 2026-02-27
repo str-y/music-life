@@ -9,6 +9,9 @@ import '../utils/app_logger.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
 
+/// Maximum number of compositions a user can save.
+const int kMaxCompositions = 50;
+
 const List<String> _kPaletteChords = [
   'C', 'Cm', 'D', 'Dm', 'E', 'Em', 'F', 'Fm',
   'G', 'Gm', 'A', 'Am', 'B', 'Bm',
@@ -181,6 +184,14 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
 
   Future<void> _showSaveDialog() async {
     final l10n = AppLocalizations.of(context)!;
+    if (_saved.length >= kMaxCompositions) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.compositionLimitReached(kMaxCompositions)),
+        ),
+      );
+      return;
+    }
     final controller = TextEditingController(
       text: l10n.compositionDefaultName(_saved.length + 1),
     );

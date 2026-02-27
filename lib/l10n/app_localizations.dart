@@ -697,6 +697,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recording saved to library'**
   String get recordingSavedSuccess;
+
+  /// Snackbar message shown when the user tries to save a composition but the limit is already reached
+  ///
+  /// In en, this message translates to:
+  /// **'Save limit of {max} compositions reached. Please delete some first.'**
+  String compositionLimitReached(int max);
 }
 
 class _AppLocalizationsDelegate

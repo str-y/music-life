@@ -478,6 +478,14 @@
     "description": "Fallback title used when the user saves a composition with an empty name"
   },
 
+  "compositionLimitReached": "Save limit of {max} compositions reached. Please delete some first.",
+  "@compositionLimitReached": {
+    "description": "Snackbar message shown when the user tries to save a composition but the limit is already reached",
+    "placeholders": {
+      "max": { "type": "int" }
+    }
+  },
+
   "bpmLabel": "BPM",
   "@bpmLabel": {
     "description": "Label displayed beneath the BPM number on the Rhythm screen"

@@ -332,4 +332,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => 'Recording saved to library';
+
+  @override
+  String compositionLimitReached(int max) {
+    return 'Save limit of $max compositions reached. Please delete some first.';
+  }
 }

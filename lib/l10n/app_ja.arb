@@ -93,6 +93,8 @@
   "compositionChordCount": "{count}コード",
   "compositionDefaultName": "作曲 {number}",
   "compositionUntitled": "無題",
+
+  "compositionLimitReached": "{max}曲の保存上限に達しました。先にいくつか削除してください。",
   "bpmLabel": "BPM",
   "metronomePlayTooltip": "メトロノームを開始",
   "metronomeStopTooltip": "メトロノームを停止",

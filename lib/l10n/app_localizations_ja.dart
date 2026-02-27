@@ -329,4 +329,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => '録音をライブラリに保存しました';
+
+  @override
+  String compositionLimitReached(int max) {
+    return '${max}曲の保存上限に達しました。先にいくつか削除してください。';
+  }
 }
