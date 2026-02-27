@@ -329,4 +329,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => '録音をライブラリに保存しました';
+
+  @override
+  String get chordAnalyserError => 'コード検出を開始できませんでした。もう一度お試しください。';
+
+  @override
+  String get compositionSaveError => '作曲を保存できませんでした。もう一度お試しください。';
+
+  @override
+  String get compositionLoadError => '作曲を読み込めませんでした。';
+
+  @override
+  String get compositionDeleteError => '作曲を削除できませんでした。';
 }

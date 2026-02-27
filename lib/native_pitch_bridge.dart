@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:record/record.dart';
 
 import 'app_constants.dart';
+import 'utils/app_logger.dart';
 
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
@@ -401,7 +402,14 @@ class NativePitchBridge implements Finalizable {
     _bufferFinalizer.detach(this);
     _audioSub?.cancel();
     _audioSub = null;
-    _recorder.stop().ignore();
+    _recorder.stop().then<void>(
+      (_) {},
+      onError: (Object e, StackTrace st) => AppLogger.reportError(
+        'Failed to stop recorder during dispose',
+        error: e,
+        stackTrace: st,
+      ),
+    );
     _recorder.dispose();
     // Signal the isolate to stop processing and close its receive port.
     _audioSendPort?.send(null);

@@ -104,5 +104,9 @@
   "recordingTitleLabel": "タイトル",
   "recordingTitleHint": "例: セッション 1",
   "recordingDurationLabel": "長さ: {seconds} 秒",
-  "recordingSavedSuccess": "録音をライブラリに保存しました"
+  "recordingSavedSuccess": "録音をライブラリに保存しました",
+  "chordAnalyserError": "コード検出を開始できませんでした。もう一度お試しください。",
+  "compositionSaveError": "作曲を保存できませんでした。もう一度お試しください。",
+  "compositionLoadError": "作曲を読み込めませんでした。",
+  "compositionDeleteError": "作曲を削除できませんでした。"
 }

@@ -332,4 +332,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => 'Recording saved to library';
+
+  @override
+  String get chordAnalyserError =>
+      'Could not start chord detection. Please try again.';
+
+  @override
+  String get compositionSaveError =>
+      'Could not save composition. Please try again.';
+
+  @override
+  String get compositionLoadError => 'Could not load compositions.';
+
+  @override
+  String get compositionDeleteError => 'Could not delete composition.';
 }

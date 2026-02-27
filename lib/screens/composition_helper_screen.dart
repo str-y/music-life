@@ -53,19 +53,10 @@ class CompositionRepository {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_key);
     if (jsonStr == null) return [];
-    try {
-      final list = jsonDecode(jsonStr) as List;
-      return list
-          .map((e) => Composition.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e, st) {
-      AppLogger.reportError(
-        'Failed to load compositions',
-        error: e,
-        stackTrace: st,
-      );
-      return [];
-    }
+    final list = jsonDecode(jsonStr) as List;
+    return list
+        .map((e) => Composition.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> save(List<Composition> compositions) async {
@@ -115,9 +106,23 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
   }
 
   Future<void> _loadSaved() async {
-    final saved = await _repo.load();
-    if (!mounted) return;
-    setState(() => _saved = saved);
+    try {
+      final saved = await _repo.load();
+      if (!mounted) return;
+      setState(() => _saved = saved);
+    } catch (e, st) {
+      AppLogger.reportError(
+        'Failed to load compositions',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.compositionLoadError),
+        ),
+      );
+    }
   }
 
   @override
@@ -216,7 +221,22 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
       chords: _sequence.map((e) => e.chord).toList(),
     );
     final updated = [..._saved, composition];
-    await _repo.save(updated);
+    try {
+      await _repo.save(updated);
+    } catch (e, st) {
+      AppLogger.reportError(
+        'Failed to save composition',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.compositionSaveError),
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     setState(() => _saved = updated);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -237,7 +257,23 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
         compositions: _saved,
         onDelete: (comp) async {
           final updated = _saved.where((c) => c.id != comp.id).toList();
-          await _repo.save(updated);
+          try {
+            await _repo.save(updated);
+          } catch (e, st) {
+            AppLogger.reportError(
+                'Failed to delete composition',
+                error: e,
+                stackTrace: st,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.compositionDeleteError),
+                ),
+              );
+            }
+            return;
+          }
           if (mounted) setState(() => _saved = updated);
         },
       ),

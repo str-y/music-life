@@ -5,7 +5,12 @@ import 'native_pitch_bridge.dart';
 import 'repositories/recording_repository.dart';
 
 /// Factory function type for creating [NativePitchBridge] instances.
-typedef PitchBridgeFactory = NativePitchBridge Function();
+///
+/// The optional [onError] callback is forwarded to the bridge so that
+/// callers can receive asynchronous runtime errors (e.g. isolate crashes)
+/// and surface them in the UI.
+typedef PitchBridgeFactory = NativePitchBridge Function(
+    {FfiErrorHandler? onError});
 
 /// A minimal service locator that manages the lifecycle of long-lived
 /// services, enabling dependency injection and mock-friendly testing.
@@ -26,7 +31,7 @@ typedef PitchBridgeFactory = NativePitchBridge Function();
 /// ```dart
 /// ServiceLocator.overrideForTesting(ServiceLocator.forTesting(
 ///   prefs: mockSharedPreferences,
-///   pitchBridgeFactory: () => FakeNativePitchBridge(),
+///   pitchBridgeFactory: ({FfiErrorHandler? onError}) => FakeNativePitchBridge(),
 /// ));
 /// ```
 class ServiceLocator {
@@ -36,7 +41,8 @@ class ServiceLocator {
     RecordingRepository? recordingRepository,
   })  : _prefs = prefs,
         pitchBridgeFactory =
-            pitchBridgeFactory ?? (() => NativePitchBridge()),
+            pitchBridgeFactory ??
+            (({FfiErrorHandler? onError}) => NativePitchBridge(onError: onError)),
         recordingRepository =
             recordingRepository ?? RecordingRepository(prefs);
 
@@ -95,7 +101,7 @@ class ServiceLocator {
   ///
   /// Replace with a mock factory in tests to avoid loading native libraries:
   /// ```dart
-  /// pitchBridgeFactory: () => FakeNativePitchBridge(),
+  /// pitchBridgeFactory: ({FfiErrorHandler? onError}) => FakeNativePitchBridge(),
   /// ```
   final PitchBridgeFactory pitchBridgeFactory;
 

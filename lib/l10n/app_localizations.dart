@@ -697,6 +697,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recording saved to library'**
   String get recordingSavedSuccess;
+
+  /// SnackBar message shown when the chord analyser bridge fails to start or encounters a runtime error
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start chord detection. Please try again.'**
+  String get chordAnalyserError;
+
+  /// SnackBar message shown when saving a composition fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save composition. Please try again.'**
+  String get compositionSaveError;
+
+  /// SnackBar message shown when loading saved compositions fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load compositions.'**
+  String get compositionLoadError;
+
+  /// SnackBar message shown when deleting a composition fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete composition.'**
+  String get compositionDeleteError;
 }
 
 class _AppLocalizationsDelegate

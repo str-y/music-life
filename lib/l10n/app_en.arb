@@ -536,5 +536,25 @@
   "recordingSavedSuccess": "Recording saved to library",
   "@recordingSavedSuccess": {
     "description": "SnackBar message shown after a recording is successfully saved"
+  },
+
+  "chordAnalyserError": "Could not start chord detection. Please try again.",
+  "@chordAnalyserError": {
+    "description": "SnackBar message shown when the chord analyser bridge fails to start or encounters a runtime error"
+  },
+
+  "compositionSaveError": "Could not save composition. Please try again.",
+  "@compositionSaveError": {
+    "description": "SnackBar message shown when saving a composition fails"
+  },
+
+  "compositionLoadError": "Could not load compositions.",
+  "@compositionLoadError": {
+    "description": "SnackBar message shown when loading saved compositions fails"
+  },
+
+  "compositionDeleteError": "Could not delete composition.",
+  "@compositionDeleteError": {
+    "description": "SnackBar message shown when deleting a composition fails"
   }
 }
