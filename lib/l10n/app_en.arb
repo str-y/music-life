@@ -492,6 +492,26 @@
   "@metronomeStopTooltip": {
     "description": "Tooltip for the stop button on the Rhythm screen"
   },
+
+  "bpmDecrease10SemanticLabel": "Decrease BPM by 10",
+  "@bpmDecrease10SemanticLabel": {
+    "description": "Accessibility label for the −10 BPM button on the Rhythm screen"
+  },
+
+  "bpmDecrease1SemanticLabel": "Decrease BPM by 1",
+  "@bpmDecrease1SemanticLabel": {
+    "description": "Accessibility label for the −1 BPM button on the Rhythm screen"
+  },
+
+  "bpmIncrease1SemanticLabel": "Increase BPM by 1",
+  "@bpmIncrease1SemanticLabel": {
+    "description": "Accessibility label for the +1 BPM button on the Rhythm screen"
+  },
+
+  "bpmIncrease10SemanticLabel": "Increase BPM by 10",
+  "@bpmIncrease10SemanticLabel": {
+    "description": "Accessibility label for the +10 BPM button on the Rhythm screen"
+  },
   "newRecording": "New Recording",
   "@newRecording": {
     "description": "FAB tooltip and dialog title for adding a new recording entry"
