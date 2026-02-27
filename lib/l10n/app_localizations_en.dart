@@ -332,4 +332,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => 'Recording saved to library';
+
+  @override
+  String get practicedLabel => 'practiced';
+
+  @override
+  String get todayLabel => 'today';
+
+  @override
+  String get currentNoteSemanticLabel => 'Detected note';
 }

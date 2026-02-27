@@ -329,4 +329,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recordingSavedSuccess => '録音をライブラリに保存しました';
+
+  @override
+  String get practicedLabel => '練習済み';
+
+  @override
+  String get todayLabel => '今日';
+
+  @override
+  String get currentNoteSemanticLabel => '検出された音符';
 }

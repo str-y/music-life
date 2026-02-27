@@ -327,6 +327,7 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     final textColor = isSunday
         ? Colors.red.shade400
@@ -334,50 +335,58 @@ class _DayCell extends StatelessWidget {
             ? Colors.blue.shade400
             : cs.onSurface;
 
-    return SizedBox(
-      height: 44,
-      child: Center(
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (hasPractice && isToday)
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.primary,
+    final parts = <String>['$day'];
+    if (isToday) parts.add(l10n.todayLabel);
+    if (hasPractice) parts.add(l10n.practicedLabel);
+
+    return Semantics(
+      label: parts.join(', '),
+      excludeSemantics: true,
+      child: SizedBox(
+        height: 44,
+        child: Center(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (hasPractice && isToday)
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.primary,
+                  ),
+                )
+              else if (hasPractice)
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.primaryContainer,
+                  ),
+                )
+              else if (isToday)
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: cs.primary, width: 1.5),
+                  ),
                 ),
-              )
-            else if (hasPractice)
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.primaryContainer,
-                ),
-              )
-            else if (isToday)
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: cs.primary, width: 1.5),
+              Text(
+                '$day',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight:
+                      hasPractice ? FontWeight.w700 : FontWeight.normal,
+                  color:
+                      hasPractice && isToday ? cs.onPrimary : textColor,
                 ),
               ),
-            Text(
-              '$day',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight:
-                    hasPractice ? FontWeight.w700 : FontWeight.normal,
-                color:
-                    hasPractice && isToday ? cs.onPrimary : textColor,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

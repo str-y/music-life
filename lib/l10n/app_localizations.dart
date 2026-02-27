@@ -697,6 +697,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recording saved to library'**
   String get recordingSavedSuccess;
+
+  /// Accessibility indicator appended to a calendar day cell when the user practiced on that day
+  ///
+  /// In en, this message translates to:
+  /// **'practiced'**
+  String get practicedLabel;
+
+  /// Accessibility indicator appended to a calendar day cell that corresponds to the current date
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get todayLabel;
+
+  /// Accessibility label for the live detected-note region on the Chord Analyser screen
+  ///
+  /// In en, this message translates to:
+  /// **'Detected note'**
+  String get currentNoteSemanticLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -104,5 +104,9 @@
   "recordingTitleLabel": "タイトル",
   "recordingTitleHint": "例: セッション 1",
   "recordingDurationLabel": "長さ: {seconds} 秒",
-  "recordingSavedSuccess": "録音をライブラリに保存しました"
+  "recordingSavedSuccess": "録音をライブラリに保存しました",
+
+  "practicedLabel": "練習済み",
+  "todayLabel": "今日",
+  "currentNoteSemanticLabel": "検出された音符"
 }

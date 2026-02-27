@@ -536,5 +536,20 @@
   "recordingSavedSuccess": "Recording saved to library",
   "@recordingSavedSuccess": {
     "description": "SnackBar message shown after a recording is successfully saved"
+  },
+
+  "practicedLabel": "practiced",
+  "@practicedLabel": {
+    "description": "Accessibility indicator appended to a calendar day cell when the user practiced on that day"
+  },
+
+  "todayLabel": "today",
+  "@todayLabel": {
+    "description": "Accessibility indicator appended to a calendar day cell that corresponds to the current date"
+  },
+
+  "currentNoteSemanticLabel": "Detected note",
+  "@currentNoteSemanticLabel": {
+    "description": "Accessibility label for the live detected-note region on the Chord Analyser screen"
   }
 }
