@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../repositories/recording_repository.dart';
 import '../service_locator.dart';
+import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -54,7 +55,12 @@ class LibraryNotifier extends AutoDisposeNotifier<LibraryState> {
       final recordings = await _repo.loadRecordings();
       final logs = await _repo.loadPracticeLogs();
       state = LibraryState(recordings: recordings, logs: logs);
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.reportError(
+        'LibraryNotifier: failed to load library data',
+        error: e,
+        stackTrace: st,
+      );
       state = const LibraryState(loading: false, hasError: true);
     }
   }
