@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../providers/tuner_provider.dart';
 import '../widgets/listening_indicator.dart';
@@ -37,9 +38,8 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
   /// detected, and for animating the cents needle.
   late final AnimationController _pulseCtrl;
 
-  /// Timer used to stop [_pulseCtrl] after [_idleTimeout] of no audio input.
+  /// Timer used to stop [_pulseCtrl] after [AppConstants.listeningIdleTimeout] of no audio input.
   Timer? _idleTimer;
-  static const Duration _idleTimeout = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -51,10 +51,10 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     _scheduleIdleStop();
   }
 
-  /// Schedules [_pulseCtrl] to stop after [_idleTimeout] of no audio activity.
+  /// Schedules [_pulseCtrl] to stop after [AppConstants.listeningIdleTimeout] of no audio activity.
   void _scheduleIdleStop() {
     _idleTimer?.cancel();
-    _idleTimer = Timer(_idleTimeout, () {
+    _idleTimer = Timer(AppConstants.listeningIdleTimeout, () {
       if (mounted) _pulseCtrl.stop();
     });
   }
@@ -105,8 +105,8 @@ class _TunerBody extends StatelessWidget {
   /// Maps cents offset (−50 … +50) to a colour between red → green → red.
   Color _centColor(BuildContext context, double cents) {
     final abs = cents.abs();
-    if (abs <= 5) return Colors.green;
-    if (abs <= 15) return Colors.orange;
+    if (abs <= AppConstants.tunerInTuneThresholdCents) return Colors.green;
+    if (abs <= AppConstants.tunerWarningThresholdCents) return Colors.orange;
     return Theme.of(context).colorScheme.error;
   }
 
@@ -123,7 +123,7 @@ class _TunerBody extends StatelessWidget {
     final centsText = latest != null
         ? (cents >= 0 ? '+${cents.toStringAsFixed(1)}' : cents.toStringAsFixed(1))
         : '---';
-    final inTune = latest != null && cents.abs() <= 5;
+    final inTune = latest != null && cents.abs() <= AppConstants.tunerInTuneThresholdCents;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -211,9 +211,9 @@ class _CentsMeter extends StatelessWidget {
           cents: hasReading ? cents : null,
           trackColor: cs.outlineVariant,
           needleColor: hasReading
-              ? (cents.abs() <= 5
+              ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
                   ? Colors.green
-                  : cents.abs() <= 15
+                  : cents.abs() <= AppConstants.tunerWarningThresholdCents
                       ? Colors.orange
                       : cs.error)
               : cs.outlineVariant,
