@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -113,82 +114,121 @@ class RecordingRepository {
   static const _logsKey = 'practice_logs_v1';
   static const _migratedKey = 'db_migrated_v1';
 
-  /// Cached in memory so the SharedPreferences lookup only happens once per session.
-  static bool _migrated = false;
+  /// Guards against concurrent migration calls.  Non-null while a migration is
+  /// in progress; subsequent callers await this future instead of starting a
+  /// second migration.  Set back to null when migration fails so it can be
+  /// retried on the next access.
+  static Completer<void>? _migrationCompleter;
 
   final SharedPreferences _prefs;
 
   Future<void> _migrateIfNeeded() async {
-    if (_migrated) return;
+    // Already completed successfully in this session.
+    if (_migrationCompleter?.isCompleted == true) return;
+    // Migration is already in progress – join it instead of starting another.
+    if (_migrationCompleter != null) return _migrationCompleter!.future;
 
-    if (_prefs.getBool(_migratedKey) == true) {
-      _migrated = true;
-      return;
-    }
-
-    var migrationSucceeded = true;
-
-    // Migrate recordings
-    final recStr = _prefs.getString(_recordingsKey);
-    if (recStr != null) {
-      try {
-        final list = jsonDecode(recStr) as List<dynamic>;
-        final entries = list
-            .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        await AppDatabase.instance.replaceAllRecordings(
-          entries
-              .map((e) => {
-                    'id': e.id,
-                    'title': e.title,
-                    'recorded_at': e.recordedAt.toIso8601String(),
-                    'duration_seconds': e.durationSeconds,
-                    'waveform_data': _waveformToBlob(e.waveformData),
-                  })
-              .toList(),
-        );
-      } catch (e, st) {
-        AppLogger.reportError(
-          'RecordingRepository: recording migration failed',
-          error: e,
-          stackTrace: st,
-        );
-        migrationSucceeded = false;
+    _migrationCompleter = Completer<void>();
+    try {
+      if (_prefs.getBool(_migratedKey) == true) {
+        _migrationCompleter!.complete();
+        return;
       }
-    }
 
-    // Migrate practice logs
-    final logStr = _prefs.getString(_logsKey);
-    if (logStr != null) {
-      try {
-        final list = jsonDecode(logStr) as List<dynamic>;
-        final entries = list
-            .map((e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
-            .toList();
+      // Parse both data sets before touching the database so that a decode
+      // error in one set does not leave the database in a half-migrated state.
+      final recordingRows = <Map<String, Object?>>[];
+      final logRows = <Map<String, Object?>>[];
+      var migrationSucceeded = true;
 
-        await AppDatabase.instance.replaceAllPracticeLogs(
-          entries
-              .map((e) => {
-                    'date': e.date.toIso8601String(),
-                    'duration_minutes': e.durationMinutes,
-                    'memo': e.memo,
-                  })
-              .toList(),
-        );
-      } catch (e, st) {
-        AppLogger.reportError(
-          'RecordingRepository: practice log migration failed',
-          error: e,
-          stackTrace: st,
-        );
-        migrationSucceeded = false;
+      final recStr = _prefs.getString(_recordingsKey);
+      if (recStr != null) {
+        try {
+          final list = jsonDecode(recStr) as List<dynamic>;
+          recordingRows.addAll(
+            list
+                .map((e) => RecordingEntry.fromJson(e as Map<String, dynamic>))
+                .map((e) => <String, Object?>{
+                      'id': e.id,
+                      'title': e.title,
+                      'recorded_at': e.recordedAt.toIso8601String(),
+                      'duration_seconds': e.durationSeconds,
+                      'waveform_data': _waveformToBlob(e.waveformData),
+                    }),
+          );
+        } catch (e, st) {
+          AppLogger.reportError(
+            'RecordingRepository: recording migration failed',
+            error: e,
+            stackTrace: st,
+          );
+          migrationSucceeded = false;
+        }
       }
-    }
 
-    if (migrationSucceeded) {
-      await _prefs.setBool(_migratedKey, true);
-      _migrated = true;
+      final logStr = _prefs.getString(_logsKey);
+      if (logStr != null) {
+        try {
+          final list = jsonDecode(logStr) as List<dynamic>;
+          logRows.addAll(
+            list
+                .map(
+                    (e) => PracticeLogEntry.fromJson(e as Map<String, dynamic>))
+                .map((e) => <String, Object?>{
+                      'date': e.date.toIso8601String(),
+                      'duration_minutes': e.durationMinutes,
+                      'memo': e.memo,
+                    }),
+          );
+        } catch (e, st) {
+          AppLogger.reportError(
+            'RecordingRepository: practice log migration failed',
+            error: e,
+            stackTrace: st,
+          );
+          migrationSucceeded = false;
+        }
+      }
+
+      if (migrationSucceeded) {
+        // Write both data sets atomically so the database never ends up with
+        // recordings migrated but practice logs not (or vice versa).
+        try {
+          await AppDatabase.instance.replaceAllData(
+            recordings: recordingRows,
+            practiceLogs: logRows,
+          );
+          await _prefs.setBool(_migratedKey, true);
+        } catch (e, st) {
+          AppLogger.reportError(
+            'RecordingRepository: migration DB write failed',
+            error: e,
+            stackTrace: st,
+          );
+          migrationSucceeded = false;
+        }
+      }
+
+      _migrationCompleter!.complete();
+      if (!migrationSucceeded) {
+        // Migration was attempted but failed.  Completing the Completer
+        // normally (rather than with an error) lets concurrent callers
+        // proceed to the underlying database query — migration failure is
+        // non-fatal and the DB may still contain valid data from a previous
+        // successful migration.  Resetting to null allows a retry on the
+        // next session access.
+        _migrationCompleter = null;
+      }
+    } catch (e, st) {
+      AppLogger.reportError(
+        'RecordingRepository: migration failed',
+        error: e,
+        stackTrace: st,
+      );
+      // Reset so the next caller can retry rather than receiving this error.
+      final c = _migrationCompleter;
+      _migrationCompleter = null;
+      c!.completeError(e, st);
     }
   }
 
