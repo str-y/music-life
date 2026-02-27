@@ -59,40 +59,10 @@ class AppDatabase {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          // Migrate waveform_data from JSON TEXT to binary BLOB.
-          await db.execute('''
-            CREATE TABLE recordings_new (
-              id TEXT PRIMARY KEY,
-              title TEXT NOT NULL,
-              recorded_at TEXT NOT NULL,
-              duration_seconds INTEGER NOT NULL,
-              waveform_data BLOB NOT NULL
-            )
-          ''');
-          final rows = await db.query('recordings');
-          for (final row in rows) {
-            final jsonStr = row['waveform_data'] as String;
-            final doubles = (jsonDecode(jsonStr) as List)
-                .map((e) => (e as num).toDouble())
-                .toList();
-            // Encoding matches _waveformToBlob in recording_repository.dart.
-            final byteData = ByteData(doubles.length * 8);
-            for (var i = 0; i < doubles.length; i++) {
-              byteData.setFloat64(i * 8, doubles[i], Endian.little);
-            }
-            await db.insert('recordings_new', {
-              'id': row['id'],
-              'title': row['title'],
-              'recorded_at': row['recorded_at'],
-              'duration_seconds': row['duration_seconds'],
-              'waveform_data': byteData.buffer.asUint8List(),
-            });
-          }
-          await db.execute('DROP TABLE recordings');
-          await db.execute(
-              'ALTER TABLE recordings_new RENAME TO recordings');
+          await _migrateV1ToV2(db);
         }
       },
+      onDowngrade: onDatabaseVersionChangeError,
     );
   }
 
@@ -181,10 +151,72 @@ class AppDatabase {
   /// the database can be re-opened on the next access.  Call this when the app
   /// is disposed to release the file handle promptly.
   Future<void> close() async {
-    if (_dbFuture != null) {
-      final db = await _dbFuture!;
+    if (_completer != null) {
+      final db = await _completer!.future;
       await db.close();
-      _dbFuture = null;
+      _completer = null;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Migration helpers
+  // ---------------------------------------------------------------------------
+
+  /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
+  ///
+  /// Safe to re-run after a partial failure:
+  ///   • If [recordings_new] already exists (interrupted after CREATE TABLE),
+  ///     it is dropped and the migration restarts from scratch.
+  ///   • If [recordings] was already dropped but [recordings_new] was not yet
+  ///     renamed (interrupted between DROP and RENAME), only the rename is
+  ///     performed to complete the migration.
+  static Future<void> _migrateV1ToV2(DatabaseExecutor db) async {
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+      " AND name IN ('recordings', 'recordings_new')",
+    );
+    final tableNames = tables.map((r) => r['name'] as String).toSet();
+
+    // Interrupted between DROP TABLE recordings and RENAME — just finish.
+    if (!tableNames.contains('recordings') &&
+        tableNames.contains('recordings_new')) {
+      await db.execute(
+          'ALTER TABLE recordings_new RENAME TO recordings');
+      return;
+    }
+
+    // Drop any leftover partial table so the migration can restart cleanly.
+    await db.execute('DROP TABLE IF EXISTS recordings_new');
+
+    await db.execute('''
+      CREATE TABLE recordings_new (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL,
+        waveform_data BLOB NOT NULL
+      )
+    ''');
+    final rows = await db.query('recordings');
+    for (final row in rows) {
+      final jsonStr = row['waveform_data'] as String;
+      final doubles = (jsonDecode(jsonStr) as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      // Encoding matches _waveformToBlob in recording_repository.dart.
+      final byteData = ByteData(doubles.length * 8);
+      for (var i = 0; i < doubles.length; i++) {
+        byteData.setFloat64(i * 8, doubles[i], Endian.little);
+      }
+      await db.insert('recordings_new', {
+        'id': row['id'],
+        'title': row['title'],
+        'recorded_at': row['recorded_at'],
+        'duration_seconds': row['duration_seconds'],
+        'waveform_data': byteData.buffer.asUint8List(),
+      });
+    }
+    await db.execute('DROP TABLE recordings');
+    await db.execute('ALTER TABLE recordings_new RENAME TO recordings');
   }
 }
