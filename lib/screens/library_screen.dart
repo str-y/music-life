@@ -111,7 +111,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               controller: _tabController,
               children: [
                 RecordingsTab(recordings: state.recordings),
-                LogTab(logs: state.logs),
+                LogTab(monthlyLogStatsByMonth: state.monthlyLogStats),
               ],
             ),
       floatingActionButton: ListenableBuilder(
