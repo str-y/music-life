@@ -11,10 +11,12 @@ import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
 import 'providers/app_settings_provider.dart';
 import 'providers/dependency_providers.dart';
+import 'repositories/backup_repository.dart';
 import 'repositories/settings_repository.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 import 'screens/composition_helper_screen.dart';
+import 'utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
@@ -173,6 +175,7 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
+  final BackupRepository _backupRepository = const BackupRepository();
 
   @override
   void initState() {
@@ -201,8 +204,52 @@ class _MainScreenState extends ConsumerState<MainScreen>
         onChanged: (updated) {
           ref.read(appSettingsProvider.notifier).update(updated);
         },
+        onExportBackup: () => _exportBackupData(context),
+        onImportBackup: () => _importBackupData(context),
       ),
     );
+  }
+
+  Future<void> _exportBackupData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final path = await _backupRepository.exportWithFilePicker();
+      if (!context.mounted || path == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupExported(path))),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to export backup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupExportFailed)),
+      );
+    }
+  }
+
+  Future<void> _importBackupData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final path = await _backupRepository.importWithFilePicker();
+      if (!context.mounted || path == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupImported(path))),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to import backup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupImportFailed)),
+      );
+    }
   }
 
   @override
@@ -317,8 +364,15 @@ class _MainScreenState extends ConsumerState<MainScreen>
 class _SettingsModal extends StatefulWidget {
   final AppSettings settings;
   final ValueChanged<AppSettings> onChanged;
+  final Future<void> Function() onExportBackup;
+  final Future<void> Function() onImportBackup;
 
-  const _SettingsModal({required this.settings, required this.onChanged});
+  const _SettingsModal({
+    required this.settings,
+    required this.onChanged,
+    required this.onExportBackup,
+    required this.onImportBackup,
+  });
 
   @override
   State<_SettingsModal> createState() => _SettingsModalState();
@@ -394,6 +448,21 @@ class _SettingsModalState extends State<_SettingsModal> {
             label: '${_local.referencePitch.round()} Hz',
             value: _local.referencePitch,
             onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 32),
+          Text(l10n.backupAndRestore, style: textTheme.titleSmall),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.download_outlined),
+            title: Text(l10n.exportBackup),
+            onTap: widget.onExportBackup,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.upload_file_outlined),
+            title: Text(l10n.importBackup),
+            onTap: widget.onImportBackup,
           ),
           const SizedBox(height: 8),
           const Divider(height: 32),
