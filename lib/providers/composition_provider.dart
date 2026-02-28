@@ -39,7 +39,12 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
 
   /// Appends [composition] to the list and persists the change.
   Future<void> saveComposition(Composition composition) async {
-    final previous = state.valueOrNull ?? await future;
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      throw StateError(
+        'Cannot save composition: data not loaded. Please wait for initialization to complete.',
+      );
+    }
     if (previous.length >= kMaxCompositions) {
       throw CompositionLimitReachedException(kMaxCompositions);
     }
@@ -60,7 +65,12 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
 
   /// Removes the composition with [id] from the list and persists the change.
   Future<void> deleteComposition(String id) async {
-    final previous = state.valueOrNull ?? await future;
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      throw StateError(
+        'Cannot delete composition: data not loaded. Please wait for initialization to complete.',
+      );
+    }
     final updated = previous.where((c) => c.id != id).toList();
     state = AsyncValue.data(updated);
     try {
