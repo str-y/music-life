@@ -181,10 +181,17 @@ static bool test_yin_non_simd_multiple_frame_size() {
 }
 
 static bool test_yin_manual_backend_selection() {
+    const char* original = std::getenv("ML_FFT_BACKEND");
+    std::string original_value = original ? original : "";
     setenv("ML_FFT_BACKEND", "manual", 1);
     Yin yin(44100, 2048, 0.10f);
-    ASSERT_TRUE(std::strcmp(yin.fft_backend_name(), "radix2") == 0);
-    unsetenv("ML_FFT_BACKEND");
+    const bool ok = std::strcmp(yin.fft_backend_name(), "radix2") == 0;
+    if (original != nullptr) {
+        setenv("ML_FFT_BACKEND", original_value.c_str(), 1);
+    } else {
+        unsetenv("ML_FFT_BACKEND");
+    }
+    ASSERT_TRUE(ok);
     return true;
 }
 

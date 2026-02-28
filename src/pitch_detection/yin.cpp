@@ -234,12 +234,13 @@ void ifft_inplace_radix2(std::vector<std::complex<float>>& x,
 }
 
 #if defined(ML_HAS_ACCELERATE)
-void fft_inplace_accelerate(std::vector<std::complex<float>>& x, vDSP_DFT_Setup setup) {
+void fft_inplace_accelerate(std::vector<std::complex<float>>& x,
+                            vDSP_DFT_Setup setup,
+                            std::vector<float>& in_real,
+                            std::vector<float>& in_imag,
+                            std::vector<float>& out_real,
+                            std::vector<float>& out_imag) {
     const int n = static_cast<int>(x.size());
-    std::vector<float> in_real(static_cast<size_t>(n));
-    std::vector<float> in_imag(static_cast<size_t>(n));
-    std::vector<float> out_real(static_cast<size_t>(n));
-    std::vector<float> out_imag(static_cast<size_t>(n));
     for (int i = 0; i < n; ++i) {
         in_real[static_cast<size_t>(i)] = x[static_cast<size_t>(i)].real();
         in_imag[static_cast<size_t>(i)] = x[static_cast<size_t>(i)].imag();
@@ -256,37 +257,43 @@ void fft_inplace_accelerate(std::vector<std::complex<float>>& x, vDSP_DFT_Setup 
 #endif
 
 #if defined(ML_HAS_FFTW)
-void fft_inplace_fftw(std::vector<std::complex<float>>& x, int sign) {
+void fft_inplace_fftw(std::vector<std::complex<float>>& x, void* fftw_plan) {
     fftwf_complex* data = reinterpret_cast<fftwf_complex*>(x.data());
-    fftwf_plan plan = fftwf_plan_dft_1d(static_cast<int>(x.size()),
-                                        data,
-                                        data,
-                                        sign,
-                                        FFTW_ESTIMATE);
-    fftwf_execute(plan);
-    fftwf_destroy_plan(plan);
+    fftwf_execute_dft(static_cast<fftwf_plan>(fftw_plan), data, data);
 }
 #endif
 
 void fft_inplace(std::vector<std::complex<float>>& x,
                  const std::vector<std::complex<float>>& twiddle,
                  FftBackend backend,
-                 void* accelerate_setup) {
-#if !defined(ML_HAS_ACCELERATE)
+                 void* accelerate_setup,
+                 void* fftw_plan,
+                 std::vector<float>* accelerate_in_real,
+                 std::vector<float>* accelerate_in_imag,
+                 std::vector<float>* accelerate_out_real,
+                 std::vector<float>* accelerate_out_imag) {
     (void)accelerate_setup;
-#endif
+    (void)fftw_plan;
+    (void)accelerate_in_real;
+    (void)accelerate_in_imag;
+    (void)accelerate_out_real;
+    (void)accelerate_out_imag;
     switch (backend) {
         case FftBackend::Accelerate:
 #if defined(ML_HAS_ACCELERATE)
-            fft_inplace_accelerate(x, static_cast<vDSP_DFT_Setup>(accelerate_setup));
-            for (auto& c : x) c /= static_cast<float>(x.size());
+            fft_inplace_accelerate(x,
+                                   static_cast<vDSP_DFT_Setup>(accelerate_setup),
+                                   *accelerate_in_real,
+                                   *accelerate_in_imag,
+                                   *accelerate_out_real,
+                                   *accelerate_out_imag);
             return;
 #else
             break;
 #endif
         case FftBackend::Fftw:
 #if defined(ML_HAS_FFTW)
-            fft_inplace_fftw(x, FFTW_FORWARD);
+            fft_inplace_fftw(x, fftw_plan);
             return;
 #else
             break;
@@ -303,21 +310,35 @@ void fft_inplace(std::vector<std::complex<float>>& x,
 void ifft_inplace(std::vector<std::complex<float>>& x,
                   const std::vector<std::complex<float>>& twiddle,
                   FftBackend backend,
-                  void* accelerate_setup) {
-#if !defined(ML_HAS_ACCELERATE)
+                  void* accelerate_setup,
+                  void* fftw_plan,
+                  std::vector<float>* accelerate_in_real,
+                  std::vector<float>* accelerate_in_imag,
+                  std::vector<float>* accelerate_out_real,
+                  std::vector<float>* accelerate_out_imag) {
     (void)accelerate_setup;
-#endif
+    (void)fftw_plan;
+    (void)accelerate_in_real;
+    (void)accelerate_in_imag;
+    (void)accelerate_out_real;
+    (void)accelerate_out_imag;
     switch (backend) {
         case FftBackend::Accelerate:
 #if defined(ML_HAS_ACCELERATE)
-            fft_inplace_accelerate(x, static_cast<vDSP_DFT_Setup>(accelerate_setup));
+            fft_inplace_accelerate(x,
+                                   static_cast<vDSP_DFT_Setup>(accelerate_setup),
+                                   *accelerate_in_real,
+                                   *accelerate_in_imag,
+                                   *accelerate_out_real,
+                                   *accelerate_out_imag);
+            for (auto& c : x) c /= static_cast<float>(x.size());
             return;
 #else
             break;
 #endif
         case FftBackend::Fftw:
 #if defined(ML_HAS_FFTW)
-            fft_inplace_fftw(x, FFTW_BACKWARD);
+            fft_inplace_fftw(x, fftw_plan);
             for (auto& c : x) c /= static_cast<float>(x.size());
             return;
 #else
@@ -362,6 +383,13 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
     , fft_backend_(resolve_backend())
     , accelerate_forward_setup_(nullptr)
     , accelerate_inverse_setup_(nullptr)
+    , fftw_forward_plan_(nullptr)
+    , fftw_inverse_plan_(nullptr)
+    , fftw_plan_buffer_(fft_size_, {0.0f, 0.0f})
+    , accelerate_in_real_(fft_size_, 0.0f)
+    , accelerate_in_imag_(fft_size_, 0.0f)
+    , accelerate_out_real_(fft_size_, 0.0f)
+    , accelerate_out_imag_(fft_size_, 0.0f)
 {
     // Pre-compute twiddle factors: twiddle_[k] = exp(-2pi*i*k / fft_size_).
     // These are computed once here so the real-time audio path is free of
@@ -392,6 +420,27 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
         }
     }
 #endif
+
+#if defined(ML_HAS_FFTW)
+    if (fft_backend_ == FftBackend::Fftw) {
+        fftwf_complex* plan_data = reinterpret_cast<fftwf_complex*>(fftw_plan_buffer_.data());
+        fftw_forward_plan_ = static_cast<void*>(fftwf_plan_dft_1d(
+            fft_size_, plan_data, plan_data, FFTW_FORWARD, FFTW_MEASURE));
+        fftw_inverse_plan_ = static_cast<void*>(fftwf_plan_dft_1d(
+            fft_size_, plan_data, plan_data, FFTW_BACKWARD, FFTW_MEASURE));
+        if (fftw_forward_plan_ == nullptr || fftw_inverse_plan_ == nullptr) {
+            if (fftw_forward_plan_ != nullptr) {
+                fftwf_destroy_plan(static_cast<fftwf_plan>(fftw_forward_plan_));
+                fftw_forward_plan_ = nullptr;
+            }
+            if (fftw_inverse_plan_ != nullptr) {
+                fftwf_destroy_plan(static_cast<fftwf_plan>(fftw_inverse_plan_));
+                fftw_inverse_plan_ = nullptr;
+            }
+            fft_backend_ = FftBackend::Radix2;
+        }
+    }
+#endif
 }
 
 Yin::~Yin() {
@@ -401,6 +450,14 @@ Yin::~Yin() {
     }
     if (accelerate_inverse_setup_ != nullptr) {
         vDSP_DFT_DestroySetup(static_cast<vDSP_DFT_Setup>(accelerate_inverse_setup_));
+    }
+#endif
+#if defined(ML_HAS_FFTW)
+    if (fftw_forward_plan_ != nullptr) {
+        fftwf_destroy_plan(static_cast<fftwf_plan>(fftw_forward_plan_));
+    }
+    if (fftw_inverse_plan_ != nullptr) {
+        fftwf_destroy_plan(static_cast<fftwf_plan>(fftw_inverse_plan_));
     }
 #endif
 }
@@ -457,12 +514,36 @@ void Yin::difference(const float* samples, std::vector<float>& df) const {
     for (int j = 0; j < buffer_size_; ++j) fft_G_[j] = {samples[j], 0.0f};
     std::fill(fft_G_.begin() + buffer_size_, fft_G_.end(), std::complex<float>{0.0f, 0.0f});
 
-    fft_inplace(fft_F_, twiddle_, fft_backend_, accelerate_forward_setup_);
-    fft_inplace(fft_G_, twiddle_, fft_backend_, accelerate_forward_setup_);
+    fft_inplace(fft_F_,
+                twiddle_,
+                fft_backend_,
+                accelerate_forward_setup_,
+                fftw_forward_plan_,
+                &accelerate_in_real_,
+                &accelerate_in_imag_,
+                &accelerate_out_real_,
+                &accelerate_out_imag_);
+    fft_inplace(fft_G_,
+                twiddle_,
+                fft_backend_,
+                accelerate_forward_setup_,
+                fftw_forward_plan_,
+                &accelerate_in_real_,
+                &accelerate_in_imag_,
+                &accelerate_out_real_,
+                &accelerate_out_imag_);
 
     // Cross-correlation in frequency domain: conj(F) * G
     multiply_conj_fft_bins(fft_F_.data(), fft_G_.data(), fft_size_);
-    ifft_inplace(fft_F_, twiddle_, fft_backend_, accelerate_inverse_setup_);  // fft_F_[tau].real() == r(tau)
+    ifft_inplace(fft_F_,
+                 twiddle_,
+                 fft_backend_,
+                 accelerate_inverse_setup_,
+                 fftw_inverse_plan_,
+                 &accelerate_in_real_,
+                 &accelerate_in_imag_,
+                 &accelerate_out_real_,
+                 &accelerate_out_imag_);  // fft_F_[tau].real() == r(tau)
 
     // Prefix sums of squares for A and B(tau)
     compute_sq_prefix(samples, buffer_size_, sq_prefix_);

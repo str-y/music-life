@@ -72,6 +72,13 @@ private:
 
     void* accelerate_forward_setup_;
     void* accelerate_inverse_setup_;
+    void* fftw_forward_plan_;
+    void* fftw_inverse_plan_;
+    std::vector<std::complex<float>> fftw_plan_buffer_;
+    mutable std::vector<float> accelerate_in_real_;
+    mutable std::vector<float> accelerate_in_imag_;
+    mutable std::vector<float> accelerate_out_real_;
+    mutable std::vector<float> accelerate_out_imag_;
 
 
     /** Step 2: Difference function. */
