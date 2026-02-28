@@ -87,9 +87,11 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
       );
     }
 
-    return _TunerBody(
-      latest: state.latest,
-      pulseCtrl: _pulseCtrl,
+    return RepaintBoundary(
+      child: _TunerBody(
+        latest: state.latest,
+        pulseCtrl: _pulseCtrl,
+      ),
     );
   }
 }
@@ -206,18 +208,20 @@ class _CentsMeter extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 48,
-      child: CustomPaint(
-        painter: _CentsMeterPainter(
-          cents: hasReading ? cents : null,
-          trackColor: cs.outlineVariant,
-          needleColor: hasReading
-              ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
-                  ? Colors.green
-                  : cents.abs() <= AppConstants.tunerWarningThresholdCents
-                      ? Colors.orange
-                      : cs.error)
-              : cs.outlineVariant,
-          centerColor: cs.primary,
+      child: RepaintBoundary(
+        child: CustomPaint(
+          painter: _CentsMeterPainter(
+            cents: hasReading ? cents : null,
+            trackColor: cs.outlineVariant,
+            needleColor: hasReading
+                ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
+                    ? Colors.green
+                    : cents.abs() <= AppConstants.tunerWarningThresholdCents
+                        ? Colors.orange
+                        : cs.error)
+                : cs.outlineVariant,
+            centerColor: cs.primary,
+          ),
         ),
       ),
     );
@@ -301,5 +305,8 @@ class _CentsMeterPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CentsMeterPainter old) =>
-      old.cents != cents || old.needleColor != needleColor;
+      old.cents != cents ||
+      old.needleColor != needleColor ||
+      old.trackColor != trackColor ||
+      old.centerColor != centerColor;
 }
