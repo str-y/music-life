@@ -156,6 +156,22 @@ static bool test_yin_workspace_size_is_not_changed() {
     return true;
 }
 
+static bool test_yin_non_simd_multiple_frame_size() {
+    // Covers SIMD tail paths (W = FRAME/2 = 1025, not divisible by 4).
+    const int   SR          = 44100;
+    const int   FRAME       = 2050;
+    const float EXPECTED_HZ = 440.0f;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, EXPECTED_HZ, SR);
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Tests – PitchDetector
 // ---------------------------------------------------------------------------
@@ -420,6 +436,7 @@ int main() {
     run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
+    run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
