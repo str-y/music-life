@@ -103,10 +103,12 @@ void main() {
             }),
           ),
         ));
-        // Allow the 50ms mock delay to complete
-        await Future.delayed(const Duration(milliseconds: 100));
+        // Allow the 100ms mock delay to complete
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
+      await tester.pump(); // Handle the rebuild after async
+      await tester.pump(const Duration(milliseconds: 100)); // Handle SnackBar entrance
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);

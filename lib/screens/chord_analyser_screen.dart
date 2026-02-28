@@ -169,35 +169,40 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
         Expanded(
           flex: 5,
           child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.currentChord,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (child, animation) => ScaleTransition(
-                    scale: animation,
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  child: Text(
-                    _currentChord,
-                    key: ValueKey(_currentChord),
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                          fontSize: 80,
+            child: Semantics(
+              liveRegion: true,
+              label: AppLocalizations.of(context)!.currentNoteSemanticLabel,
+              value: _currentChord == '---' ? null : _currentChord,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    AppLocalizations.of(context)!.currentChord,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                         ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                ListeningIndicator(controller: _listeningCtrl),
-              ],
+                  const SizedBox(height: 12),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: Text(
+                      _currentChord,
+                      key: ValueKey(_currentChord),
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            fontSize: 80,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListeningIndicator(controller: _listeningCtrl),
+                ],
+              ),
             ),
           ),
         ),
@@ -292,10 +297,13 @@ class _ChordHistoryTile extends StatelessWidget {
       sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
       child: FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: AnimatedOpacity(
-          opacity: isLatest ? 1.0 : 0.65,
-          duration: const Duration(milliseconds: 300),
-          child: Container(
+        child: Semantics(
+          label: '${entry.chord}, $timeLabel',
+          excludeSemantics: true,
+          child: AnimatedOpacity(
+            opacity: isLatest ? 1.0 : 0.65,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isLatest
@@ -333,6 +341,7 @@ class _ChordHistoryTile extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }
