@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -289,34 +290,75 @@ class WaveformPainter extends CustomPainter {
   final List<double> data;
   final Color color;
   final double breathPhase;
+  static const int _maxCacheEntries = 128;
+  static final Map<String, Path> _pathCache = <String, Path>{};
+  static final Map<String, ui.Picture> _pictureCache = <String, ui.Picture>{};
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
 
-    final paint = Paint()
-      ..color = color
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2.5;
+    final centerY = size.height / 2;
+    final breathScale = 1.0 + breathPhase * 0.22;
+    final cacheKey =
+        '${identityHashCode(data)}:${size.width.toStringAsFixed(2)}:${size.height.toStringAsFixed(2)}';
+    if (_pathCache.length >= _maxCacheEntries && !_pathCache.containsKey(cacheKey)) {
+      _pathCache.remove(_pathCache.keys.first);
+    }
+    final basePath =
+        _pathCache.putIfAbsent(cacheKey, () => _buildBasePath(data, size));
+    final pictureKey = '$cacheKey:${color.value}';
+    if (_pictureCache.length >= _maxCacheEntries &&
+        !_pictureCache.containsKey(pictureKey)) {
+      final firstKey = _pictureCache.keys.first;
+      _pictureCache.remove(firstKey)?.dispose();
+    }
+    final picture = _pictureCache.putIfAbsent(
+      pictureKey,
+      () => _recordPicture(basePath, color),
+    );
 
-    final barCount = data.length;
+    canvas.save();
+    canvas.transform(
+      (Matrix4.identity()
+            ..translate(0.0, centerY)
+            ..scale(1.0, breathScale)
+            ..translate(0.0, -centerY))
+          .storage,
+    );
+    canvas.drawPicture(picture);
+    canvas.restore();
+  }
+
+  Path _buildBasePath(List<double> waveformData, Size size) {
+    final path = Path();
+    final barCount = waveformData.length;
     final totalSpacing = size.width;
     final barWidth = totalSpacing / (barCount * 1.6);
     final gap = barWidth * 0.6;
     final step = barWidth + gap;
     final centerY = size.height / 2;
-    final breathScale = 1.0 + breathPhase * 0.22;
 
     for (var i = 0; i < barCount; i++) {
       final x = i * step + barWidth / 2;
-      final halfHeight =
-          (data[i] * centerY * breathScale).clamp(2.0, centerY);
-      canvas.drawLine(
-        Offset(x, centerY - halfHeight),
-        Offset(x, centerY + halfHeight),
-        paint,
-      );
+      final halfHeight = (waveformData[i] * centerY).clamp(2.0, centerY);
+      path
+        ..moveTo(x, centerY - halfHeight)
+        ..lineTo(x, centerY + halfHeight);
     }
+    return path;
+  }
+
+  ui.Picture _recordPicture(Path path, Color waveformColor) {
+    final recorder = ui.PictureRecorder();
+    final recorderCanvas = Canvas(recorder);
+    final paint = Paint()
+      ..color = waveformColor
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke;
+    recorderCanvas.drawPath(path, paint);
+    return recorder.endRecording();
   }
 
   @override

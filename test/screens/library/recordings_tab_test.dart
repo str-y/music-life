@@ -107,4 +107,46 @@ void main() {
       expect(find.byIcon(Icons.pause_circle), findsOneWidget);
     });
   });
+
+  group('WaveformPainter', () {
+    test('shouldRepaint responds to waveform inputs and animation phase', () {
+      final sameData = <double>[0.1, 0.6, 0.3];
+      final base = WaveformPainter(
+        data: sameData,
+        color: Colors.blue,
+        breathPhase: 0.0,
+      );
+
+      expect(
+        base.shouldRepaint(
+          WaveformPainter(
+            data: sameData,
+            color: Colors.blue,
+            breathPhase: 0.0,
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        base.shouldRepaint(
+          WaveformPainter(
+            data: sameData,
+            color: Colors.blue,
+            breathPhase: 0.2,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        base.shouldRepaint(
+          WaveformPainter(
+            data: sameData,
+            color: Colors.red,
+            breathPhase: 0.0,
+          ),
+        ),
+        isTrue,
+      );
+    });
+  });
 }
