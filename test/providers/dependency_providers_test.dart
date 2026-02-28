@@ -16,7 +16,7 @@ void main() {
     );
   });
 
-  test('dependency providers resolve from sharedPreferencesProvider override',
+  test('repository providers resolve with sharedPreferences override',
       () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
