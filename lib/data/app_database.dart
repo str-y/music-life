@@ -15,7 +15,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _schemaVersion = 3;
+  static const int _schemaVersion = 4;
 
   Completer<Database>? _completer;
 
@@ -39,6 +39,7 @@ class AppDatabase {
             recorded_at TEXT NOT NULL,
             duration_seconds INTEGER NOT NULL,
             waveform_data BLOB NOT NULL,
+            audio_file_path TEXT,
             is_deleted INTEGER NOT NULL DEFAULT 0
           )
         ''');
@@ -254,6 +255,7 @@ class AppDatabase {
   static final Map<int, Future<void> Function(DatabaseExecutor)> _migrations = {
     2: _migrateV1ToV2,
     3: _migrateV2ToV3,
+    4: _migrateV3ToV4,
   };
 
   static List<int> _migrationPlan({
@@ -336,6 +338,10 @@ class AppDatabase {
     await _ensureSoftDeleteColumn(db, table: 'practice_logs');
   }
 
+  static Future<void> _migrateV3ToV4(DatabaseExecutor db) async {
+    await _ensureAudioFilePathColumn(db);
+  }
+
   static Future<void> _ensureSoftDeleteColumn(
     DatabaseExecutor db, {
     required String table,
@@ -356,6 +362,14 @@ class AppDatabase {
     final hasIsDeleted = columns.any((row) => row['name'] == 'is_deleted');
     if (!hasIsDeleted) {
       await db.execute(addSoftDeleteColumnQuery);
+    }
+  }
+
+  static Future<void> _ensureAudioFilePathColumn(DatabaseExecutor db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(recordings)');
+    final hasAudioPath = columns.any((row) => row['name'] == 'audio_file_path');
+    if (!hasAudioPath) {
+      await db.execute('ALTER TABLE recordings ADD COLUMN audio_file_path TEXT');
     }
   }
 }

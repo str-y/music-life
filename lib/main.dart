@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +24,19 @@ const String _privacyPolicyUrl =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.stry.musiclife.audio',
+      androidNotificationChannelName: 'Music Life Playback',
+      androidNotificationOngoing: true,
+    );
+  } catch (e, stackTrace) {
+    AppLogger.reportError(
+      'Failed to initialize background audio',
+      error: e,
+      stackTrace: stackTrace,
+    );
+  }
   final prefs = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(
