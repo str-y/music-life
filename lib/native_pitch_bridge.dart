@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 
 import 'app_constants.dart';
 import 'utils/app_logger.dart';
+import 'utils/ring_buffer.dart';
 
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
@@ -120,7 +121,7 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
   final process = lib.lookupFunction<_MLProcessNative, _MLProcessDart>(
       'ml_pitch_detector_process');
 
-  final sampleBuf = <double>[];
+  final sampleBuf = RingBuffer();
 
   void processFrame(Float32List frame) {
     try {
@@ -160,9 +161,9 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
         sampleBuf.add(s / 32768.0);
       }
       while (sampleBuf.length >= setup.frameSize) {
-        processFrame(
-            Float32List.fromList(sampleBuf.sublist(0, setup.frameSize)));
-        sampleBuf.removeRange(0, setup.frameSize);
+        final frame = Float32List(setup.frameSize);
+        if (!sampleBuf.readInto(frame)) break;
+        processFrame(frame);
       }
     } else if (msg is Float32List) {
       processFrame(msg);
