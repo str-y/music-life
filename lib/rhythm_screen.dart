@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'l10n/app_localizations.dart';
+import 'app_constants.dart';
+import 'utils/metronome_utils.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -56,13 +58,8 @@ class _RhythmScreenState extends State<RhythmScreen>
   late final AnimationController _tapRingCtrl;
   late final Animation<double> _tapRingAnim;
 
-  static const int _minBpm = 30;
-  static const int _maxBpm = 240;
-
   // ── Timing helpers ───────────────────────────────────────────────────────
-  Duration get _beatDuration => Duration(
-        microseconds: (60 * 1000 * 1000 ~/ _bpm),
-      );
+  Duration get _beatDuration => beatDurationFor(_bpm);
 
   void _startMetronome() {
     _metTicker?.dispose();
@@ -113,7 +110,7 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   void _changeBpm(int delta) {
     setState(() {
-      _bpm = (_bpm + delta).clamp(_minBpm, _maxBpm);
+      _bpm = (_bpm + delta).clamp(AppConstants.metronomeMinBpm, AppConstants.metronomeMaxBpm);
     });
     if (_isPlaying) {
       _startMetronome(); // restart at new tempo
@@ -129,14 +126,12 @@ class _RhythmScreenState extends State<RhythmScreen>
     final elapsedMs =
         now.difference(_lastBeatTime!).inMilliseconds.toDouble();
 
-    // Map elapsed time to [-beatMs/2, +beatMs/2].
-    double offset = elapsedMs;
-    if (offset > beatMs / 2) offset -= beatMs;
+    final offset = computeGrooveTapOffset(elapsedMs: elapsedMs, beatMs: beatMs);
 
     setState(() {
       _lastOffsetMs = offset;
       // Score penalty: proportional to |offset| / (beatMs/2), capped at 20 pts.
-      final penalty = (offset.abs() / (beatMs / 2)) * 20;
+      final penalty = computeScorePenalty(offsetMs: offset, beatMs: beatMs);
       _timingScore = (_timingScore - penalty).clamp(0, 100);
     });
 
@@ -243,11 +238,13 @@ class _RhythmScreenState extends State<RhythmScreen>
             children: [
               _BpmButton(
                 label: '−10',
+                semanticLabel: l10n.bpmDecrease10SemanticLabel,
                 onPressed: () => _changeBpm(-10),
               ),
               const SizedBox(width: 8),
               _BpmButton(
                 label: '−1',
+                semanticLabel: l10n.bpmDecrease1SemanticLabel,
                 onPressed: () => _changeBpm(-1),
               ),
               const SizedBox(width: 24),
@@ -281,11 +278,13 @@ class _RhythmScreenState extends State<RhythmScreen>
               const SizedBox(width: 24),
               _BpmButton(
                 label: '+1',
+                semanticLabel: l10n.bpmIncrease1SemanticLabel,
                 onPressed: () => _changeBpm(1),
               ),
               const SizedBox(width: 8),
               _BpmButton(
                 label: '+10',
+                semanticLabel: l10n.bpmIncrease10SemanticLabel,
                 onPressed: () => _changeBpm(10),
               ),
             ],
@@ -413,20 +412,29 @@ class _RhythmScreenState extends State<RhythmScreen>
 // ── BPM helper button ────────────────────────────────────────────────────────
 
 class _BpmButton extends StatelessWidget {
-  const _BpmButton({required this.label, required this.onPressed});
+  const _BpmButton({
+    required this.label,
+    required this.onPressed,
+    required this.semanticLabel,
+  });
 
   final String label;
   final VoidCallback onPressed;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        minimumSize: const Size(50, 36),
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          minimumSize: const Size(50, 36),
+        ),
+        child: ExcludeSemantics(child: Text(label)),
       ),
-      child: Text(label),
     );
   }
 }

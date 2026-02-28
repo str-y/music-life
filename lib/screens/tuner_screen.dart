@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
-import '../service_locator.dart';
+import '../providers/tuner_provider.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
@@ -21,30 +23,23 @@ class TunerScreen extends StatelessWidget {
   }
 }
 
-// ── Internal body wrapper (handles bridge & state) ───────────────────────────
+// ── Internal body wrapper (handles provider & animation) ─────────────────────
 
-class _TunerBodyWrapper extends StatefulWidget {
+class _TunerBodyWrapper extends ConsumerStatefulWidget {
   const _TunerBodyWrapper();
 
   @override
-  State<_TunerBodyWrapper> createState() => _TunerBodyWrapperState();
+  ConsumerState<_TunerBodyWrapper> createState() => _TunerBodyWrapperState();
 }
 
-class _TunerBodyWrapperState extends State<_TunerBodyWrapper>
+class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     with SingleTickerProviderStateMixin {
-  NativePitchBridge? _bridge;
-  StreamSubscription<PitchResult>? _sub;
-
-  bool _loading = true;
-  PitchResult? _latest;
-
   /// Controller for the "listening" pulse animation shown before a note is
   /// detected, and for animating the cents needle.
   late final AnimationController _pulseCtrl;
 
-  /// Timer used to stop [_pulseCtrl] after [_idleTimeout] of no audio input.
+  /// Timer used to stop [_pulseCtrl] after [AppConstants.listeningIdleTimeout] of no audio input.
   Timer? _idleTimer;
-  static const Duration _idleTimeout = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -54,65 +49,46 @@ class _TunerBodyWrapperState extends State<_TunerBodyWrapper>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _scheduleIdleStop();
-    _startCapture();
   }
 
-  /// Schedules [_pulseCtrl] to stop after [_idleTimeout] of no audio activity.
+  /// Schedules [_pulseCtrl] to stop after [AppConstants.listeningIdleTimeout] of no audio activity.
   void _scheduleIdleStop() {
     _idleTimer?.cancel();
-    _idleTimer = Timer(_idleTimeout, () {
+    _idleTimer = Timer(AppConstants.listeningIdleTimeout, () {
       if (mounted) _pulseCtrl.stop();
     });
-  }
-
-  Future<void> _startCapture() async {
-    setState(() => _loading = true);
-
-    final bridge = ServiceLocator.instance.pitchBridgeFactory();
-    final started = await bridge.startCapture();
-    if (!mounted) {
-      bridge.dispose();
-      return;
-    }
-    if (!started) {
-      bridge.dispose();
-      setState(() => _loading = false);
-      return;
-    }
-
-    _bridge = bridge;
-    _sub = bridge.pitchStream.listen((result) {
-      if (!mounted) return;
-      if (!_pulseCtrl.isAnimating) {
-        _pulseCtrl.repeat(reverse: true);
-      }
-      _scheduleIdleStop();
-      setState(() => _latest = result);
-    });
-    setState(() => _loading = false);
   }
 
   @override
   void dispose() {
     _idleTimer?.cancel();
-    _sub?.cancel();
-    _bridge?.dispose();
     _pulseCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    ref.listen<TunerState>(tunerProvider, (prev, next) {
+      if (next.latest != null && next.latest != prev?.latest) {
+        if (!_pulseCtrl.isAnimating) {
+          _pulseCtrl.repeat(reverse: true);
+        }
+        _scheduleIdleStop();
+      }
+    });
 
-    if (_bridge == null) {
+    final state = ref.watch(tunerProvider);
+
+    if (state.loading) return const Center(child: CircularProgressIndicator());
+
+    if (!state.bridgeActive) {
       return MicPermissionDeniedView(
-        onRetry: () => _startCapture(),
+        onRetry: () => ref.read(tunerProvider.notifier).retry(),
       );
     }
 
     return _TunerBody(
-      latest: _latest,
+      latest: state.latest,
       pulseCtrl: _pulseCtrl,
     );
   }
@@ -129,8 +105,8 @@ class _TunerBody extends StatelessWidget {
   /// Maps cents offset (−50 … +50) to a colour between red → green → red.
   Color _centColor(BuildContext context, double cents) {
     final abs = cents.abs();
-    if (abs <= 5) return Colors.green;
-    if (abs <= 15) return Colors.orange;
+    if (abs <= AppConstants.tunerInTuneThresholdCents) return Colors.green;
+    if (abs <= AppConstants.tunerWarningThresholdCents) return Colors.orange;
     return Theme.of(context).colorScheme.error;
   }
 
@@ -147,7 +123,7 @@ class _TunerBody extends StatelessWidget {
     final centsText = latest != null
         ? (cents >= 0 ? '+${cents.toStringAsFixed(1)}' : cents.toStringAsFixed(1))
         : '---';
-    final inTune = latest != null && cents.abs() <= 5;
+    final inTune = latest != null && cents.abs() <= AppConstants.tunerInTuneThresholdCents;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -179,7 +155,11 @@ class _TunerBody extends StatelessWidget {
           const SizedBox(height: 32),
 
           // ── Cents meter ───────────────────────────────────────────
-          _CentsMeter(cents: cents, hasReading: latest != null),
+          Semantics(
+            label: AppLocalizations.of(context)!.centsMeterSemanticLabel,
+            value: '$centsText cents',
+            child: _CentsMeter(cents: cents, hasReading: latest != null),
+          ),
           const SizedBox(height: 8),
           Text(
             '$centsText cents',
@@ -231,9 +211,9 @@ class _CentsMeter extends StatelessWidget {
           cents: hasReading ? cents : null,
           trackColor: cs.outlineVariant,
           needleColor: hasReading
-              ? (cents.abs() <= 5
+              ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
                   ? Colors.green
-                  : cents.abs() <= 15
+                  : cents.abs() <= AppConstants.tunerWarningThresholdCents
                       ? Colors.orange
                       : cs.error)
               : cs.outlineVariant,

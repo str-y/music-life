@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -12,14 +16,20 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
 
-  Future<Database>? _dbFuture;
+  Completer<Database>? _completer;
 
-  Future<Database> get database => _dbFuture ??= _open();
+  Future<Database> get database {
+    if (_completer == null) {
+      _completer = Completer<Database>();
+      _open().then(_completer!.complete, onError: _completer!.completeError);
+    }
+    return _completer!.future;
+  }
 
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE recordings (
@@ -27,7 +37,7 @@ class AppDatabase {
             title TEXT NOT NULL,
             recorded_at TEXT NOT NULL,
             duration_seconds INTEGER NOT NULL,
-            waveform_data TEXT NOT NULL
+            waveform_data BLOB NOT NULL
           )
         ''');
         await db.execute('''
@@ -47,6 +57,12 @@ class AppDatabase {
           )
         ''');
       },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _migrateV1ToV2(db);
+        }
+      },
+      onDowngrade: onDatabaseVersionChangeError,
     );
   }
 
@@ -97,6 +113,26 @@ class AppDatabase {
     });
   }
 
+  /// Atomically replaces all recordings **and** practice logs in a single
+  /// transaction so that both data sets move together or not at all.
+  /// Used during the one-time SharedPreferences → SQLite migration.
+  Future<void> replaceAllData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('recordings');
+      for (final row in recordings) {
+        await txn.insert('recordings', row);
+      }
+      await txn.delete('practice_logs');
+      for (final row in practiceLogs) {
+        await txn.insert('practice_logs', row);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Practice log entries (PracticeLogScreen)
   // ---------------------------------------------------------------------------
@@ -109,5 +145,78 @@ class AppDatabase {
   Future<void> insertPracticeLogEntry(Map<String, Object?> row) async {
     final db = await database;
     await db.insert('practice_log_entries', row);
+  }
+
+  /// Closes the underlying SQLite connection and resets the lazy future so that
+  /// the database can be re-opened on the next access.  Call this when the app
+  /// is disposed to release the file handle promptly.
+  Future<void> close() async {
+    if (_completer != null) {
+      final db = await _completer!.future;
+      await db.close();
+      _completer = null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Migration helpers
+  // ---------------------------------------------------------------------------
+
+  /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
+  ///
+  /// Safe to re-run after a partial failure:
+  ///   • If [recordings_new] already exists (interrupted after CREATE TABLE),
+  ///     it is dropped and the migration restarts from scratch.
+  ///   • If [recordings] was already dropped but [recordings_new] was not yet
+  ///     renamed (interrupted between DROP and RENAME), only the rename is
+  ///     performed to complete the migration.
+  static Future<void> _migrateV1ToV2(DatabaseExecutor db) async {
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table'"
+      " AND name IN ('recordings', 'recordings_new')",
+    );
+    final tableNames = tables.map((r) => r['name'] as String).toSet();
+
+    // Interrupted between DROP TABLE recordings and RENAME — just finish.
+    if (!tableNames.contains('recordings') &&
+        tableNames.contains('recordings_new')) {
+      await db.execute(
+          'ALTER TABLE recordings_new RENAME TO recordings');
+      return;
+    }
+
+    // Drop any leftover partial table so the migration can restart cleanly.
+    await db.execute('DROP TABLE IF EXISTS recordings_new');
+
+    await db.execute('''
+      CREATE TABLE recordings_new (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL,
+        waveform_data BLOB NOT NULL
+      )
+    ''');
+    final rows = await db.query('recordings');
+    for (final row in rows) {
+      final jsonStr = row['waveform_data'] as String;
+      final doubles = (jsonDecode(jsonStr) as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      // Encoding matches _waveformToBlob in recording_repository.dart.
+      final byteData = ByteData(doubles.length * 8);
+      for (var i = 0; i < doubles.length; i++) {
+        byteData.setFloat64(i * 8, doubles[i], Endian.little);
+      }
+      await db.insert('recordings_new', {
+        'id': row['id'],
+        'title': row['title'],
+        'recorded_at': row['recorded_at'],
+        'duration_seconds': row['duration_seconds'],
+        'waveform_data': byteData.buffer.asUint8List(),
+      });
+    }
+    await db.execute('DROP TABLE recordings');
+    await db.execute('ALTER TABLE recordings_new RENAME TO recordings');
   }
 }

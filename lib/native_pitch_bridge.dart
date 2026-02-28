@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 import 'package:record/record.dart';
 
+import 'app_constants.dart';
+
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
 /// Mirrors the C struct `MLPitchResult` from `pitch_detector_ffi.h`.
@@ -176,9 +178,9 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
 /// - **Memory-Safe**: Uses [NativeFinalizer] and [Finalizable] to prevent leaks.
 /// - **Robust**: Real-time error reporting via [FfiErrorHandler].
 class NativePitchBridge implements Finalizable {
-  static const int defaultFrameSize = 2048;
-  static const int defaultSampleRate = 44100;
-  static const double defaultThreshold = 0.10;
+  static const int defaultFrameSize = AppConstants.audioFrameSize;
+  static const int defaultSampleRate = AppConstants.audioSampleRate;
+  static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
 
   final NativeFinalizer _handleFinalizer;
   static final NativeFinalizer _bufferFinalizer =
@@ -193,7 +195,9 @@ class NativePitchBridge implements Finalizable {
 
   SendPort? _audioSendPort;
   ReceivePort? _resultPort;
+  ReceivePort? _exitPort;
   StreamSubscription<dynamic>? _resultSub;
+  Isolate? _isolate;
   final FfiErrorHandler? _onError;
   bool _disposed = false;
 
@@ -272,9 +276,11 @@ class NativePitchBridge implements Finalizable {
 
     final resultPort = ReceivePort();
     _resultPort = resultPort;
+    final exitPort = ReceivePort();
+    _exitPort = exitPort;
 
     try {
-      await Isolate.spawn(
+      _isolate = await Isolate.spawn(
         _audioProcessingIsolate,
         _IsolateSetup(
           resultPort: resultPort.sendPort,
@@ -283,20 +289,52 @@ class NativePitchBridge implements Finalizable {
           frameSize: _frameSize,
         ),
         onError: resultPort.sendPort,
+        onExit: exitPort.sendPort,
       );
     } catch (e, stack) {
       _onError?.call(e, stack);
+      exitPort.close();
+      _exitPort = null;
       return false;
     }
 
     final completer = Completer<bool>();
+
+    // Helper: parse and forward a fatal error list sent by the Dart runtime
+    // via onError: resultPort.sendPort  →  [errorDescription, stackTraceString].
+    void forwardFatalError(List<dynamic> msg) {
+      final error = msg.isNotEmpty ? msg[0] : 'Unknown isolate error';
+      final stackStr = msg.length > 1 ? (msg[1] as String?) ?? '' : '';
+      _onError?.call(error, StackTrace.fromString(stackStr));
+    }
+
+    // If the isolate exits before it ever sends its SendPort (e.g. fatal
+    // crash before the port.listen line), complete the completer so the
+    // caller is never left hanging.
+    late StreamSubscription<dynamic> exitSub;
+    exitSub = exitPort.listen((_) {
+      exitPort.close();
+      _exitPort = null;
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    });
+
     _resultSub = resultPort.listen((msg) {
       if (!completer.isCompleted) {
         if (msg is SendPort) {
           _audioSendPort = msg;
+          // Cancel the exit watcher now that startup succeeded; crashes after
+          // this point are reported via onError: resultPort.sendPort.
+          exitSub.cancel();
           completer.complete(true);
         } else if (msg is _IsolateError) {
           _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+          completer.complete(false);
+        } else if (msg is List) {
+          // Fatal uncaught isolate error forwarded via onError: resultPort.sendPort.
+          // The Dart runtime sends it as [errorDescription, stackTraceString].
+          forwardFatalError(msg);
           completer.complete(false);
         } else {
           completer.complete(false);
@@ -307,6 +345,9 @@ class NativePitchBridge implements Finalizable {
         _onPitchResult(msg);
       } else if (msg is _IsolateError) {
         _onError?.call(msg.message, StackTrace.fromString(msg.stack));
+      } else if (msg is List) {
+        // Fatal uncaught isolate error after startup.
+        forwardFatalError(msg);
       }
     });
 
@@ -362,15 +403,54 @@ class NativePitchBridge implements Finalizable {
     _audioSub = null;
     _recorder.stop().ignore();
     _recorder.dispose();
+    // Signal the isolate to stop processing and close its receive port.
     _audioSendPort?.send(null);
     _audioSendPort = null;
     _resultSub?.cancel();
     _resultSub = null;
     _resultPort?.close();
     _resultPort = null;
-    _nativeDestroy(_handle);
-    malloc.free(_persistentBuffer);
     _controller.close();
     _pitchController.close();
+
+    final isolate = _isolate;
+    _isolate = null;
+    final exitPort = _exitPort;
+    _exitPort = null;
+
+    if (isolate == null || exitPort == null) {
+      // No isolate was started; free native resources immediately.
+      _nativeDestroy(_handle);
+      malloc.free(_persistentBuffer);
+      return;
+    }
+
+    // Defer native-resource teardown until the isolate confirms it has exited.
+    // This prevents a use-after-free if the isolate is mid-frame when
+    // dispose() is called: the isolate is single-threaded, so it finishes its
+    // current message (including any in-flight native call) before processing
+    // the null shutdown signal and exiting.
+    bool freed = false;
+    StreamSubscription<dynamic>? exitSub;
+    Timer? forceKillTimer;
+    void freeNativeResources() {
+      if (freed) return;
+      freed = true;
+      forceKillTimer?.cancel();
+      exitSub?.cancel();
+      exitPort.close();
+      _nativeDestroy(_handle);
+      malloc.free(_persistentBuffer);
+    }
+
+    exitSub = exitPort.listen((_) => freeNativeResources());
+
+    // Safety net: if the isolate does not exit gracefully within 5 seconds,
+    // force-kill it. The Dart VM sends the exit-port notification after the
+    // kill completes, so freeNativeResources() will still be called exactly
+    // once even in this path.
+    forceKillTimer = Timer(const Duration(seconds: 5), () {
+      isolate.kill(priority: Isolate.immediate);
+    });
   }
 }

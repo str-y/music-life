@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../service_locator.dart';
+import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
-/// Maximum number of historical chord entries shown in the timeline.
-const int _maxHistory = 12;
 
 class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key});
@@ -55,9 +55,8 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
   /// Controller for the pulsing "listening" indicator.
   late final AnimationController _listeningCtrl;
 
-  /// Timer used to stop [_listeningCtrl] after [_idleTimeout] of no audio input.
+  /// Timer used to stop [_listeningCtrl] after [AppConstants.listeningIdleTimeout] of no audio input.
   Timer? _idleTimer;
-  static const Duration _idleTimeout = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -99,10 +98,10 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
         0,
         duration: const Duration(milliseconds: 300),
       );
-      if (_history.length > _maxHistory) {
+      if (_history.length > AppConstants.chordHistoryMaxEntries) {
         final removed = _history.removeLast();
         _listKey.currentState?.removeItem(
-          _maxHistory,
+          AppConstants.chordHistoryMaxEntries,
           (context, animation) => _ChordHistoryTile(
             entry: removed,
             isLatest: false,
@@ -116,10 +115,10 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
     setState(() => _loading = false);
   }
 
-  /// Schedules [_listeningCtrl] to stop after [_idleTimeout] of no audio activity.
+  /// Schedules [_listeningCtrl] to stop after [AppConstants.listeningIdleTimeout] of no audio activity.
   void _scheduleIdleStop() {
     _idleTimer?.cancel();
-    _idleTimer = Timer(_idleTimeout, () {
+    _idleTimer = Timer(AppConstants.listeningIdleTimeout, () {
       if (mounted) _listeningCtrl.stop();
     });
   }
@@ -240,11 +239,6 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-String _formatTime(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:'
-    '${t.minute.toString().padLeft(2, '0')}:'
-    '${t.second.toString().padLeft(2, '0')}';
-
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
@@ -274,7 +268,7 @@ class _ChordHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeLabel = _formatTime(entry.time);
+    final timeLabel = formatTimeHMS(entry.time);
 
     return SizeTransition(
       sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),

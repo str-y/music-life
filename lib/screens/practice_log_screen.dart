@@ -78,6 +78,7 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
       context: context,
       builder: (_) => const _AddEntryDialog(),
     );
+    if (!mounted) return;
     if (result != null) {
       await _addEntry(result);
     }
@@ -523,7 +524,7 @@ class _AddEntryDialogState extends State<_AddEntryDialog> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) setState(() => _date = picked);
+    if (picked != null && mounted) setState(() => _date = picked);
   }
 
   String _formatDate(DateTime dt) =>

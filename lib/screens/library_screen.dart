@@ -4,10 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:record/record.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
-import '../service_locator.dart';
 import '../utils/waveform_analyzer.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
@@ -16,73 +17,21 @@ import 'library/recordings_tab.dart';
 // LibraryScreen
 // ---------------------------------------------------------------------------
 
-class LibraryScreen extends StatefulWidget {
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen>
+class _LibraryScreenState extends ConsumerState<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  late final RecordingRepository _repository;
-
-  List<RecordingEntry> _recordings = [];
-  List<PracticeLogEntry> _logs = [];
-  bool _loading = true;
-  bool _hasError = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _repository = ServiceLocator.instance.recordingRepository;
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      final recordings = await _repository.loadRecordings();
-      final logs = await _repository.loadPracticeLogs();
-      if (!mounted) return;
-      setState(() {
-        _recordings = recordings;
-        _logs = logs;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _hasError = true);
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  Future<void> _addRecording(RecordingEntry entry) async {
-    final updated = [entry, ..._recordings];
-    setState(() => _recordings = updated);
-    await _repository.saveRecordings(updated);
-
-    if (mounted) {
-      HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  Future<void> _showAddDialog() async {
-    final result = await showDialog<RecordingEntry>(
-      context: context,
-      builder: (_) => const _AddRecordingDialog(),
-    );
-    if (result != null) {
-      await _addRecording(result);
-    }
   }
 
   @override
@@ -91,8 +40,28 @@ class _LibraryScreenState extends State<LibraryScreen>
     super.dispose();
   }
 
+  Future<void> _showAddDialog() async {
+    final result = await showDialog<RecordingEntry>(
+      context: context,
+      builder: (_) => const _AddRecordingDialog(),
+    );
+    if (result != null && mounted) {
+      await ref.read(libraryProvider.notifier).addRecording(result);
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(libraryProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.libraryTitle),
@@ -104,13 +73,13 @@ class _LibraryScreenState extends State<LibraryScreen>
           ],
         ),
       ),
-      body: _loading
+      body: state.loading
           ? Center(
               child: CircularProgressIndicator(
                 semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
               ),
             )
-          : _hasError
+          : state.hasError
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -124,13 +93,7 @@ class _LibraryScreenState extends State<LibraryScreen>
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _loading = true;
-                            _hasError = false;
-                          });
-                          _loadData();
-                        },
+                        onPressed: () => ref.read(libraryProvider.notifier).reload(),
                         icon: const Icon(Icons.refresh),
                         label: Text(AppLocalizations.of(context)!.retry),
                       ),
@@ -140,18 +103,18 @@ class _LibraryScreenState extends State<LibraryScreen>
               : TabBarView(
               controller: _tabController,
               children: [
-                RecordingsTab(recordings: _recordings),
-                LogTab(logs: _logs),
+                RecordingsTab(recordings: state.recordings),
+                LogTab(logs: state.logs),
               ],
             ),
       floatingActionButton: ListenableBuilder(
         listenable: _tabController,
         builder: (context, _) {
-          if (_tabController.index != 0 || _loading || _hasError) {
+          if (_tabController.index != 0 || state.loading || state.hasError) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton(
-            onPressed: _showAddDialog,
+            onPressed: () => _showAddDialog(),
             tooltip: AppLocalizations.of(context)!.newRecording,
             child: const Icon(Icons.add),
           );
