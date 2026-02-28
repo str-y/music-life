@@ -200,7 +200,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Builder'));
+      await tester.tap(find.text('Chord Builder'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('chord_builder_root')));

@@ -383,7 +383,7 @@ class _ChordPalette extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           child: ActionChip(
             avatar: const Icon(Icons.tune, size: 16),
-            label: const Text('Builder'),
+            label: const Text('Chord Builder'),
             onPressed: () async {
               final chord = await showDialog<String>(
                 context: context,
