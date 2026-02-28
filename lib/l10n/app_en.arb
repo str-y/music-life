@@ -536,5 +536,17 @@
   "recordingSavedSuccess": "Recording saved to library",
   "@recordingSavedSuccess": {
     "description": "SnackBar message shown after a recording is successfully saved"
+  },
+  "tapToRecord": "Tap to record",
+  "@tapToRecord": {
+    "description": "Hint shown on the record button before recording starts"
+  },
+  "tapToStop": "Tap to stop",
+  "@tapToStop": {
+    "description": "Hint shown on the stop button while recording is in progress"
+  },
+  "micPermissionNeeded": "Microphone permission is required to record.",
+  "@micPermissionNeeded": {
+    "description": "Message shown in the recording dialog when microphone permission is not granted"
   }
 }
