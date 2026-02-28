@@ -45,10 +45,12 @@ class BackupRepository {
     final recordings = await AppDatabase.instance.queryAllRecordings();
     final practiceLogs = await AppDatabase.instance.queryAllPracticeLogs();
     final practiceLogEntries = await AppDatabase.instance.queryAllPracticeLogEntries();
+    final compositions = await AppDatabase.instance.queryAllCompositions();
     final bundle = BackupBundle.fromDatabaseRows(
       recordings: recordings,
       practiceLogs: practiceLogs,
       practiceLogEntries: practiceLogEntries,
+      compositions: compositions,
     );
     return jsonEncode(bundle.toJson());
   }
@@ -60,6 +62,7 @@ class BackupRepository {
       recordings: bundle.recordingRows,
       practiceLogs: bundle.practiceLogRows,
       practiceLogEntries: bundle.practiceLogEntryRows,
+      compositions: bundle.compositionRows,
     );
   }
 }
@@ -69,16 +72,19 @@ class BackupBundle {
     required this.recordingRows,
     required this.practiceLogRows,
     required this.practiceLogEntryRows,
+    required this.compositionRows,
   });
 
   final List<Map<String, Object?>> recordingRows;
   final List<Map<String, Object?>> practiceLogRows;
   final List<Map<String, Object?>> practiceLogEntryRows;
+  final List<Map<String, Object?>> compositionRows;
 
   factory BackupBundle.fromDatabaseRows({
     required List<Map<String, Object?>> recordings,
     required List<Map<String, Object?>> practiceLogs,
     required List<Map<String, Object?>> practiceLogEntries,
+    required List<Map<String, Object?>> compositions,
   }) {
     return BackupBundle(
       recordingRows: recordings
@@ -111,6 +117,15 @@ class BackupBundle {
             },
           )
           .toList(),
+      compositionRows: compositions
+          .map(
+            (row) => <String, Object?>{
+              'id': row['id'],
+              'title': row['title'],
+              'chords': row['chords'],
+            },
+          )
+          .toList(),
     );
   }
 
@@ -131,6 +146,7 @@ class BackupBundle {
       }).toList(),
       'practice_logs': practiceLogRows,
       'practice_log_entries': practiceLogEntryRows,
+      'compositions': compositionRows,
     };
   }
 
@@ -168,10 +184,21 @@ class BackupBundle {
         'note': row['note'] as String? ?? '',
       };
     }).toList();
+    final compositions = (json['compositions'] as List<dynamic>? ?? const [])
+        .map((item) {
+          final row = item as Map<String, dynamic>;
+          return <String, Object?>{
+            'id': row['id'] as String,
+            'title': row['title'] as String,
+            'chords': row['chords'] as String,
+          };
+        })
+        .toList();
     return BackupBundle(
       recordingRows: recordings,
       practiceLogRows: practiceLogs,
       practiceLogEntryRows: practiceLogEntries,
+      compositionRows: compositions,
     );
   }
 }
