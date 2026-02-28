@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -75,7 +76,9 @@ class _AppSettingsScope extends InheritedWidget {
 }
 
 class MusicLifeApp extends ConsumerStatefulWidget {
-  const MusicLifeApp({super.key});
+  const MusicLifeApp({super.key, this.initialLocation});
+
+  final String? initialLocation;
 
   @override
   ConsumerState<MusicLifeApp> createState() => _MusicLifeAppState();
@@ -83,6 +86,7 @@ class MusicLifeApp extends ConsumerStatefulWidget {
 
 class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   _AppSettings _settings = const _AppSettings();
+  late final GoRouter _router;
 
   static const _kDarkMode = 'darkMode';
   static const _kReferencePitch = 'referencePitch';
@@ -90,11 +94,67 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   @override
   void initState() {
     super.initState();
+    _router = GoRouter(
+      initialLocation: widget.initialLocation,
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const MainScreen(),
+        ),
+        GoRoute(
+          path: '/tuner',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const TunerScreen()),
+        ),
+        GoRoute(
+          path: '/practice-log',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const PracticeLogScreen()),
+        ),
+        GoRoute(
+          path: '/library',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const LibraryScreen()),
+        ),
+        GoRoute(
+          path: '/recordings',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const LibraryScreen(initialTabIndex: 0),
+          ),
+        ),
+        GoRoute(
+          path: '/library/logs',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const LibraryScreen(initialTabIndex: 1),
+          ),
+        ),
+        GoRoute(
+          path: '/rhythm',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const RhythmScreen()),
+        ),
+        GoRoute(
+          path: '/chord-analyser',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const ChordAnalyserScreen()),
+        ),
+        GoRoute(
+          path: '/composition-helper',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const CompositionHelperScreen(),
+          ),
+        ),
+      ],
+    );
     _loadSettings();
   }
 
   @override
   void dispose() {
+    _router.dispose();
     AppDatabase.instance.close();
     super.dispose();
   }
@@ -122,7 +182,7 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
     return _AppSettingsScope(
       settings: _settings,
       onChanged: _updateSettings,
-      child: MaterialApp(
+      child: MaterialApp.router(
         onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -138,16 +198,20 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
           useMaterial3: true,
         ),
         themeMode: _settings.darkMode ? ThemeMode.dark : ThemeMode.light,
-        home: const MainScreen(),
+        routerConfig: _router,
       ),
     );
   }
 }
 
-/// A page route with a subtle slide-up + fade entrance animation.
-PageRoute<T> _slideUpRoute<T>({required WidgetBuilder builder}) {
-  return PageRouteBuilder<T>(
-    pageBuilder: (context, animation, _) => builder(context),
+/// A page with a subtle slide-up + fade entrance animation.
+CustomTransitionPage<void> _slideUpPage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
     transitionsBuilder: (context, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -256,11 +320,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.tunerTitle),
                   subtitle: Text(l10n.tunerSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const TunerScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/tuner'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -270,11 +330,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.practiceLogTitle),
                   subtitle: Text(l10n.practiceLogSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const PracticeLogScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/practice-log'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -284,11 +340,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.libraryTitle),
                   subtitle: Text(l10n.librarySubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const LibraryScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/library'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -298,11 +350,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.rhythmTitle),
                   subtitle: Text(l10n.rhythmSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const RhythmScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/rhythm'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -312,11 +360,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.chordAnalyserTitle),
                   subtitle: Text(l10n.chordAnalyserSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const ChordAnalyserScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/chord-analyser'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -326,11 +370,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.compositionHelperTitle),
                   subtitle: Text(l10n.compositionHelperSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const CompositionHelperScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/composition-helper'),
                 ),
               ),
             ],
