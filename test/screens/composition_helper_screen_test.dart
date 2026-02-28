@@ -1,18 +1,45 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/providers/composition_provider.dart';
+import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/screens/composition_helper_screen.dart';
+import 'package:music_life/service_locator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Widget _wrap(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
+}
 
 void main() {
-  group('kMaxCompositions', () {
-    test('is a positive integer', () {
-      expect(kMaxCompositions, greaterThan(0));
-    });
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    ServiceLocator.overrideForTesting(ServiceLocator.forTesting(
+      prefs: prefs,
+      pitchBridgeFactory: ({FfiErrorHandler? onError}) =>
+          _FakeNativePitchBridge(),
+    ));
+  });
 
+  tearDown(() {
+    ServiceLocator.reset();
+  });
+
+  group('kMaxCompositions', () {
     test('is 50', () {
       expect(kMaxCompositions, equals(50));
     });
   });
 
-  group('Composition', () {
+  group('Composition Model', () {
     final comp = Composition(
       id: 'id1',
       title: 'My Song',
@@ -32,11 +59,110 @@ void main() {
       expect(restored.title, comp.title);
       expect(restored.chords, comp.chords);
     });
+  });
 
-    test('fromJson handles empty chord list', () {
-      final empty = Composition(id: 'e', title: 'Empty', chords: []);
-      final restored = Composition.fromJson(empty.toJson());
-      expect(restored.chords, isEmpty);
+  group('CompositionRepository', () {
+    test('load returns empty list when no data is stored', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final repo = CompositionRepository(prefs);
+      final result = await repo.load();
+      expect(result, isEmpty);
+    });
+
+    test('load returns compositions when valid JSON is stored', () async {
+      SharedPreferences.setMockInitialValues({
+        'compositions_v1': '[{"id":"1","title":"Test","chords":["C","G"]}]',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repo = CompositionRepository(prefs);
+      final result = await repo.load();
+      expect(result.length, 1);
+      expect(result.first.title, 'Test');
+    });
+  });
+
+  group('CompositionHelperScreen – error notifications', () {
+    testWidgets('shows load-error SnackBar when stored data is corrupt',
+        (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) async {
+        await Future.delayed(const Duration(milliseconds: 50));
+        throw Exception('test error');
+      });
+
+      late String expectedError;
+      await tester.runAsync(() async {
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            compositionRepositoryProvider.overrideWithValue(mockRepo),
+          ],
+          child: _wrap(
+            Builder(builder: (ctx) {
+              expectedError = AppLocalizations.of(ctx)!.compositionLoadError;
+              return const CompositionHelperScreen();
+            }),
+          ),
+        ));
+        // Allow the 50ms mock delay to complete
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining(expectedError), findsOneWidget);
+    });
+
+    testWidgets('shows limit-reached SnackBar when exceeding kMaxCompositions',
+        (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      final existing = List.generate(
+        kMaxCompositions,
+        (i) => Composition(id: '$i', title: 'C$i', chords: []),
+      );
+
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value(existing));
+      when(() => mockRepo.save(any())).thenAnswer((_) => Future.value());
+
+      late String expectedError;
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+        child: _wrap(
+          Builder(builder: (ctx) {
+            expectedError = AppLocalizations.of(ctx)!
+                .compositionLimitReached(kMaxCompositions);
+            return const CompositionHelperScreen();
+          }),
+        ),
+      ));
+
+      // Wait for provider to load
+      await tester.pumpAndSettle();
+
+      // Trigger Save Dialog
+      await tester.tap(find.text('C'));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.save_outlined));
+      await tester.pumpAndSettle();
+
+      // Confirm dialog (TextField title is autofocus)
+      final saveBtnToken =
+          AppLocalizations.of(tester.element(find.byType(AlertDialog)))!.save;
+      await tester.tap(find.text(saveBtnToken));
+
+      // Wait for SnackBar
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.text(expectedError), findsOneWidget);
     });
   });
 }
+
+class _FakeNativePitchBridge extends Fake implements NativePitchBridge {}
+
+class _MockCompositionRepository extends Mock implements CompositionRepository {}

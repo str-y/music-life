@@ -2,10 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'native_pitch_bridge.dart';
+import 'repositories/composition_repository.dart';
 import 'repositories/recording_repository.dart';
 
 /// Factory function type for creating [NativePitchBridge] instances.
-typedef PitchBridgeFactory = NativePitchBridge Function();
+///
+/// The optional [onError] callback is forwarded to the bridge so that
+/// callers can receive asynchronous runtime errors (e.g. isolate crashes)
+/// and surface them in the UI.
+typedef PitchBridgeFactory = NativePitchBridge Function(
+    {FfiErrorHandler? onError});
 
 /// A minimal service locator that manages the lifecycle of long-lived
 /// services, enabling dependency injection and mock-friendly testing.
@@ -26,7 +32,7 @@ typedef PitchBridgeFactory = NativePitchBridge Function();
 /// ```dart
 /// ServiceLocator.overrideForTesting(ServiceLocator.forTesting(
 ///   prefs: mockSharedPreferences,
-///   pitchBridgeFactory: () => FakeNativePitchBridge(),
+///   pitchBridgeFactory: ({FfiErrorHandler? onError}) => FakeNativePitchBridge(),
 /// ));
 /// ```
 class ServiceLocator {
@@ -34,11 +40,15 @@ class ServiceLocator {
     required SharedPreferences prefs,
     PitchBridgeFactory? pitchBridgeFactory,
     RecordingRepository? recordingRepository,
+    CompositionRepository? compositionRepository,
   })  : _prefs = prefs,
         pitchBridgeFactory =
-            pitchBridgeFactory ?? (() => NativePitchBridge()),
+            pitchBridgeFactory ??
+            (({FfiErrorHandler? onError}) => NativePitchBridge(onError: onError)),
         recordingRepository =
-            recordingRepository ?? RecordingRepository(prefs);
+            recordingRepository ?? RecordingRepository(prefs),
+        compositionRepository =
+            compositionRepository ?? CompositionRepository(prefs);
 
   static ServiceLocator? _instance;
 
@@ -66,11 +76,13 @@ class ServiceLocator {
     required SharedPreferences prefs,
     PitchBridgeFactory? pitchBridgeFactory,
     RecordingRepository? recordingRepository,
+    CompositionRepository? compositionRepository,
   }) {
     return ServiceLocator._(
       prefs: prefs,
       pitchBridgeFactory: pitchBridgeFactory,
       recordingRepository: recordingRepository,
+      compositionRepository: compositionRepository,
     );
   }
 
@@ -95,10 +107,13 @@ class ServiceLocator {
   ///
   /// Replace with a mock factory in tests to avoid loading native libraries:
   /// ```dart
-  /// pitchBridgeFactory: () => FakeNativePitchBridge(),
+  /// pitchBridgeFactory: ({FfiErrorHandler? onError}) => FakeNativePitchBridge(),
   /// ```
   final PitchBridgeFactory pitchBridgeFactory;
 
   /// The shared [RecordingRepository] instance.
   final RecordingRepository recordingRepository;
+
+  /// The shared [CompositionRepository] instance.
+  final CompositionRepository compositionRepository;
 }

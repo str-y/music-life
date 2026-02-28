@@ -6,6 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../service_locator.dart';
+import '../utils/app_logger.dart';
+import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
@@ -71,7 +73,9 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
   Future<void> _startCapture() async {
     setState(() => _loading = true);
 
-    final bridge = ServiceLocator.instance.pitchBridgeFactory();
+    final bridge = ServiceLocator.instance.pitchBridgeFactory(
+      onError: _onBridgeError,
+    );
     final started = await bridge.startCapture();
     if (!mounted) {
       bridge.dispose();
@@ -112,6 +116,21 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
       }
     });
     setState(() => _loading = false);
+  }
+
+  /// Called when the [NativePitchBridge] reports a runtime error.
+  void _onBridgeError(Object error, StackTrace stack) {
+    AppLogger.reportError(
+      'Chord analyser bridge error',
+      error: error,
+      stackTrace: stack,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.chordAnalyserError),
+      ),
+    );
   }
 
   /// Schedules [_listeningCtrl] to stop after [AppConstants.listeningIdleTimeout] of no audio activity.
@@ -238,11 +257,6 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-String _formatTime(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:'
-    '${t.minute.toString().padLeft(2, '0')}:'
-    '${t.second.toString().padLeft(2, '0')}';
-
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
@@ -272,7 +286,7 @@ class _ChordHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeLabel = _formatTime(entry.time);
+    final timeLabel = formatTimeHMS(entry.time);
 
     return SizeTransition(
       sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
