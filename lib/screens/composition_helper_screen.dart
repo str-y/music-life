@@ -379,7 +379,141 @@ class _ChordPalette extends StatelessWidget {
             },
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: ActionChip(
+            avatar: const Icon(Icons.tune, size: 16),
+            label: const Text('Builder'),
+            onPressed: () async {
+              final chord = await showDialog<String>(
+                context: context,
+                builder: (_) => const _ChordBuilderDialog(),
+              );
+              if (chord != null) onChordTap(chord);
+            },
+          ),
+        ),
         const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _ChordBuilderDialog extends StatefulWidget {
+  const _ChordBuilderDialog();
+
+  @override
+  State<_ChordBuilderDialog> createState() => _ChordBuilderDialogState();
+}
+
+class _ChordBuilderDialogState extends State<_ChordBuilderDialog> {
+  static const List<String> _roots = [
+    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab',
+    'A', 'A#', 'Bb', 'B',
+  ];
+  static const List<String> _qualities = [
+    'Maj',
+    'Min',
+    'Dim',
+    'Aug',
+    'Sus2',
+    'Sus4',
+  ];
+  static const List<String> _extensions = ['None', '7', 'maj7', '9', '13'];
+
+  String _root = _roots.first;
+  String _quality = _qualities.first;
+  String _extension = _extensions.first;
+  String _bass = 'None';
+
+  String _buildChord() {
+    final quality = switch (_quality) {
+      'Maj' => '',
+      'Min' => 'm',
+      'Dim' => 'dim',
+      'Aug' => 'aug',
+      'Sus2' => 'sus2',
+      'Sus4' => 'sus4',
+      _ => '',
+    };
+    final extension = _extension == 'None' ? '' : _extension;
+    final bass = _bass == 'None' ? '' : '/$_bass';
+    return '$_root$quality$extension$bass';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Chord Builder'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              key: const Key('chord_builder_root'),
+              initialValue: _root,
+              decoration: const InputDecoration(labelText: 'Root'),
+              items: _roots
+                  .map((value) =>
+                      DropdownMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _root = value);
+              },
+            ),
+            DropdownButtonFormField<String>(
+              key: const Key('chord_builder_quality'),
+              initialValue: _quality,
+              decoration: const InputDecoration(labelText: 'Quality'),
+              items: _qualities
+                  .map((value) =>
+                      DropdownMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _quality = value);
+              },
+            ),
+            DropdownButtonFormField<String>(
+              key: const Key('chord_builder_extension'),
+              initialValue: _extension,
+              decoration: const InputDecoration(labelText: 'Extension'),
+              items: _extensions
+                  .map((value) =>
+                      DropdownMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _extension = value);
+              },
+            ),
+            DropdownButtonFormField<String>(
+              key: const Key('chord_builder_bass'),
+              initialValue: _bass,
+              decoration: const InputDecoration(labelText: 'Bass note'),
+              items: ['None', ..._roots]
+                  .map((value) =>
+                      DropdownMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _bass = value);
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('chord_builder_add'),
+          onPressed: () => Navigator.of(context).pop(_buildChord()),
+          child: const Text('Add'),
+        ),
       ],
     );
   }

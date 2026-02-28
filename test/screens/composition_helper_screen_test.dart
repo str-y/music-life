@@ -187,6 +187,47 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text(expectedError), findsOneWidget);
     });
+
+    testWidgets('adds dynamically built chord from dialog', (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value([]));
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+        child: _wrap(const CompositionHelperScreen()),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Builder'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_root')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('D').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_quality')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Min').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_extension')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('7').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_bass')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_add')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dm7/A'), findsOneWidget);
+    });
   });
 }
 
