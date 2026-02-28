@@ -143,6 +143,19 @@ static bool test_yin_workspace_no_reallocation() {
     return true;
 }
 
+static bool test_yin_workspace_size_is_not_changed() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME, 0.0f);
+    std::vector<float> workspace(FRAME);
+
+    yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(workspace.size() == static_cast<size_t>(FRAME));
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Tests – PitchDetector
 // ---------------------------------------------------------------------------
@@ -406,6 +419,7 @@ int main() {
     run_test("yin: detects C5 (523 Hz)",            test_yin_sine_c5);
     run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
+    run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);

@@ -31,7 +31,8 @@ public:
      * @param workspace  Caller-supplied scratch buffer (size >= buffer_size / 2).
      *                   Providing this per-call buffer makes detect() safe for
      *                   concurrent use from multiple real-time threads as long as
-     *                   each thread passes its own workspace.
+     *                   each thread passes its own workspace. detect() does not
+     *                   resize this buffer in the real-time path.
      * @return Fundamental frequency in Hz, or -1 if no pitch is detected.
      */
     float detect(const float* samples, std::vector<float>& workspace);
