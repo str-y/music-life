@@ -111,7 +111,7 @@ class CompositionRepository {
         // proceed to the underlying database query — migration failure is
         // non-fatal and the DB may still contain valid data from a previous
         // successful migration.  Resetting to null allows a retry on the
-        // next session access.
+        // next access attempt.
         _migrationCompleter = null;
       }
     } catch (e, st) {
