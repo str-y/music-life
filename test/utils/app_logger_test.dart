@@ -31,6 +31,17 @@ void main() {
       expect(logs[1], contains('[ERROR] error'));
     });
 
+    test('keeps only the latest 1000 buffered logs', () {
+      for (var i = 0; i < 1005; i++) {
+        AppLogger.info('entry $i');
+      }
+
+      final logs = AppLogger.bufferedLogs;
+      expect(logs.length, 1000);
+      expect(logs.first, contains('[INFO] entry 5'));
+      expect(logs.last, contains('[INFO] entry 1004'));
+    });
+
     test('reportError forwards errors to FlutterError.reportError', () {
       FlutterErrorDetails? captured;
       final previousHandler = FlutterError.onError;
@@ -58,8 +69,10 @@ void main() {
 
       final file = await AppLogger.exportLogsToFile(filePath: filePath);
       final content = await file.readAsString();
+      final lines = content.split('\n');
 
       expect(file.path, filePath);
+      expect(lines.length, 1);
       expect(content, contains('[INFO] hello'));
     });
   });
