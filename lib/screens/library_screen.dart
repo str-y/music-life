@@ -18,7 +18,9 @@ import 'library/recordings_tab.dart';
 // ---------------------------------------------------------------------------
 
 class LibraryScreen extends ConsumerStatefulWidget {
-  const LibraryScreen({super.key});
+  const LibraryScreen({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
@@ -31,7 +33,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
   }
 
   @override
