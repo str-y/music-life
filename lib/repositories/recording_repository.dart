@@ -37,6 +37,7 @@ class RecordingEntry {
     required this.recordedAt,
     required this.durationSeconds,
     required this.waveformData,
+    this.audioFilePath,
   });
 
   final String id;
@@ -46,6 +47,7 @@ class RecordingEntry {
 
   /// Normalised amplitude values in [0.0, 1.0] used for waveform preview.
   final List<double> waveformData;
+  final String? audioFilePath;
 
   String get formattedDuration {
     final m = durationSeconds ~/ 60;
@@ -59,6 +61,7 @@ class RecordingEntry {
         'recordedAt': recordedAt.toIso8601String(),
         'durationSeconds': durationSeconds,
         'waveformData': waveformData,
+        'audioFilePath': audioFilePath,
       };
 
   factory RecordingEntry.fromJson(Map<String, dynamic> json) {
@@ -70,6 +73,7 @@ class RecordingEntry {
       waveformData: (json['waveformData'] as List)
           .map((e) => (e as num).toDouble())
           .toList(),
+      audioFilePath: json['audioFilePath'] as String?,
     );
   }
 }
@@ -154,6 +158,7 @@ class RecordingRepository {
                       'recorded_at': e.recordedAt.toIso8601String(),
                       'duration_seconds': e.durationSeconds,
                       'waveform_data': _waveformToBlob(e.waveformData),
+                      'audio_file_path': e.audioFilePath,
                     }),
           );
         } catch (e, st) {
@@ -243,6 +248,7 @@ class RecordingRepository {
               durationSeconds: row['duration_seconds'] as int,
               waveformData:
                   _blobToWaveform(row['waveform_data'] as Uint8List),
+              audioFilePath: row['audio_file_path'] as String?,
             ))
         .toList();
   }
@@ -256,6 +262,7 @@ class RecordingRepository {
                 'recorded_at': e.recordedAt.toIso8601String(),
                 'duration_seconds': e.durationSeconds,
                 'waveform_data': _waveformToBlob(e.waveformData),
+                'audio_file_path': e.audioFilePath,
               })
           .toList(),
     );

@@ -5,14 +5,14 @@ void main() {
   group('AppDatabase migration planning', () {
     test('returns sequential versions between old and new schema', () {
       expect(
-        AppDatabase.migrationPlanForTesting(oldVersion: 1, newVersion: 3),
-        [2, 3],
+        AppDatabase.migrationPlanForTesting(oldVersion: 1, newVersion: 4),
+        [2, 3, 4],
       );
     });
 
     test('returns empty plan when no upgrade is needed', () {
       expect(
-        AppDatabase.migrationPlanForTesting(oldVersion: 3, newVersion: 3),
+        AppDatabase.migrationPlanForTesting(oldVersion: 4, newVersion: 4),
         isEmpty,
       );
     });

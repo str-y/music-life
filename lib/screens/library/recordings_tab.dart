@@ -1,33 +1,27 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../providers/recording_playback_provider.dart';
 import '../../repositories/recording_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Recordings tab
 // ---------------------------------------------------------------------------
 
-class RecordingsTab extends StatefulWidget {
+class RecordingsTab extends ConsumerStatefulWidget {
   const RecordingsTab({super.key, required this.recordings});
 
   final List<RecordingEntry> recordings;
 
   @override
-  State<RecordingsTab> createState() => _RecordingsTabState();
+  ConsumerState<RecordingsTab> createState() => _RecordingsTabState();
 }
 
-class _RecordingsTabState extends State<RecordingsTab> {
-  String? _playingId;
-  double _positionRatio = 0;
-  DateTime? _playbackStart;
-  Duration _playbackDuration = Duration.zero;
-  Timer? _progressTicker;
-
+class _RecordingsTabState extends ConsumerState<RecordingsTab> {
   late List<RecordingEntry> _sorted;
 
   @override
@@ -46,56 +40,10 @@ class _RecordingsTabState extends State<RecordingsTab> {
     }
   }
 
-  void _startProgressTicker() {
-    _progressTicker?.cancel();
-    _progressTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
-      if (!mounted || _playingId == null || _playbackStart == null) return;
-      final elapsed = DateTime.now().difference(_playbackStart!);
-      final nextRatio = _playbackDuration.inMilliseconds <= 0
-          ? 0.0
-          : (elapsed.inMilliseconds / _playbackDuration.inMilliseconds).clamp(0.0, 1.0);
-      if (nextRatio >= 1) {
-        setState(() {
-          _playingId = null;
-          _positionRatio = 0;
-          _playbackStart = null;
-        });
-        _progressTicker?.cancel();
-        return;
-      }
-      setState(() {
-        _positionRatio = nextRatio;
-      });
-    });
-  }
-
-  void _togglePlayback(String id) {
-    final selected = widget.recordings.firstWhere((entry) => entry.id == id);
-    setState(() {
-      if (_playingId == id) {
-        _playingId = null;
-        _positionRatio = 0;
-        _playbackStart = null;
-        _progressTicker?.cancel();
-        return;
-      }
-      _playingId = id;
-      _positionRatio = 0;
-      _playbackStart = DateTime.now();
-      _playbackDuration = Duration(seconds: selected.durationSeconds);
-    });
-    _startProgressTicker();
-    SystemSound.play(SystemSoundType.click);
-  }
-
-  @override
-  void dispose() {
-    _progressTicker?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final playback = ref.watch(recordingPlaybackProvider);
+    final playbackNotifier = ref.read(recordingPlaybackProvider.notifier);
     if (_sorted.isEmpty) {
       return Center(
         child: Text(
@@ -111,12 +59,16 @@ class _RecordingsTabState extends State<RecordingsTab> {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = _sorted[index];
-        final isPlaying = _playingId == entry.id;
+        final isActive = playback.activeRecordingId == entry.id;
+        final isPlaying = isActive && playback.isPlaying;
         return RecordingTile(
           entry: entry,
           isPlaying: isPlaying,
-          progress: isPlaying ? _positionRatio : 0,
-          onPlayPause: () => _togglePlayback(entry.id),
+          progress: isActive ? playback.progress : 0,
+          volume: playback.volume,
+          onPlayPause: () => playbackNotifier.togglePlayback(entry),
+          onSeek: isActive ? playbackNotifier.seekToRatio : null,
+          onVolumeChanged: isActive ? playbackNotifier.setVolume : null,
         );
       },
     );
@@ -129,13 +81,19 @@ class RecordingTile extends StatelessWidget {
     required this.entry,
     required this.isPlaying,
     required this.progress,
+    required this.volume,
     required this.onPlayPause,
+    required this.onSeek,
+    required this.onVolumeChanged,
   });
 
   final RecordingEntry entry;
   final bool isPlaying;
   final double progress;
+  final double volume;
   final VoidCallback onPlayPause;
+  final ValueChanged<double>? onSeek;
+  final ValueChanged<double>? onVolumeChanged;
 
   String _formatDate(DateTime dt) {
     return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} '
@@ -146,6 +104,8 @@ class RecordingTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final canPlay = entry.audioFilePath?.isNotEmpty == true;
+    final isActive = onSeek != null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -155,7 +115,7 @@ class RecordingTile extends StatelessWidget {
             icon: Icon(isPlaying ? Icons.pause_circle : Icons.play_circle),
             iconSize: 40,
             color: colorScheme.primary,
-            onPressed: onPlayPause,
+            onPressed: canPlay ? onPlayPause : null,
             tooltip: isPlaying ? l10n.pause : l10n.play,
           ),
           title: Text(
@@ -172,7 +132,7 @@ class RecordingTile extends StatelessWidget {
                   color: colorScheme.onSurfaceVariant,
                 ),
           ),
-          onTap: onPlayPause,
+          onTap: canPlay ? onPlayPause : null,
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
@@ -185,9 +145,21 @@ class RecordingTile extends StatelessWidget {
                 isPlaying: isPlaying,
                 color: isPlaying ? colorScheme.primary : colorScheme.outlineVariant,
               ),
-              if (isPlaying) ...[
+              if (isActive) ...[
                 const SizedBox(height: 6),
-                LinearProgressIndicator(value: progress),
+                Slider(value: progress, onChanged: onSeek),
+                Row(
+                  children: [
+                    const Icon(Icons.volume_down, size: 16),
+                    Expanded(
+                      child: Slider(
+                        value: volume,
+                        onChanged: onVolumeChanged,
+                      ),
+                    ),
+                    const Icon(Icons.volume_up, size: 16),
+                  ],
+                ),
               ],
             ],
           ),

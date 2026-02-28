@@ -89,6 +89,7 @@ class BackupBundle {
               'recorded_at': row['recorded_at'],
               'duration_seconds': row['duration_seconds'],
               'waveform_data': row['waveform_data'],
+              'audio_file_path': row['audio_file_path'],
             },
           )
           .toList(),
@@ -125,6 +126,7 @@ class BackupBundle {
           'recorded_at': row['recorded_at'],
           'duration_seconds': row['duration_seconds'],
           'waveform_data_base64': base64Encode(waveform),
+          'audio_file_path': row['audio_file_path'],
         };
       }).toList(),
       'practice_logs': practiceLogRows,
@@ -143,6 +145,7 @@ class BackupBundle {
             'duration_seconds': row['duration_seconds'] as int,
             'waveform_data':
                 base64Decode(row['waveform_data_base64'] as String),
+            'audio_file_path': row['audio_file_path'] as String?,
           };
         })
         .toList();

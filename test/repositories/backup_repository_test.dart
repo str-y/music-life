@@ -13,6 +13,7 @@ void main() {
           'recorded_at': '2026-01-01T12:00:00.000',
           'duration_seconds': 42,
           'waveform_data': Uint8List.fromList([1, 2, 3, 4]),
+          'audio_file_path': '/tmp/rec-1.m4a',
         },
       ],
       practiceLogs: [
@@ -38,6 +39,7 @@ void main() {
       restored.recordingRows.single['waveform_data'],
       Uint8List.fromList([1, 2, 3, 4]),
     );
+    expect(restored.recordingRows.single['audio_file_path'], '/tmp/rec-1.m4a');
     expect(restored.practiceLogRows.single['memo'], 'Warmup');
     expect(restored.practiceLogEntryRows.single['note'], 'Scales');
   });

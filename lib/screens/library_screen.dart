@@ -1,15 +1,16 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:record/record.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:record/record.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
-import '../utils/waveform_analyzer.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
 
@@ -145,23 +146,48 @@ class _AddRecordingDialog extends StatefulWidget {
 
 class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   final _titleCtrl = TextEditingController();
-  final _analyzer = WaveformAnalyzer();
   final _recorder = AudioRecorder();
+  final List<double> _amplitudeData = [];
 
   _RecordingState _state = _RecordingState.idle;
   int _durationSeconds = 0;
   List<double> _waveformData = const [];
+  String? _recordingPath;
   Timer? _ticker;
-  StreamSubscription<Uint8List>? _audioSub;
+  StreamSubscription<Amplitude>? _amplitudeSub;
 
   @override
   void dispose() {
     _ticker?.cancel();
-    _audioSub?.cancel();
+    _amplitudeSub?.cancel();
     _recorder.stop().ignore();
     _recorder.dispose();
     _titleCtrl.dispose();
     super.dispose();
+  }
+
+  Future<String> _createRecordingPath() async {
+    final dbPath = await getDatabasesPath();
+    final dir = Directory(p.join(dbPath, 'recordings'));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    final fileName = 'rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    return p.join(dir.path, fileName);
+  }
+
+  List<double> _toWaveform(List<double> source, int targetPoints) {
+    if (source.isEmpty) return const [];
+    if (source.length <= targetPoints) return List<double>.from(source);
+    final bucket = source.length / targetPoints;
+    return List<double>.generate(targetPoints, (i) {
+      final start = (i * bucket).floor();
+      final end =
+          ((i + 1) * bucket).ceil().clamp(start + 1, source.length) as int;
+      final segment = source.sublist(start, end);
+      final sum = segment.fold<double>(0, (acc, value) => acc + value);
+      return (sum / segment.length).clamp(0.0, 1.0).toDouble();
+    });
   }
 
   Future<void> _startRecording() async {
@@ -177,16 +203,23 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       return;
     }
 
-    _analyzer.reset();
-    final stream = await _recorder.startStream(
+    final path = await _createRecordingPath();
+    await _recorder.start(
       const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
+        encoder: AudioEncoder.aacLc,
         sampleRate: 44100,
         numChannels: 1,
       ),
+      path: path,
     );
 
-    _audioSub = stream.listen(_analyzer.addChunk);
+    _amplitudeData.clear();
+    _amplitudeSub = _recorder
+        .onAmplitudeChanged(const Duration(milliseconds: 120))
+        .listen((amp) {
+      final normalised = ((amp.current + 60) / 60).clamp(0.0, 1.0).toDouble();
+      _amplitudeData.add(normalised);
+    });
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _durationSeconds++);
     });
@@ -195,16 +228,17 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       _state = _RecordingState.recording;
       _durationSeconds = 0;
       _waveformData = const [];
+      _recordingPath = path;
     });
   }
 
   Future<void> _stopRecording() async {
     _ticker?.cancel();
     _ticker = null;
-    await _audioSub?.cancel();
-    _audioSub = null;
+    await _amplitudeSub?.cancel();
+    _amplitudeSub = null;
     await _recorder.stop();
-    final data = _analyzer.compute(40);
+    final data = _toWaveform(_amplitudeData, 40);
     setState(() {
       _state = _RecordingState.stopped;
       _waveformData = data;
@@ -297,6 +331,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
                       recordedAt: DateTime.now(),
                       durationSeconds: _durationSeconds,
                       waveformData: _waveformData,
+                      audioFilePath: _recordingPath,
                     ),
                   );
                 }

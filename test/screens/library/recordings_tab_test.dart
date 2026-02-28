@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library/recordings_tab.dart';
@@ -8,7 +9,7 @@ Widget _wrap(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(body: child),
+    home: ProviderScope(child: Scaffold(body: child)),
   );
 }
 
@@ -84,11 +85,12 @@ void main() {
       expect(find.text('Take B'), findsOneWidget);
     });
 
-    testWidgets('play button toggles to pause when tapped', (tester) async {
+    testWidgets('play button is disabled when entry has no audio file',
+        (tester) async {
       final recordings = [
         RecordingEntry(
           id: '1',
-          title: 'Toggle Test',
+          title: 'No Audio',
           recordedAt: DateTime(2024, 3, 5),
           durationSeconds: 120,
           waveformData: const [0.5],
@@ -104,7 +106,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.play_circle));
       await tester.pump();
 
-      expect(find.byIcon(Icons.pause_circle), findsOneWidget);
+      expect(find.byIcon(Icons.pause_circle), findsNothing);
     });
   });
 
