@@ -11,6 +11,15 @@ extern "C" {
 
 typedef struct MLPitchDetectorHandle MLPitchDetectorHandle;
 
+typedef enum {
+    ML_LOG_LEVEL_TRACE = 0,
+    ML_LOG_LEVEL_DEBUG = 1,
+    ML_LOG_LEVEL_INFO  = 2,
+    ML_LOG_LEVEL_ERROR = 3,
+} MLLogLevel;
+
+typedef void (*MLLogCallback)(int level, const char* message);
+
 typedef struct {
     int   pitched;
     float frequency;
@@ -26,6 +35,8 @@ void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle);
 void ml_pitch_detector_reset(MLPitchDetectorHandle* handle);
 int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz);
 MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples);
+void ml_pitch_detector_set_log_callback(MLLogCallback callback);
+void ml_pitch_detector_install_crash_handlers(void);
 
 #ifdef __cplusplus
 }

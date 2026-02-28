@@ -61,6 +61,47 @@
     "description": "Label for the reference pitch slider"
   },
 
+  "backupAndRestore": "Backup & Restore",
+  "@backupAndRestore": {
+    "description": "Section header for backup and restore actions"
+  },
+
+  "exportBackup": "Export backup",
+  "@exportBackup": {
+    "description": "Action label for exporting a backup file"
+  },
+
+  "importBackup": "Import backup",
+  "@importBackup": {
+    "description": "Action label for importing a backup file"
+  },
+
+  "backupExportFailed": "Failed to export backup.",
+  "@backupExportFailed": {
+    "description": "Message shown when backup export fails"
+  },
+
+  "backupImportFailed": "Failed to import backup.",
+  "@backupImportFailed": {
+    "description": "Message shown when backup import fails"
+  },
+
+  "backupExported": "Backup exported: {path}",
+  "@backupExported": {
+    "description": "Message shown after backup export succeeds",
+    "placeholders": {
+      "path": {}
+    }
+  },
+
+  "backupImported": "Backup imported: {path}",
+  "@backupImported": {
+    "description": "Message shown after backup import succeeds",
+    "placeholders": {
+      "path": {}
+    }
+  },
+
   "cancel": "Cancel",
   "@cancel": {
     "description": "Cancel button label"
@@ -587,5 +628,17 @@
   "micPermissionNeeded": "Microphone permission is required to record.",
   "@micPermissionNeeded": {
     "description": "Message shown in the recording dialog when microphone permission is not granted"
+  },
+  "shareRecording": "Share",
+  "@shareRecording": {
+    "description": "Tooltip for sharing a recording"
+  },
+  "recordingUnavailableForShare": "Audio file is unavailable for sharing.",
+  "@recordingUnavailableForShare": {
+    "description": "Snackbar message shown when a recording file is missing for sharing"
+  },
+  "recordingShareFailed": "Could not share recording.",
+  "@recordingShareFailed": {
+    "description": "Snackbar message shown when sharing a recording fails"
   }
 }

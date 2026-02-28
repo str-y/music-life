@@ -3,11 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/composition_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/screens/composition_helper_screen.dart';
-import 'package:music_life/service_locator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
@@ -19,18 +18,8 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  setUp(() async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    ServiceLocator.overrideForTesting(ServiceLocator.forTesting(
-      prefs: prefs,
-      pitchBridgeFactory: ({FfiErrorHandler? onError}) =>
-          _FakeNativePitchBridge(),
-    ));
-  });
-
-  tearDown(() {
-    ServiceLocator.reset();
   });
 
   group('kMaxCompositions', () {
@@ -78,6 +67,42 @@ void main() {
       final result = await repo.load();
       expect(result.length, 1);
       expect(result.first.title, 'Test');
+    });
+  });
+
+  group('CompositionNotifier – AsyncValue states', () {
+    test('build resolves to AsyncData when repository load succeeds', () async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) async => []);
+
+      final container = ProviderContainer(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(compositionProvider).isLoading, isTrue);
+      await container.read(compositionProvider.future);
+      expect(container.read(compositionProvider).hasValue, isTrue);
+    });
+
+    test('build exposes AsyncError when repository load fails', () async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenThrow(Exception('test error'));
+
+      final container = ProviderContainer(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(compositionProvider.future),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(compositionProvider).hasError, isTrue);
     });
   });
 
@@ -162,9 +187,48 @@ void main() {
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text(expectedError), findsOneWidget);
     });
+
+    testWidgets('adds dynamically built chord from dialog', (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value([]));
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+        child: _wrap(const CompositionHelperScreen()),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Chord Builder'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_root')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('D').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_quality')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Min').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_extension')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('7').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_bass')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('chord_builder_add')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dm7/A'), findsOneWidget);
+    });
   });
 }
-
-class _FakeNativePitchBridge extends Fake implements NativePitchBridge {}
 
 class _MockCompositionRepository extends Mock implements CompositionRepository {}

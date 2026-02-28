@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'data/app_database.dart';
@@ -7,139 +10,155 @@ import 'l10n/app_localizations.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
+import 'providers/app_settings_provider.dart';
+import 'providers/dependency_providers.dart';
+import 'repositories/backup_repository.dart';
+import 'repositories/settings_repository.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
-import 'service_locator.dart';
 import 'screens/composition_helper_screen.dart';
+import 'utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ServiceLocator.initialize();
-  runApp(const ProviderScope(child: MusicLifeApp()));
-}
-
-class _AppSettings {
-  final bool darkMode;
-  final double referencePitch;
-
-  const _AppSettings({
-    this.darkMode = false,
-    this.referencePitch = 440.0,
-  });
-
-  _AppSettings copyWith({bool? darkMode, double? referencePitch}) {
-    return _AppSettings(
-      darkMode: darkMode ?? this.darkMode,
-      referencePitch: referencePitch ?? this.referencePitch,
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.stry.musiclife.audio',
+      androidNotificationChannelName: 'Music Life Playback',
+      androidNotificationOngoing: true,
+    );
+  } catch (e, stackTrace) {
+    AppLogger.reportError(
+      'Failed to initialize background audio',
+      error: e,
+      stackTrace: stackTrace,
     );
   }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _AppSettings &&
-          darkMode == other.darkMode &&
-          referencePitch == other.referencePitch;
-
-  @override
-  int get hashCode => Object.hash(darkMode, referencePitch);
+  final prefs = await SharedPreferences.getInstance();
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const MusicLifeApp(),
+    ),
+  );
 }
 
-class _AppSettingsScope extends InheritedWidget {
-  final _AppSettings settings;
-  final ValueChanged<_AppSettings> onChanged;
+class MusicLifeApp extends ConsumerStatefulWidget {
+  const MusicLifeApp({super.key, this.initialLocation});
 
-  const _AppSettingsScope({
-    required this.settings,
-    required super.child,
-    required this.onChanged,
-  });
-
-  static _AppSettingsScope of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_AppSettingsScope>()!;
-  }
+  final String? initialLocation;
 
   @override
-  bool updateShouldNotify(_AppSettingsScope old) => settings != old.settings;
+  ConsumerState<MusicLifeApp> createState() => _MusicLifeAppState();
 }
 
-class MusicLifeApp extends StatefulWidget {
-  const MusicLifeApp({super.key});
-
-  @override
-  State<MusicLifeApp> createState() => _MusicLifeAppState();
-}
-
-class _MusicLifeAppState extends State<MusicLifeApp> {
-  _AppSettings _settings = const _AppSettings();
-
-  static const _kDarkMode = 'darkMode';
-  static const _kReferencePitch = 'referencePitch';
+class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
+  late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _router = GoRouter(
+      initialLocation: widget.initialLocation,
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const MainScreen(),
+        ),
+        GoRoute(
+          path: '/tuner',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const TunerScreen()),
+        ),
+        GoRoute(
+          path: '/practice-log',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const PracticeLogScreen()),
+        ),
+        GoRoute(
+          path: '/library',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const LibraryScreen()),
+        ),
+        GoRoute(
+          path: '/recordings',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const LibraryScreen(initialTabIndex: 0),
+          ),
+        ),
+        GoRoute(
+          path: '/library/logs',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const LibraryScreen(initialTabIndex: 1),
+          ),
+        ),
+        GoRoute(
+          path: '/rhythm',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const RhythmScreen()),
+        ),
+        GoRoute(
+          path: '/chord-analyser',
+          pageBuilder: (context, state) =>
+              _slideUpPage(state: state, child: const ChordAnalyserScreen()),
+        ),
+        GoRoute(
+          path: '/composition-helper',
+          pageBuilder: (context, state) => _slideUpPage(
+            state: state,
+            child: const CompositionHelperScreen(),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   void dispose() {
+    _router.dispose();
     AppDatabase.instance.close();
     super.dispose();
   }
 
-  Future<void> _loadSettings() async {
-    final prefs = ServiceLocator.instance.prefs;
-    if (!mounted) return;
-    setState(() {
-      _settings = _AppSettings(
-        darkMode: prefs.getBool(_kDarkMode) ?? false,
-        referencePitch: prefs.getDouble(_kReferencePitch) ?? 440.0,
-      );
-    });
-  }
-
-  Future<void> _updateSettings(_AppSettings updated) async {
-    setState(() => _settings = updated);
-    final prefs = ServiceLocator.instance.prefs;
-    await prefs.setBool(_kDarkMode, updated.darkMode);
-    await prefs.setDouble(_kReferencePitch, updated.referencePitch);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return _AppSettingsScope(
-      settings: _settings,
-      onChanged: _updateSettings,
-      child: MaterialApp(
-        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: _settings.darkMode ? ThemeMode.dark : ThemeMode.light,
-        home: const MainScreen(),
+    final settings = ref.watch(appSettingsProvider);
+    return MaterialApp.router(
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+      routerConfig: _router,
     );
   }
 }
 
-/// A page route with a subtle slide-up + fade entrance animation.
-PageRoute<T> _slideUpRoute<T>({required WidgetBuilder builder}) {
-  return PageRouteBuilder<T>(
-    pageBuilder: (context, animation, _) => builder(context),
+/// A page with a subtle slide-up + fade entrance animation.
+CustomTransitionPage<void> _slideUpPage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
     transitionsBuilder: (context, animation, _, child) {
       final curved = CurvedAnimation(
         parent: animation,
@@ -160,16 +179,17 @@ PageRoute<T> _slideUpRoute<T>({required WidgetBuilder builder}) {
   );
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
+class _MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
+  final BackupRepository _backupRepository = const BackupRepository();
 
   @override
   void initState() {
@@ -186,8 +206,7 @@ class _MainScreenState extends State<MainScreen>
     super.dispose();
   }
 
-  void _openSettings(BuildContext context) {
-    final scope = _AppSettingsScope.of(context);
+  void _openSettings(BuildContext context, AppSettings settings) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -195,15 +214,62 @@ class _MainScreenState extends State<MainScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _SettingsModal(
-        settings: scope.settings,
-        onChanged: scope.onChanged,
+        settings: settings,
+        onChanged: (updated) {
+          ref.read(appSettingsProvider.notifier).update(updated);
+        },
+        onExportBackup: () => _exportBackupData(context),
+        onImportBackup: () => _importBackupData(context),
       ),
     );
+  }
+
+  Future<void> _exportBackupData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final path = await _backupRepository.exportWithFilePicker();
+      if (!context.mounted || path == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupExported(path))),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to export backup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupExportFailed)),
+      );
+    }
+  }
+
+  Future<void> _importBackupData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final path = await _backupRepository.importWithFilePicker();
+      if (!context.mounted || path == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupImported(path))),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to import backup',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupImportFailed)),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final settings = ref.watch(appSettingsProvider);
     final entranceCurve = CurvedAnimation(
       parent: _entranceCtrl,
       curve: Curves.easeOutCubic,
@@ -215,7 +281,7 @@ class _MainScreenState extends State<MainScreen>
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: l10n.settingsTooltip,
-            onPressed: () => _openSettings(context),
+            onPressed: () => _openSettings(context, settings),
           ),
         ],
       ),
@@ -248,11 +314,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.tunerTitle),
                   subtitle: Text(l10n.tunerSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const TunerScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/tuner'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -262,11 +324,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.practiceLogTitle),
                   subtitle: Text(l10n.practiceLogSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const PracticeLogScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/practice-log'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -276,11 +334,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.libraryTitle),
                   subtitle: Text(l10n.librarySubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const LibraryScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/library'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -290,11 +344,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.rhythmTitle),
                   subtitle: Text(l10n.rhythmSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const RhythmScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/rhythm'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -304,11 +354,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.chordAnalyserTitle),
                   subtitle: Text(l10n.chordAnalyserSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const ChordAnalyserScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/chord-analyser'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -318,11 +364,7 @@ class _MainScreenState extends State<MainScreen>
                   title: Text(l10n.compositionHelperTitle),
                   subtitle: Text(l10n.compositionHelperSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    _slideUpRoute<void>(
-                      builder: (_) => const CompositionHelperScreen(),
-                    ),
-                  ),
+                  onTap: () => context.push('/composition-helper'),
                 ),
               ),
             ],
@@ -334,17 +376,24 @@ class _MainScreenState extends State<MainScreen>
 }
 
 class _SettingsModal extends StatefulWidget {
-  final _AppSettings settings;
-  final ValueChanged<_AppSettings> onChanged;
+  final AppSettings settings;
+  final ValueChanged<AppSettings> onChanged;
+  final Future<void> Function() onExportBackup;
+  final Future<void> Function() onImportBackup;
 
-  const _SettingsModal({required this.settings, required this.onChanged});
+  const _SettingsModal({
+    required this.settings,
+    required this.onChanged,
+    required this.onExportBackup,
+    required this.onImportBackup,
+  });
 
   @override
   State<_SettingsModal> createState() => _SettingsModalState();
 }
 
 class _SettingsModalState extends State<_SettingsModal> {
-  late _AppSettings _local;
+  late AppSettings _local;
 
   @override
   void initState() {
@@ -352,7 +401,7 @@ class _SettingsModalState extends State<_SettingsModal> {
     _local = widget.settings;
   }
 
-  void _emit(_AppSettings updated) {
+  void _emit(AppSettings updated) {
     setState(() => _local = updated);
     widget.onChanged(updated);
   }
@@ -413,6 +462,21 @@ class _SettingsModalState extends State<_SettingsModal> {
             label: '${_local.referencePitch.round()} Hz',
             value: _local.referencePitch,
             onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 32),
+          Text(l10n.backupAndRestore, style: textTheme.titleSmall),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.download_outlined),
+            title: Text(l10n.exportBackup),
+            onTap: widget.onExportBackup,
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.upload_file_outlined),
+            title: Text(l10n.importBackup),
+            onTap: widget.onImportBackup,
           ),
           const SizedBox(height: 8),
           const Divider(height: 32),

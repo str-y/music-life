@@ -4,6 +4,9 @@ project(music_life VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(ML_ENABLE_ACCELERATE "Enable Accelerate FFT backend on Apple platforms" ON)
+option(ML_ENABLE_FFTW "Enable FFTW backend when fftw3f is available" OFF)
+
 # -----------------------------------------------------------------------
 # Pitch Detection Library
 # -----------------------------------------------------------------------
@@ -18,6 +21,26 @@ target_include_directories(pitch_detection
         ${CMAKE_CURRENT_SOURCE_DIR}/src/pitch_detection
         ${CMAKE_CURRENT_SOURCE_DIR}/src/app_bridge
 )
+
+if(APPLE AND ML_ENABLE_ACCELERATE)
+    find_library(ACCELERATE_FRAMEWORK Accelerate)
+    if(ACCELERATE_FRAMEWORK)
+        target_compile_definitions(pitch_detection PRIVATE ML_HAS_ACCELERATE=1)
+        target_link_libraries(pitch_detection PRIVATE ${ACCELERATE_FRAMEWORK})
+    endif()
+endif()
+
+if(ML_ENABLE_FFTW)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(FFTW3F QUIET fftw3f)
+        if(FFTW3F_FOUND)
+            target_compile_definitions(pitch_detection PRIVATE ML_HAS_FFTW=1)
+            target_include_directories(pitch_detection PRIVATE ${FFTW3F_INCLUDE_DIRS})
+            target_link_libraries(pitch_detection PRIVATE ${FFTW3F_LIBRARIES})
+        endif()
+    endif()
+endif()
 
 target_compile_options(pitch_detection PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -O2>

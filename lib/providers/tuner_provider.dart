@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dependency_providers.dart';
 import '../native_pitch_bridge.dart';
-import '../service_locator.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -61,7 +61,7 @@ class TunerNotifier extends Notifier<TunerState> {
 
   Future<void> _startCapture() async {
     state = state.copyWith(loading: true, clearLatest: true, bridgeActive: false);
-    final bridge = ServiceLocator.instance.pitchBridgeFactory();
+    final bridge = ref.read(pitchBridgeFactoryProvider)();
     // Assign early so the onDispose callback can dispose the bridge even if
     // the provider is disposed while [startCapture] is awaited.
     _bridge = bridge;

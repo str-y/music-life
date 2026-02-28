@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <cstdio>
 #include <stdexcept>
 
@@ -102,7 +103,7 @@ void PitchDetector::set_reference_pitch(float reference_pitch_hz) {
 
 PitchDetector::Result PitchDetector::process(const float* samples, int num_samples) {
     if (reset_pending_.exchange(false, std::memory_order_acq_rel)) {
-        std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
+        std::memset(ring_buffer_.data(), 0, ring_buffer_.size() * sizeof(float));
         write_pos_     = 0;
         samples_ready_ = 0;
         last_result_   = {};
@@ -131,8 +132,12 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
 
     // Assemble a contiguous frame from the ring buffer
     int start = (write_pos_ - frame_size_ + frame_size_ * 2) % (frame_size_ * 2);
-    for (int i = 0; i < frame_size_; ++i) {
-        frame_buffer_[i] = ring_buffer_[(start + i) % (frame_size_ * 2)];
+    const int first_chunk = std::min(frame_size_, frame_size_ * 2 - start);
+    std::memcpy(frame_buffer_.data(), ring_buffer_.data() + start, first_chunk * sizeof(float));
+    if (first_chunk < frame_size_) {
+        std::memcpy(frame_buffer_.data() + first_chunk,
+                    ring_buffer_.data(),
+                    (frame_size_ - first_chunk) * sizeof(float));
     }
 
     // Run YIN detection

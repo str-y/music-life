@@ -12,6 +12,7 @@
 #include "yin.h"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -27,6 +28,13 @@ using music_life::Yin;
 
 static int g_passed = 0;
 static int g_failed = 0;
+static int g_last_log_level = -1;
+static std::string g_last_log_message;
+
+static void test_log_callback(int level, const char* message) {
+    g_last_log_level = level;
+    g_last_log_message = message ? message : "";
+}
 
 #define ASSERT_TRUE(expr) \
     do { \
@@ -140,6 +148,50 @@ static bool test_yin_workspace_no_reallocation() {
     const float* ptr_after = workspace.data();
 
     ASSERT_TRUE(ptr_before == ptr_after);
+    return true;
+}
+
+static bool test_yin_workspace_size_is_not_changed() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME, 0.0f);
+    std::vector<float> workspace(FRAME);
+
+    yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(workspace.size() == static_cast<size_t>(FRAME));
+    return true;
+}
+
+static bool test_yin_non_simd_multiple_frame_size() {
+    // Covers SIMD tail paths (W = FRAME/2 = 1025, not divisible by 4).
+    const int   SR          = 44100;
+    const int   FRAME       = 2050;
+    const float EXPECTED_HZ = 440.0f;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, EXPECTED_HZ, SR);
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
+    return true;
+}
+
+static bool test_yin_manual_backend_selection() {
+    const char* original = std::getenv("ML_FFT_BACKEND");
+    std::string original_value = original ? original : "";
+    setenv("ML_FFT_BACKEND", "manual", 1);
+    Yin yin(44100, 2048, 0.10f);
+    const bool ok = std::strcmp(yin.fft_backend_name(), "radix2") == 0;
+    if (original != nullptr) {
+        setenv("ML_FFT_BACKEND", original_value.c_str(), 1);
+    } else {
+        unsetenv("ML_FFT_BACKEND");
+    }
+    ASSERT_TRUE(ok);
     return true;
 }
 
@@ -396,6 +448,36 @@ static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
     return true;
 }
 
+static bool test_ffi_log_callback_receives_error_logs() {
+    ml_pitch_detector_set_log_callback(test_log_callback);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(0, 2048, 0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_ERROR);
+    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_create") != std::string::npos);
+    ml_pitch_detector_set_log_callback(nullptr);
+    return true;
+}
+
+static bool test_ffi_log_callback_supports_trace_level() {
+    ml_pitch_detector_set_log_callback(test_log_callback);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+    ml_pitch_detector_reset(handle);
+    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_TRACE);
+    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_reset") != std::string::npos);
+    ml_pitch_detector_destroy(handle);
+    ml_pitch_detector_set_log_callback(nullptr);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -406,6 +488,9 @@ int main() {
     run_test("yin: detects C5 (523 Hz)",            test_yin_sine_c5);
     run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
+    run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
+    run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
+    run_test("yin: supports backend override",       test_yin_manual_backend_selection);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
@@ -423,6 +508,8 @@ int main() {
     run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
     run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
     run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
+    run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
+    run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
 
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);

@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
-import '../service_locator.dart';
+import '../providers/dependency_providers.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
@@ -31,14 +32,14 @@ class ChordAnalyserScreen extends StatelessWidget {
 
 // ── Internal body (shown only after permission is granted) ────────────────────
 
-class _ChordAnalyserBody extends StatefulWidget {
+class _ChordAnalyserBody extends ConsumerStatefulWidget {
   const _ChordAnalyserBody();
 
   @override
-  State<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
+  ConsumerState<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
 }
 
-class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
+class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     with SingleTickerProviderStateMixin {
   NativePitchBridge? _bridge;
   StreamSubscription<String>? _subscription;
@@ -73,7 +74,7 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
   Future<void> _startCapture() async {
     setState(() => _loading = true);
 
-    final bridge = ServiceLocator.instance.pitchBridgeFactory(
+    final bridge = ref.read(pitchBridgeFactoryProvider)(
       onError: _onBridgeError,
     );
     final started = await bridge.startCapture();
@@ -168,40 +169,42 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
         // ── Current chord ──────────────────────────────────────────
         Expanded(
           flex: 5,
-          child: Center(
-            child: Semantics(
-              liveRegion: true,
-              label: AppLocalizations.of(context)!.currentNoteSemanticLabel,
-              value: _currentChord == '---' ? null : _currentChord,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.currentChord,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 400),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    ),
-                    child: Text(
-                      _currentChord,
-                      key: ValueKey(_currentChord),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
-                            fontSize: 80,
+          child: RepaintBoundary(
+            child: Center(
+              child: Semantics(
+                liveRegion: true,
+                label: AppLocalizations.of(context)!.currentNoteSemanticLabel,
+                value: _currentChord == '---' ? null : _currentChord,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.currentChord,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  ListeningIndicator(controller: _listeningCtrl),
-                ],
+                    const SizedBox(height: 12),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      transitionBuilder: (child, animation) => ScaleTransition(
+                        scale: animation,
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: Text(
+                        _currentChord,
+                        key: ValueKey(_currentChord),
+                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                              fontSize: 80,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ListeningIndicator(controller: _listeningCtrl),
+                  ],
+                ),
               ),
             ),
           ),
@@ -227,33 +230,35 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
         ),
         Expanded(
           flex: 4,
-          child: _history.isEmpty
-              ? Center(
-                  child: Text(
-                    AppLocalizations.of(context)!.noChordHistory,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+          child: RepaintBoundary(
+            child: _history.isEmpty
+                ? Center(
+                    child: Text(
+                      AppLocalizations.of(context)!.noChordHistory,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  )
+                : AnimatedList(
+                    key: _listKey,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    initialItemCount: _history.length,
+                    itemBuilder: (context, index, animation) {
+                      final entry = _history[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _ChordHistoryTile(
+                          entry: entry,
+                          isLatest: index == 0,
+                          colorScheme: colorScheme,
+                          animation: animation,
                         ),
+                      );
+                    },
                   ),
-                )
-              : AnimatedList(
-                  key: _listKey,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  initialItemCount: _history.length,
-                  itemBuilder: (context, index, animation) {
-                    final entry = _history[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: _ChordHistoryTile(
-                        entry: entry,
-                        isLatest: index == 0,
-                        colorScheme: colorScheme,
-                        animation: animation,
-                      ),
-                    );
-                  },
-                ),
+          ),
         ),
       ],
     );

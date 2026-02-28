@@ -11,10 +11,12 @@ import 'package:sqflite/sqflite.dart';
 ///   - recordings          : recording metadata (RecordingEntry)
 ///   - practice_logs       : practice log entries shown in LibraryScreen
 ///   - practice_log_entries: practice log entries managed in PracticeLogScreen
+///   - compositions        : composition chord progressions
 class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
+  static const int _schemaVersion = 5;
 
   Completer<Database>? _completer;
 
@@ -29,7 +31,7 @@ class AppDatabase {
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
-      version: 2,
+      version: _schemaVersion,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE recordings (
@@ -37,7 +39,9 @@ class AppDatabase {
             title TEXT NOT NULL,
             recorded_at TEXT NOT NULL,
             duration_seconds INTEGER NOT NULL,
-            waveform_data BLOB NOT NULL
+            waveform_data BLOB NOT NULL,
+            audio_file_path TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -45,7 +49,8 @@ class AppDatabase {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
             duration_minutes INTEGER NOT NULL,
-            memo TEXT NOT NULL DEFAULT ''
+            memo TEXT NOT NULL DEFAULT '',
+            is_deleted INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -56,10 +61,24 @@ class AppDatabase {
             note TEXT NOT NULL DEFAULT ''
           )
         ''');
+        await db.execute('''
+          CREATE TABLE compositions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            chords TEXT NOT NULL
+          )
+        ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await _migrateV1ToV2(db);
+        for (final version in _migrationPlan(
+          oldVersion: oldVersion,
+          newVersion: newVersion,
+        )) {
+          final migration = _migrations[version];
+          if (migration == null) {
+            throw StateError('No migration registered for version $version');
+          }
+          await migration(db);
         }
       },
       onDowngrade: onDatabaseVersionChangeError,
@@ -72,7 +91,11 @@ class AppDatabase {
 
   Future<List<Map<String, Object?>>> queryAllRecordings() async {
     final db = await database;
-    return db.query('recordings', orderBy: 'recorded_at DESC');
+    return db.query(
+      'recordings',
+      where: 'is_deleted = 0',
+      orderBy: 'recorded_at DESC',
+    );
   }
 
   Future<void> insertRecording(Map<String, Object?> row) async {
@@ -87,9 +110,17 @@ class AppDatabase {
   Future<void> replaceAllRecordings(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('recordings');
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in rows) {
-        await txn.insert('recordings', row);
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     });
   }
@@ -100,15 +131,27 @@ class AppDatabase {
 
   Future<List<Map<String, Object?>>> queryAllPracticeLogs() async {
     final db = await database;
-    return db.query('practice_logs', orderBy: 'date DESC');
+    return db.query(
+      'practice_logs',
+      where: 'is_deleted = 0',
+      orderBy: 'date DESC',
+    );
   }
 
   Future<void> replaceAllPracticeLogs(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('practice_logs');
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in rows) {
-        await txn.insert('practice_logs', row);
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     });
   }
@@ -122,13 +165,73 @@ class AppDatabase {
   }) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('recordings');
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in recordings) {
-        await txn.insert('recordings', row);
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
-      await txn.delete('practice_logs');
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in practiceLogs) {
-        await txn.insert('practice_logs', row);
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
+  /// Atomically replaces all backup-eligible data tables.
+  Future<void> replaceAllBackupData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+    required List<Map<String, Object?>> practiceLogEntries,
+    required List<Map<String, Object?>> compositions,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
+      for (final row in recordings) {
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
+      for (final row in practiceLogs) {
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await txn.delete('practice_log_entries');
+      for (final row in practiceLogEntries) {
+        await txn.insert('practice_log_entries', row);
+      }
+      await txn.delete('compositions');
+      for (final row in compositions) {
+        await txn.insert('compositions', row);
       }
     });
   }
@@ -147,6 +250,47 @@ class AppDatabase {
     await db.insert('practice_log_entries', row);
   }
 
+  // ---------------------------------------------------------------------------
+  // Compositions
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, Object?>>> queryAllCompositions() async {
+    final db = await database;
+    return db.query('compositions', orderBy: 'title ASC');
+  }
+
+  Future<void> insertComposition(Map<String, Object?> row) async {
+    final db = await database;
+    await db.insert(
+      'compositions',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> deleteComposition(String id) async {
+    final db = await database;
+    await db.delete(
+      'compositions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> replaceAllCompositions(List<Map<String, Object?>> rows) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('compositions');
+      for (final row in rows) {
+        await txn.insert(
+          'compositions',
+          row,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
+  }
+
   /// Closes the underlying SQLite connection and resets the lazy future so that
   /// the database can be re-opened on the next access.  Call this when the app
   /// is disposed to release the file handle promptly.
@@ -161,6 +305,30 @@ class AppDatabase {
   // ---------------------------------------------------------------------------
   // Migration helpers
   // ---------------------------------------------------------------------------
+
+  static final Map<int, Future<void> Function(DatabaseExecutor)> _migrations = {
+    2: _migrateV1ToV2,
+    3: _migrateV2ToV3,
+    4: _migrateV3ToV4,
+    5: _migrateV4ToV5,
+  };
+
+  static List<int> _migrationPlan({
+    required int oldVersion,
+    required int newVersion,
+  }) {
+    return [
+      for (var version = oldVersion + 1; version <= newVersion; version++)
+        version,
+    ];
+  }
+
+  static List<int> migrationPlanForTesting({
+    required int oldVersion,
+    required int newVersion,
+  }) {
+    return _migrationPlan(oldVersion: oldVersion, newVersion: newVersion);
+  }
 
   /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
   ///
@@ -218,5 +386,55 @@ class AppDatabase {
     }
     await db.execute('DROP TABLE recordings');
     await db.execute('ALTER TABLE recordings_new RENAME TO recordings');
+  }
+
+  static Future<void> _migrateV2ToV3(DatabaseExecutor db) async {
+    await _ensureSoftDeleteColumn(db, table: 'recordings');
+    await _ensureSoftDeleteColumn(db, table: 'practice_logs');
+  }
+
+  static Future<void> _migrateV3ToV4(DatabaseExecutor db) async {
+    await _ensureAudioFilePathColumn(db);
+  }
+
+  static Future<void> _ensureSoftDeleteColumn(
+    DatabaseExecutor db, {
+    required String table,
+  }) async {
+    final tableInfoQuery = switch (table) {
+      'recordings' => 'PRAGMA table_info(recordings)',
+      'practice_logs' => 'PRAGMA table_info(practice_logs)',
+      _ => throw ArgumentError.value(table, 'table', 'Unsupported table'),
+    };
+    final addSoftDeleteColumnQuery = switch (table) {
+      'recordings' =>
+        'ALTER TABLE recordings ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      'practice_logs' =>
+        'ALTER TABLE practice_logs ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      _ => throw ArgumentError.value(table, 'table', 'Unsupported table'),
+    };
+    final columns = await db.rawQuery(tableInfoQuery);
+    final hasIsDeleted = columns.any((row) => row['name'] == 'is_deleted');
+    if (!hasIsDeleted) {
+      await db.execute(addSoftDeleteColumnQuery);
+    }
+  }
+
+  static Future<void> _ensureAudioFilePathColumn(DatabaseExecutor db) async {
+    final columns = await db.rawQuery('PRAGMA table_info(recordings)');
+    final hasAudioPath = columns.any((row) => row['name'] == 'audio_file_path');
+    if (!hasAudioPath) {
+      await db.execute('ALTER TABLE recordings ADD COLUMN audio_file_path TEXT');
+    }
+  }
+
+  static Future<void> _migrateV4ToV5(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS compositions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        chords TEXT NOT NULL
+      )
+    ''');
   }
 }

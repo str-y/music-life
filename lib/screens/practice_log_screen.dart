@@ -1,23 +1,23 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
-import '../service_locator.dart';
 import '../utils/app_logger.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-class PracticeLogScreen extends StatefulWidget {
+class PracticeLogScreen extends ConsumerStatefulWidget {
   const PracticeLogScreen({super.key});
 
   @override
-  State<PracticeLogScreen> createState() => _PracticeLogScreenState();
+  ConsumerState<PracticeLogScreen> createState() => _PracticeLogScreenState();
 }
 
-class _PracticeLogScreenState extends State<PracticeLogScreen>
+class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
-  late final RecordingRepository _repository;
   List<PracticeLogEntry> _entries = [];
   bool _loading = true;
   late DateTime _displayMonth;
@@ -26,12 +26,13 @@ class _PracticeLogScreenState extends State<PracticeLogScreen>
   @override
   void initState() {
     super.initState();
-    _repository = ServiceLocator.instance.recordingRepository;
     _tabController = TabController(length: 2, vsync: this);
     final now = DateTime.now();
     _displayMonth = DateTime(now.year, now.month);
     _loadEntries();
   }
+
+  RecordingRepository get _repository => ref.read(recordingRepositoryProvider);
 
   @override
   void dispose() {

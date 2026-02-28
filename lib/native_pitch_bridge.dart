@@ -9,6 +9,7 @@ import 'package:record/record.dart';
 
 import 'app_constants.dart';
 import 'utils/app_logger.dart';
+import 'utils/ring_buffer.dart';
 
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
@@ -48,6 +49,24 @@ typedef _MLProcessNative = MLPitchResult Function(
     Pointer<Void> handle, Pointer<Float> samples, Int32 numSamples);
 typedef _MLProcessDart = MLPitchResult Function(
     Pointer<Void> handle, Pointer<Float> samples, int numSamples);
+
+typedef _MLNativeLogCallbackNative = Void Function(
+    Int32 level, Pointer<Utf8> message);
+typedef _MLNativeLogCallbackDart = void Function(
+    int level, Pointer<Utf8> message);
+
+typedef _MLSetLogCallbackNative = Void Function(
+    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
+typedef _MLSetLogCallbackDart = void Function(
+    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
+
+typedef _MLInstallCrashHandlersNative = Void Function();
+typedef _MLInstallCrashHandlersDart = void Function();
+
+const int _mlLogLevelTrace = 0;
+const int _mlLogLevelDebug = 1;
+const int _mlLogLevelInfo = 2;
+const int _mlLogLevelError = 3;
 
 // ── Native library loading ────────────────────────────────────────────────────
 
@@ -107,6 +126,17 @@ class _IsolateError {
   final String stack;
 }
 
+class _TransferablePcmChunk {
+  const _TransferablePcmChunk(this.data);
+  final TransferableTypedData data;
+}
+
+class _TransferableFloatFrame {
+  const _TransferableFloatFrame(this.data, this.sampleCount);
+  final TransferableTypedData data;
+  final int sampleCount;
+}
+
 /// Entry point for the background isolate.
 void _audioProcessingIsolate(_IsolateSetup setup) {
   final DynamicLibrary lib;
@@ -120,7 +150,7 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
   final process = lib.lookupFunction<_MLProcessNative, _MLProcessDart>(
       'ml_pitch_detector_process');
 
-  final sampleBuf = <double>[];
+  final sampleBuf = RingBuffer();
 
   void processFrame(Float32List frame) {
     try {
@@ -145,6 +175,19 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
     }
   }
 
+  void processPcmChunk(Uint8List chunk) {
+    for (int i = 0; i + 1 < chunk.length; i += 2) {
+      int s = chunk[i] | (chunk[i + 1] << 8);
+      if (s >= 0x8000) s -= 0x10000;
+      sampleBuf.add(s / 32768.0);
+    }
+    while (sampleBuf.length >= setup.frameSize) {
+      final frame = Float32List(setup.frameSize);
+      if (!sampleBuf.readInto(frame)) break;
+      processFrame(frame);
+    }
+  }
+
   final port = ReceivePort();
   setup.resultPort.send(port.sendPort);
 
@@ -153,17 +196,22 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
       port.close();
       return;
     }
-    if (msg is Uint8List) {
-      for (int i = 0; i + 1 < msg.length; i += 2) {
-        int s = msg[i] | (msg[i + 1] << 8);
-        if (s >= 0x8000) s -= 0x10000;
-        sampleBuf.add(s / 32768.0);
+    if (msg is _TransferablePcmChunk) {
+      processPcmChunk(msg.data.materialize().asUint8List());
+    } else if (msg is Uint8List) {
+      processPcmChunk(msg);
+    } else if (msg is _TransferableFloatFrame) {
+      final buffer = msg.data.materialize();
+      final maxSamples = buffer.lengthInBytes ~/ Float32List.bytesPerElement;
+      if (msg.sampleCount < 0 || msg.sampleCount > maxSamples) {
+        setup.resultPort.send(_IsolateError(
+          'Invalid transferable frame length: '
+          '${msg.sampleCount} samples requested from $maxSamples available.',
+          StackTrace.current.toString(),
+        ));
+        return;
       }
-      while (sampleBuf.length >= setup.frameSize) {
-        processFrame(
-            Float32List.fromList(sampleBuf.sublist(0, setup.frameSize)));
-        sampleBuf.removeRange(0, setup.frameSize);
-      }
+      processFrame(buffer.asFloat32List(0, msg.sampleCount));
     } else if (msg is Float32List) {
       processFrame(msg);
     }
@@ -182,6 +230,11 @@ class NativePitchBridge implements Finalizable {
   static const int defaultFrameSize = AppConstants.audioFrameSize;
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
+  static bool _nativeLoggingConfigured = false;
+  static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
+      NativeCallable<_MLNativeLogCallbackNative>.listener(
+    _onNativeLog,
+  );
 
   final NativeFinalizer _handleFinalizer;
   static final NativeFinalizer _bufferFinalizer =
@@ -239,6 +292,7 @@ class NativePitchBridge implements Finalizable {
     FfiErrorHandler? onError,
   }) {
     final lib = _loadNativeLib();
+    _configureNativeLogging(lib);
     final handleFinalizer = NativeFinalizer(
       lib.lookup<NativeFunction<Void Function(Pointer<Void>)>>(
           'ml_pitch_detector_destroy'),
@@ -263,13 +317,67 @@ class NativePitchBridge implements Finalizable {
     );
   }
 
+  static void _configureNativeLogging(DynamicLibrary lib) {
+    if (_nativeLoggingConfigured) return;
+    _nativeLoggingConfigured = true;
+    try {
+      lib
+          .lookupFunction<_MLSetLogCallbackNative, _MLSetLogCallbackDart>(
+            'ml_pitch_detector_set_log_callback',
+          )
+          .call(_nativeLogCallback.nativeFunction);
+      lib
+          .lookupFunction<_MLInstallCrashHandlersNative,
+              _MLInstallCrashHandlersDart>(
+            'ml_pitch_detector_install_crash_handlers',
+          )
+          .call();
+    } catch (e, stack) {
+      _nativeLoggingConfigured = false;
+      AppLogger.reportError(
+        'Failed to configure native logging bridge',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  static void _onNativeLog(int level, Pointer<Utf8> messagePointer) {
+    final message = messagePointer == nullptr
+        ? 'Native log callback received null message'
+        : messagePointer.toDartString();
+    switch (level) {
+      case _mlLogLevelTrace:
+        AppLogger.trace('[native] $message');
+        break;
+      case _mlLogLevelDebug:
+        AppLogger.debug('[native] $message');
+        break;
+      case _mlLogLevelInfo:
+        AppLogger.info('[native] $message');
+        break;
+      case _mlLogLevelError:
+        AppLogger.reportError(
+          '[native] $message',
+          error: StateError('Native C++ error'),
+          stackTrace: StackTrace.current,
+        );
+        break;
+      default:
+        AppLogger.info('[native][unknown:$level] $message');
+    }
+  }
+
   void processAudioFrame(Float32List samples) {
     if (_disposed) return;
     assert(
       samples.length <= _frameSize,
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
-    _audioSendPort?.send(samples);
+    _audioSendPort?.send(_TransferableFloatFrame(
+      TransferableTypedData.fromList([samples]),
+      samples.length,
+    ));
   }
 
   Future<bool> startCapture() async {
@@ -379,7 +487,11 @@ class NativePitchBridge implements Finalizable {
 
   void _onAudioChunk(Uint8List chunk) {
     if (_disposed) return;
-    _audioSendPort?.send(chunk);
+    _audioSendPort?.send(
+      _TransferablePcmChunk(
+        TransferableTypedData.fromList([chunk]),
+      ),
+    );
   }
 
   void _onPitchResult(Map<dynamic, dynamic> msg) {

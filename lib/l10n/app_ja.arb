@@ -13,6 +13,13 @@
   "darkMode": "ダークモード",
   "calibration": "キャリブレーション",
   "referencePitchLabel": "基準ピッチ A =",
+  "backupAndRestore": "バックアップと復元",
+  "exportBackup": "バックアップをエクスポート",
+  "importBackup": "バックアップをインポート",
+  "backupExportFailed": "バックアップのエクスポートに失敗しました。",
+  "backupImportFailed": "バックアップのインポートに失敗しました。",
+  "backupExported": "バックアップを保存しました: {path}",
+  "backupImported": "バックアップを読み込みました: {path}",
   "cancel": "キャンセル",
   "save": "保存",
   "previousMonth": "前の月",
@@ -117,5 +124,8 @@
   "compositionDeleteError": "作曲を削除できませんでした。",
   "tapToRecord": "タップして録音",
   "tapToStop": "タップして停止",
-  "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。"
+  "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。",
+  "shareRecording": "共有",
+  "recordingUnavailableForShare": "共有する録音ファイルが見つかりません。",
+  "recordingShareFailed": "録音を共有できませんでした。"
 }
