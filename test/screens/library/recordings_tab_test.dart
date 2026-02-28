@@ -179,4 +179,56 @@ void main() {
       );
     });
   });
+
+  group('RecordingTile share', () {
+    testWidgets('share button invokes callback when audio file exists',
+        (tester) async {
+      var shared = false;
+      final entry = RecordingEntry(
+        id: 'share-1',
+        title: 'Share Me',
+        recordedAt: DateTime(2024, 6, 1, 8, 30),
+        durationSeconds: 45,
+        waveformData: const [0.3, 0.5, 0.4],
+        audioFilePath: '/tmp/audio.m4a',
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          RecordingTile(
+            entry: entry,
+            isPlaying: false,
+            progress: 0,
+            volume: 1,
+            onPlayPause: () {},
+            onSeek: null,
+            onVolumeChanged: null,
+            onShare: () => shared = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pump();
+
+      expect(shared, isTrue);
+    });
+
+    test('builds share filename with title/date metadata and extension', () {
+      final entry = RecordingEntry(
+        id: 'meta-1',
+        title: 'Take: 01 / Intro',
+        recordedAt: DateTime(2024, 6, 1, 8, 30),
+        durationSeconds: 45,
+        waveformData: const [],
+        audioFilePath: '/tmp/recording.wav',
+      );
+
+      expect(
+        recordingShareFileName(entry),
+        'Take__01___Intro_20240601_0830.wav',
+      );
+    });
+  });
 }

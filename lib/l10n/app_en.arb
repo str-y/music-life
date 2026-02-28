@@ -628,5 +628,17 @@
   "micPermissionNeeded": "Microphone permission is required to record.",
   "@micPermissionNeeded": {
     "description": "Message shown in the recording dialog when microphone permission is not granted"
+  },
+  "shareRecording": "Share",
+  "@shareRecording": {
+    "description": "Tooltip for sharing a recording"
+  },
+  "recordingUnavailableForShare": "Audio file is unavailable for sharing.",
+  "@recordingUnavailableForShare": {
+    "description": "Snackbar message shown when a recording file is missing for sharing"
+  },
+  "recordingShareFailed": "Could not share recording.",
+  "@recordingShareFailed": {
+    "description": "Snackbar message shown when sharing a recording fails"
   }
 }

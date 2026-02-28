@@ -124,5 +124,8 @@
   "compositionDeleteError": "作曲を削除できませんでした。",
   "tapToRecord": "タップして録音",
   "tapToStop": "タップして停止",
-  "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。"
+  "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。",
+  "shareRecording": "共有",
+  "recordingUnavailableForShare": "共有する録音ファイルが見つかりません。",
+  "recordingShareFailed": "録音を共有できませんでした。"
 }
