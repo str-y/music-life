@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,44 @@ import 'package:sqflite/sqflite.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
+import '../utils/app_logger.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
+
+@visibleForTesting
+List<double> downsampleWaveform(List<double> source, int targetPoints) {
+  if (source.isEmpty) return const [];
+  if (source.length <= targetPoints) return List<double>.from(source);
+  final bucket = source.length / targetPoints;
+  return List<double>.generate(targetPoints, (i) {
+    final start = (i * bucket).floor();
+    final end = ((i + 1) * bucket).ceil();
+    final boundedEnd = _boundWaveformEnd(
+      end: end,
+      min: start + 1,
+      max: source.length,
+    );
+    final segment = source.sublist(start, boundedEnd);
+    final sum = segment.fold<double>(0, (acc, value) => acc + value);
+    return (sum / segment.length).clamp(0.0, 1.0).toDouble();
+  });
+}
+
+int _boundWaveformEnd({
+  required int end,
+  required int min,
+  required int max,
+}) {
+  if (end < min) return min;
+  if (end > max) return max;
+  return end;
+}
+
+List<double> _downsampleWaveformInIsolate(Map<String, Object> args) {
+  final source = (args['source'] as List).cast<double>();
+  final targetPoints = args['targetPoints'] as int;
+  return downsampleWaveform(source, targetPoints);
+}
 
 // ---------------------------------------------------------------------------
 // LibraryScreen
@@ -160,9 +197,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   @override
   void dispose() {
     _ticker?.cancel();
-    _amplitudeSub?.cancel();
-    _recorder.stop().ignore();
-    _recorder.dispose();
+    unawaited(_disposeRecorder());
     _titleCtrl.dispose();
     super.dispose();
   }
@@ -177,90 +212,117 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
     return p.join(dir.path, fileName);
   }
 
-  List<double> _toWaveform(List<double> source, int targetPoints) {
-    if (source.isEmpty) return const [];
-    if (source.length <= targetPoints) return List<double>.from(source);
-    final bucket = source.length / targetPoints;
-    return List<double>.generate(targetPoints, (i) {
-      final start = (i * bucket).floor();
-      final end = ((i + 1) * bucket).ceil();
-      final boundedEnd = _boundWaveformEnd(
-        end: end,
-        min: start + 1,
-        max: source.length,
+  Future<void> _disposeRecorder() async {
+    try {
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to cancel amplitude stream while disposing recorder dialog.',
+        error: error,
+        stackTrace: stackTrace,
       );
-      final segment = source.sublist(start, boundedEnd);
-      final sum = segment.fold<double>(0, (acc, value) => acc + value);
-      return (sum / segment.length).clamp(0.0, 1.0).toDouble();
-    });
-  }
-
-  int _boundWaveformEnd({
-    required int end,
-    required int min,
-    required int max,
-  }) {
-    if (end < min) return min;
-    if (end > max) return max;
-    return end;
+    }
+    try {
+      await _recorder.stop();
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to stop recorder while disposing recorder dialog.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    try {
+      await _recorder.dispose();
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to dispose recorder in recorder dialog.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   Future<void> _startRecording() async {
-    if (!await _recorder.hasPermission()) {
-      if (mounted) {
+    try {
+      final hasPermission = await _recorder.hasPermission();
+      if (!mounted) return;
+      if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(AppLocalizations.of(context)!.micPermissionNeeded),
-          ),
+          SnackBar(content: Text(AppLocalizations.of(context)!.micPermissionNeeded)),
         );
+        return;
       }
-      return;
+
+      final path = await _createRecordingPath();
+      if (!mounted) return;
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          sampleRate: 44100,
+          numChannels: 1,
+        ),
+        path: path,
+      );
+      if (!mounted) {
+        await _recorder.stop();
+        return;
+      }
+
+      _amplitudeData.clear();
+      _amplitudeSub = _recorder
+          .onAmplitudeChanged(const Duration(milliseconds: 120))
+          .listen((amp) {
+        // Convert dBFS (typically in [-60, 0]) into normalized [0, 1] waveform.
+        final normalised = ((amp.current - _amplitudeFloorDb) / -_amplitudeFloorDb)
+            .clamp(0.0, 1.0)
+            .toDouble();
+        _amplitudeData.add(normalised);
+      });
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() => _durationSeconds++);
+      });
+
+      setState(() {
+        _state = _RecordingState.recording;
+        _durationSeconds = 0;
+        _waveformData = const [];
+        _recordingPath = path;
+      });
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to start audio recording.',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
-
-    final path = await _createRecordingPath();
-    await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        sampleRate: 44100,
-        numChannels: 1,
-      ),
-      path: path,
-    );
-
-    _amplitudeData.clear();
-    _amplitudeSub = _recorder
-        .onAmplitudeChanged(const Duration(milliseconds: 120))
-        .listen((amp) {
-      // Convert dBFS (typically in [-60, 0]) into normalized [0, 1] waveform.
-      final normalised = ((amp.current - _amplitudeFloorDb) / -_amplitudeFloorDb)
-          .clamp(0.0, 1.0)
-          .toDouble();
-      _amplitudeData.add(normalised);
-    });
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _durationSeconds++);
-    });
-
-    setState(() {
-      _state = _RecordingState.recording;
-      _durationSeconds = 0;
-      _waveformData = const [];
-      _recordingPath = path;
-    });
   }
 
   Future<void> _stopRecording() async {
     _ticker?.cancel();
     _ticker = null;
-    await _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    await _recorder.stop();
-    final data = _toWaveform(_amplitudeData, 40);
-    setState(() {
-      _state = _RecordingState.stopped;
-      _waveformData = data;
-    });
+    try {
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      if (!mounted) return;
+      await _recorder.stop();
+      if (!mounted) return;
+      final data = await compute<Map<String, Object>, List<double>>(
+        _downsampleWaveformInIsolate,
+        {'source': List<double>.from(_amplitudeData), 'targetPoints': 40},
+      );
+      if (!mounted) return;
+      setState(() {
+        _state = _RecordingState.stopped;
+        _waveformData = data;
+      });
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to stop audio recording.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   String _formatDuration(int seconds) {
