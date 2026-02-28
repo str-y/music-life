@@ -1,13 +1,17 @@
 import 'dart:collection';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
+import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/recording_playback_provider.dart';
 import '../../repositories/recording_repository.dart';
+import '../../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Recordings tab
@@ -86,6 +90,7 @@ class RecordingTile extends StatelessWidget {
     required this.onPlayPause,
     required this.onSeek,
     required this.onVolumeChanged,
+    this.onShare,
   });
 
   final RecordingEntry entry;
@@ -95,6 +100,41 @@ class RecordingTile extends StatelessWidget {
   final VoidCallback onPlayPause;
   final ValueChanged<double>? onSeek;
   final ValueChanged<double>? onVolumeChanged;
+  final VoidCallback? onShare;
+
+  Future<void> _shareRecording(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final path = entry.audioFilePath;
+    if (path == null || path.isEmpty || !await File(path).exists()) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.recordingUnavailableForShare)),
+      );
+      return;
+    }
+
+    try {
+      await Share.shareXFiles(
+        [
+          XFile(
+            path,
+            name: recordingShareFileName(entry),
+          ),
+        ],
+        subject: entry.title,
+        text: DateFormat.yMd().add_Hm().format(entry.recordedAt),
+      );
+    } catch (e, st) {
+      AppLogger.reportError(
+        'RecordingTile: failed to share recording',
+        error: e,
+        stackTrace: st,
+      );
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.recordingShareFailed)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +143,10 @@ class RecordingTile extends StatelessWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final dateFormat = DateFormat.yMd(locale).add_Hm();
     final canPlay = entry.audioFilePath?.isNotEmpty == true;
+    final canShare = canPlay;
     final isActive = onSeek != null;
+
+    final VoidCallback shareHandler = onShare ?? () { _shareRecording(context); };
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -124,11 +167,22 @@ class RecordingTile extends StatelessWidget {
             dateFormat.format(entry.recordedAt),
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          trailing: Text(
-            entry.formattedDuration,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                entry.formattedDuration,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: canShare ? shareHandler : null,
+                icon: const Icon(Icons.share),
+                tooltip: l10n.shareRecording,
+              ),
+            ],
           ),
           onTap: canPlay ? onPlayPause : null,
         ),
@@ -173,6 +227,18 @@ class RecordingTile extends StatelessWidget {
       ],
     );
   }
+}
+
+String recordingShareFileName(RecordingEntry entry) {
+  final detectedExtension = p.extension(entry.audioFilePath ?? '');
+  final fileExtension = detectedExtension.isEmpty ? '.m4a' : detectedExtension;
+  final dateStamp = DateFormat('yyyyMMdd_HHmm').format(entry.recordedAt);
+  final safeTitle = entry.title
+      .trim()
+      .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+      .replaceAll(RegExp(r'\s+'), '_');
+  final baseName = safeTitle.isEmpty ? 'recording' : safeTitle;
+  return '${baseName}_$dateStamp$fileExtension';
 }
 
 // ---------------------------------------------------------------------------
