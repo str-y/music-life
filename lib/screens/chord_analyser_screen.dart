@@ -6,6 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../service_locator.dart';
+import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
@@ -238,11 +239,6 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-String _formatTime(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:'
-    '${t.minute.toString().padLeft(2, '0')}:'
-    '${t.second.toString().padLeft(2, '0')}';
-
 // ── Data model ────────────────────────────────────────────────────────────────
 
 class _ChordEntry {
@@ -272,7 +268,7 @@ class _ChordHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timeLabel = _formatTime(entry.time);
+    final timeLabel = formatTimeHMS(entry.time);
 
     return SizeTransition(
       sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
