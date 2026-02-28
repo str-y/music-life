@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'native_pitch_bridge.dart';
+import 'repositories/composition_repository.dart';
 import 'repositories/recording_repository.dart';
 
 /// Factory function type for creating [NativePitchBridge] instances.
@@ -39,12 +40,15 @@ class ServiceLocator {
     required SharedPreferences prefs,
     PitchBridgeFactory? pitchBridgeFactory,
     RecordingRepository? recordingRepository,
+    CompositionRepository? compositionRepository,
   })  : _prefs = prefs,
         pitchBridgeFactory =
             pitchBridgeFactory ??
             (({FfiErrorHandler? onError}) => NativePitchBridge(onError: onError)),
         recordingRepository =
-            recordingRepository ?? RecordingRepository(prefs);
+            recordingRepository ?? RecordingRepository(prefs),
+        compositionRepository =
+            compositionRepository ?? CompositionRepository(prefs);
 
   static ServiceLocator? _instance;
 
@@ -72,11 +76,13 @@ class ServiceLocator {
     required SharedPreferences prefs,
     PitchBridgeFactory? pitchBridgeFactory,
     RecordingRepository? recordingRepository,
+    CompositionRepository? compositionRepository,
   }) {
     return ServiceLocator._(
       prefs: prefs,
       pitchBridgeFactory: pitchBridgeFactory,
       recordingRepository: recordingRepository,
+      compositionRepository: compositionRepository,
     );
   }
 
@@ -107,4 +113,7 @@ class ServiceLocator {
 
   /// The shared [RecordingRepository] instance.
   final RecordingRepository recordingRepository;
+
+  /// The shared [CompositionRepository] instance.
+  final CompositionRepository compositionRepository;
 }

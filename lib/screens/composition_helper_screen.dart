@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
-import '../utils/app_logger.dart';
+import '../providers/composition_provider.dart';
+import '../repositories/composition_repository.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
 
@@ -17,69 +17,18 @@ const List<String> _kPaletteChords = [
   'Dm7', 'Em7', 'Am7', 'Bm7',
 ];
 
-// ── Data models ───────────────────────────────────────────────────────────────
-
-class Composition {
-  Composition({
-    required this.id,
-    required this.title,
-    required this.chords,
-  });
-
-  final String id;
-  final String title;
-  final List<String> chords;
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'chords': chords,
-      };
-
-  factory Composition.fromJson(Map<String, dynamic> json) => Composition(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        chords:
-            (json['chords'] as List).map((e) => e as String).toList(),
-      );
-}
-
-// ── Repository ────────────────────────────────────────────────────────────────
-
-class CompositionRepository {
-  static const _key = 'compositions_v1';
-
-  Future<List<Composition>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_key);
-    if (jsonStr == null) return [];
-    final list = jsonDecode(jsonStr) as List;
-    return list
-        .map((e) => Composition.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<void> save(List<Composition> compositions) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _key,
-      jsonEncode(compositions.map((c) => c.toJson()).toList()),
-    );
-  }
-}
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-class CompositionHelperScreen extends StatefulWidget {
+class CompositionHelperScreen extends ConsumerStatefulWidget {
   const CompositionHelperScreen({super.key});
 
   @override
-  State<CompositionHelperScreen> createState() =>
+  ConsumerState<CompositionHelperScreen> createState() =>
       _CompositionHelperScreenState();
 }
 
-class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
-  final _repo = CompositionRepository();
+class _CompositionHelperScreenState
+    extends ConsumerState<CompositionHelperScreen> {
 
   /// Monotonically increasing counter used to assign stable unique IDs to
   /// each chord entry so that [ReorderableListView] keys remain stable across
@@ -90,9 +39,6 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
   /// so the [ReorderableListView] can track items correctly.
   final List<({int id, String chord})> _sequence = [];
 
-  /// Saved compositions loaded from persistent storage.
-  List<Composition> _saved = [];
-
   // ── Playback state ─────────────────────────────────────────────────────
   bool _isPlaying = false;
   int _playingIndex = -1;
@@ -100,31 +46,6 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
   Timer? _playTimer;
 
   @override
-  void initState() {
-    super.initState();
-    _loadSaved();
-  }
-
-  Future<void> _loadSaved() async {
-    try {
-      final saved = await _repo.load();
-      if (!mounted) return;
-      setState(() => _saved = saved);
-    } catch (e, st) {
-      AppLogger.reportError(
-        'Failed to load compositions',
-        error: e,
-        stackTrace: st,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.compositionLoadError),
-        ),
-      );
-    }
-  }
-
   @override
   void dispose() {
     _playTimer?.cancel();
@@ -186,8 +107,9 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
 
   Future<void> _showSaveDialog() async {
     final l10n = AppLocalizations.of(context)!;
+    final savedCount = ref.read(compositionProvider).compositions.length;
     final controller = TextEditingController(
-      text: l10n.compositionDefaultName(_saved.length + 1),
+      text: l10n.compositionDefaultName(savedCount + 1),
     );
     final confirmed = await showDialog<bool>(
       context: context,
@@ -220,25 +142,16 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
       title: title,
       chords: _sequence.map((e) => e.chord).toList(),
     );
-    final updated = [..._saved, composition];
     try {
-      await _repo.save(updated);
-    } catch (e, st) {
-      AppLogger.reportError(
-        'Failed to save composition',
-        error: e,
-        stackTrace: st,
-      );
+      await ref.read(compositionProvider.notifier).saveComposition(composition);
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.compositionSaveError),
-        ),
+        SnackBar(content: Text(l10n.compositionSaveError)),
       );
       return;
     }
     if (!mounted) return;
-    setState(() => _saved = updated);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.compositionSavedSuccess)),
     );
@@ -254,27 +167,18 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _LoadCompositionSheet(
-        compositions: _saved,
+        compositions: ref.read(compositionProvider).compositions,
         onDelete: (comp) async {
-          final updated = _saved.where((c) => c.id != comp.id).toList();
           try {
-            await _repo.save(updated);
-          } catch (e, st) {
-            AppLogger.reportError(
-                'Failed to delete composition',
-                error: e,
-                stackTrace: st,
+            await ref
+                .read(compositionProvider.notifier)
+                .deleteComposition(comp.id);
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.compositionDeleteError)),
             );
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.compositionDeleteError),
-                ),
-              );
-            }
-            return;
           }
-          if (mounted) setState(() => _saved = updated);
         },
       ),
     );
@@ -295,9 +199,32 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
   // ── Build ──────────────────────────────────────────────────────────────
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(compositionProvider).hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.compositionLoadError),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final compositionState = ref.watch(compositionProvider);
+
+    ref.listen(compositionProvider, (previous, next) {
+      if (next.hasError && (previous == null || !previous.hasError)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.compositionLoadError)),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -313,7 +240,9 @@ class _CompositionHelperScreenState extends State<CompositionHelperScreen> {
           IconButton(
             icon: const Icon(Icons.folder_open_outlined),
             tooltip: l10n.compositionLoad,
-            onPressed: _saved.isEmpty ? null : _showLoadDialog,
+            onPressed: compositionState.compositions.isEmpty
+                ? null
+                : _showLoadDialog,
           ),
         ],
       ),

@@ -108,5 +108,8 @@
   "chordAnalyserError": "コード検出を開始できませんでした。もう一度お試しください。",
   "compositionSaveError": "作曲を保存できませんでした。もう一度お試しください。",
   "compositionLoadError": "作曲を読み込めませんでした。",
-  "compositionDeleteError": "作曲を削除できませんでした。"
+  "compositionDeleteError": "作曲を削除できませんでした。",
+  "tapToRecord": "タップして録音",
+  "tapToStop": "タップして停止",
+  "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。"
 }
