@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/recording_playback_provider.dart';
 import '../../repositories/recording_repository.dart';
+import '../../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Recordings tab
@@ -123,7 +124,12 @@ class RecordingTile extends StatelessWidget {
         subject: entry.title,
         text: DateFormat.yMd().add_Hm().format(entry.recordedAt),
       );
-    } catch (_) {
+    } catch (e, st) {
+      AppLogger.reportError(
+        'RecordingTile: failed to share recording',
+        error: e,
+        stackTrace: st,
+      );
       messenger?.showSnackBar(
         SnackBar(content: Text(l10n.recordingShareFailed)),
       );
@@ -139,6 +145,8 @@ class RecordingTile extends StatelessWidget {
     final canPlay = entry.audioFilePath?.isNotEmpty == true;
     final canShare = canPlay;
     final isActive = onSeek != null;
+
+    final VoidCallback shareHandler = onShare ?? () { _shareRecording(context); };
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -170,9 +178,7 @@ class RecordingTile extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               IconButton(
-                onPressed: canShare
-                    ? () => onShare != null ? onShare!() : _shareRecording(context)
-                    : null,
+                onPressed: canShare ? shareHandler : null,
                 icon: const Icon(Icons.share),
                 tooltip: l10n.shareRecording,
               ),
@@ -224,16 +230,15 @@ class RecordingTile extends StatelessWidget {
 }
 
 String recordingShareFileName(RecordingEntry entry) {
-  final extension = p.extension(entry.audioFilePath ?? '').isEmpty
-      ? '.m4a'
-      : p.extension(entry.audioFilePath!);
+  final detectedExtension = p.extension(entry.audioFilePath ?? '');
+  final fileExtension = detectedExtension.isEmpty ? '.m4a' : detectedExtension;
   final dateStamp = DateFormat('yyyyMMdd_HHmm').format(entry.recordedAt);
   final safeTitle = entry.title
       .trim()
       .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
       .replaceAll(RegExp(r'\s+'), '_');
   final baseName = safeTitle.isEmpty ? 'recording' : safeTitle;
-  return '${baseName}_$dateStamp$extension';
+  return '${baseName}_$dateStamp$fileExtension';
 }
 
 // ---------------------------------------------------------------------------
