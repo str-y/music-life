@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../repositories/recording_repository.dart';
+import '../../providers/library_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Log (Calendar) tab
 // ---------------------------------------------------------------------------
 
 class LogTab extends StatefulWidget {
-  const LogTab({super.key, required this.logs});
+  const LogTab({super.key, required this.monthlyLogStatsByMonth});
 
-  final List<PracticeLogEntry> logs;
+  final Map<String, MonthlyPracticeStats> monthlyLogStatsByMonth;
 
   @override
   State<LogTab> createState() => _LogTabState();
@@ -26,19 +26,6 @@ class _LogTabState extends State<LogTab> {
     _displayMonth = DateTime(now.year, now.month);
   }
 
-  Set<int> _practiceDaysInMonth(int year, int month) {
-    return widget.logs
-        .where((e) => e.date.year == year && e.date.month == month)
-        .map((e) => e.date.day)
-        .toSet();
-  }
-
-  int _totalMinutesInMonth(int year, int month) {
-    return widget.logs
-        .where((e) => e.date.year == year && e.date.month == month)
-        .fold(0, (sum, e) => sum + e.durationMinutes);
-  }
-
   void _changeMonth(int delta) {
     setState(() {
       _displayMonth =
@@ -50,8 +37,10 @@ class _LogTabState extends State<LogTab> {
   Widget build(BuildContext context) {
     final year = _displayMonth.year;
     final month = _displayMonth.month;
-    final practiceDays = _practiceDaysInMonth(year, month);
-    final totalMinutes = _totalMinutesInMonth(year, month);
+    final monthKey = '$year-${month.toString().padLeft(2, '0')}';
+    final monthlyStats = widget.monthlyLogStatsByMonth[monthKey];
+    final practiceDays = monthlyStats?.practiceDays ?? const <int>{};
+    final totalMinutes = monthlyStats?.totalMinutes ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
