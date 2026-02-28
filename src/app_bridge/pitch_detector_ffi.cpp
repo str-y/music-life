@@ -2,8 +2,83 @@
 
 #include "pitch_detector.h"
 
+#include <cstdarg>
+#include <exception>
 #include <cstdio>
 #include <memory>
+#include <signal.h>
+#include <unistd.h>
+
+namespace {
+
+MLLogCallback g_log_callback = nullptr;
+
+void emit_log(int level, const char* fmt, ...) {
+    char buffer[512];
+    va_list args;
+    va_start(args, fmt);
+    std::vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    std::fprintf(stderr, "[music-life] %s\n", buffer);
+    if (g_log_callback) {
+        g_log_callback(level, buffer);
+    }
+}
+
+void write_signal_message(const char* message, size_t length) {
+    const ssize_t written = ::write(STDERR_FILENO, message, length);
+    (void)written;
+}
+
+void fatal_signal_handler(int signal_number) {
+#define ML_WRITE_SIGNAL(msg) write_signal_message(msg, sizeof(msg) - 1)
+    switch (signal_number) {
+        case SIGABRT:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGABRT\n");
+            break;
+        case SIGILL:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGILL\n");
+            break;
+        case SIGFPE:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGFPE\n");
+            break;
+        case SIGSEGV:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGSEGV\n");
+            break;
+#ifdef SIGBUS
+        case SIGBUS:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGBUS\n");
+            break;
+#endif
+#ifdef SIGTRAP
+        case SIGTRAP:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGTRAP\n");
+            break;
+#endif
+        default:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal\n");
+            break;
+    }
+#undef ML_WRITE_SIGNAL
+    ::signal(signal_number, SIG_DFL);
+    raise(signal_number);
+}
+
+void terminate_handler() {
+    try {
+        std::exception_ptr eptr = std::current_exception();
+        if (eptr) {
+            std::rethrow_exception(eptr);
+        }
+    } catch (const std::exception& e) {
+        emit_log(ML_LOG_LEVEL_ERROR, "native terminate: %s", e.what());
+    } catch (...) {
+        emit_log(ML_LOG_LEVEL_ERROR, "native terminate: unknown exception");
+    }
+    std::abort();
+}
+
+}  // namespace
 
 struct MLPitchDetectorHandle {
     std::unique_ptr<music_life::PitchDetector> detector;
@@ -21,23 +96,31 @@ MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_
         auto* handle = new MLPitchDetectorHandle{
             std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz)
         };
+        emit_log(ML_LOG_LEVEL_INFO,
+                 "ml_pitch_detector_create: sample_rate=%d frame_size=%d threshold=%0.3f reference_pitch_hz=%0.2f",
+                 sample_rate,
+                 frame_size,
+                 threshold,
+                 reference_pitch_hz);
         return handle;
     } catch (const std::exception& e) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_create: exception: %s\n", e.what());
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_create: exception: %s", e.what());
         return nullptr;
     } catch (...) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_create: unknown exception\n");
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_create: unknown exception");
         return nullptr;
     }
 }
 
 void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) {
     if (!handle) return;
+    emit_log(ML_LOG_LEVEL_DEBUG, "ml_pitch_detector_destroy");
     delete handle;
 }
 
 void ml_pitch_detector_reset(MLPitchDetectorHandle* handle) {
     if (!handle) return;
+    emit_log(ML_LOG_LEVEL_TRACE, "ml_pitch_detector_reset");
     handle->detector->reset();
 }
 
@@ -45,12 +128,13 @@ int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float r
     if (!handle) return 0;
     try {
         handle->detector->set_reference_pitch(reference_pitch_hz);
+        emit_log(ML_LOG_LEVEL_INFO, "ml_pitch_detector_set_reference_pitch: %0.2f", reference_pitch_hz);
         return 1;
     } catch (const std::exception& e) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_set_reference_pitch: exception: %s\n", e.what());
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_set_reference_pitch: exception: %s", e.what());
         return 0;
     } catch (...) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_set_reference_pitch: unknown exception\n");
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_set_reference_pitch: unknown exception");
         return 0;
     }
 }
@@ -68,11 +152,32 @@ MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const flo
         out.cents_offset = result.cents_offset;
         std::snprintf(out.note_name, sizeof(out.note_name), "%s", result.note_name ? result.note_name : "");
     } catch (const std::exception& e) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_process: exception: %s\n", e.what());
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_process: exception: %s", e.what());
         return out;
     } catch (...) {
-        std::fprintf(stderr, "[music-life] ml_pitch_detector_process: unknown exception\n");
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_process: unknown exception");
         return out;
     }
     return out;
+}
+
+void ml_pitch_detector_set_log_callback(MLLogCallback callback) {
+    g_log_callback = callback;
+}
+
+void ml_pitch_detector_install_crash_handlers(void) {
+    static bool installed = false;
+    if (installed) return;
+    installed = true;
+    std::set_terminate(terminate_handler);
+    ::signal(SIGABRT, fatal_signal_handler);
+    ::signal(SIGILL, fatal_signal_handler);
+    ::signal(SIGFPE, fatal_signal_handler);
+    ::signal(SIGSEGV, fatal_signal_handler);
+#ifdef SIGBUS
+    ::signal(SIGBUS, fatal_signal_handler);
+#endif
+#ifdef SIGTRAP
+    ::signal(SIGTRAP, fatal_signal_handler);
+#endif
 }

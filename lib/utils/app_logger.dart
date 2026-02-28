@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-enum AppLogLevel { debug, info, warning, error }
+enum AppLogLevel { trace, debug, info, warning, error }
 
 /// Utility for logging errors with exception and stack-trace details.
 ///
@@ -21,6 +21,8 @@ class AppLogger {
       kReleaseMode ? AppLogLevel.info : AppLogLevel.debug;
 
   static void debug(String message) => log(AppLogLevel.debug, message);
+
+  static void trace(String message) => log(AppLogLevel.trace, message);
 
   static void info(String message) => log(AppLogLevel.info, message);
 

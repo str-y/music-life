@@ -27,6 +27,13 @@ using music_life::Yin;
 
 static int g_passed = 0;
 static int g_failed = 0;
+static int g_last_log_level = -1;
+static std::string g_last_log_message;
+
+static void test_log_callback(int level, const char* message) {
+    g_last_log_level = level;
+    g_last_log_message = message ? message : "";
+}
 
 #define ASSERT_TRUE(expr) \
     do { \
@@ -425,6 +432,36 @@ static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
     return true;
 }
 
+static bool test_ffi_log_callback_receives_error_logs() {
+    ml_pitch_detector_set_log_callback(test_log_callback);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(0, 2048, 0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_ERROR);
+    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_create") != std::string::npos);
+    ml_pitch_detector_set_log_callback(nullptr);
+    return true;
+}
+
+static bool test_ffi_log_callback_supports_trace_level() {
+    ml_pitch_detector_set_log_callback(test_log_callback);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    g_last_log_level = -1;
+    g_last_log_message.clear();
+    ml_pitch_detector_reset(handle);
+    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_TRACE);
+    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_reset") != std::string::npos);
+    ml_pitch_detector_destroy(handle);
+    ml_pitch_detector_set_log_callback(nullptr);
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -454,6 +491,8 @@ int main() {
     run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
     run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
     run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
+    run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
+    run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
 
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
