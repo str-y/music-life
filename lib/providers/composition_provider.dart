@@ -36,6 +36,10 @@ class CompositionState {
 // Notifier
 // ---------------------------------------------------------------------------
 
+final compositionRepositoryProvider = Provider<CompositionRepository>((ref) {
+  return ServiceLocator.instance.compositionRepository;
+});
+
 class CompositionNotifier extends Notifier<CompositionState> {
   @override
   CompositionState build() {
@@ -43,8 +47,7 @@ class CompositionNotifier extends Notifier<CompositionState> {
     return const CompositionState();
   }
 
-  CompositionRepository get _repo =>
-      ServiceLocator.instance.compositionRepository;
+  CompositionRepository get _repo => ref.read(compositionRepositoryProvider);
 
   Future<void> _load() async {
     state = state.copyWith(loading: true, hasError: false);

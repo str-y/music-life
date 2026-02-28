@@ -46,6 +46,7 @@ class _CompositionHelperScreenState
   Timer? _playTimer;
 
   @override
+  @override
   void dispose() {
     _playTimer?.cancel();
     super.dispose();
@@ -141,7 +142,15 @@ class _CompositionHelperScreenState
       title: title,
       chords: _sequence.map((e) => e.chord).toList(),
     );
-    await ref.read(compositionProvider.notifier).saveComposition(composition);
+    try {
+      await ref.read(compositionProvider.notifier).saveComposition(composition);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.compositionSaveError)),
+      );
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.compositionSavedSuccess)),
@@ -159,8 +168,18 @@ class _CompositionHelperScreenState
       ),
       builder: (_) => _LoadCompositionSheet(
         compositions: ref.read(compositionProvider).compositions,
-        onDelete: (comp) =>
-            ref.read(compositionProvider.notifier).deleteComposition(comp.id),
+        onDelete: (comp) async {
+          try {
+            await ref
+                .read(compositionProvider.notifier)
+                .deleteComposition(comp.id);
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.compositionDeleteError)),
+            );
+          }
+        },
       ),
     );
     if (selected == null || !mounted) return;
@@ -180,10 +199,32 @@ class _CompositionHelperScreenState
   // ── Build ──────────────────────────────────────────────────────────────
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.read(compositionProvider).hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.compositionLoadError),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final compositionState = ref.watch(compositionProvider);
+
+    ref.listen(compositionProvider, (previous, next) {
+      if (next.hasError && (previous == null || !previous.hasError)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.compositionLoadError)),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(

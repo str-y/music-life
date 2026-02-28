@@ -54,7 +54,7 @@ class CompositionRepository {
         error: e,
         stackTrace: st,
       );
-      return [];
+      rethrow;
     }
   }
 
