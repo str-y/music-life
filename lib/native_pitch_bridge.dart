@@ -183,7 +183,17 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
     } else if (msg is Uint8List) {
       processPcmChunk(msg);
     } else if (msg is _TransferableFloatFrame) {
-      processFrame(msg.data.materialize().asFloat32List(0, msg.sampleCount));
+      final buffer = msg.data.materialize();
+      final maxSamples = buffer.lengthInBytes ~/ Float32List.bytesPerElement;
+      if (msg.sampleCount < 0 || msg.sampleCount > maxSamples) {
+        setup.resultPort.send(_IsolateError(
+          'Invalid transferable frame length: '
+          '${msg.sampleCount} samples requested from $maxSamples available.',
+          StackTrace.current.toString(),
+        ));
+        return;
+      }
+      processFrame(buffer.asFloat32List(0, msg.sampleCount));
     } else if (msg is Float32List) {
       processFrame(msg);
     }
@@ -290,7 +300,7 @@ class NativePitchBridge implements Finalizable {
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
     _audioSendPort?.send(_TransferableFloatFrame(
-      TransferableTypedData.fromList(<TypedData>[samples]),
+      TransferableTypedData.fromList([samples]),
       samples.length,
     ));
   }
@@ -404,7 +414,7 @@ class NativePitchBridge implements Finalizable {
     if (_disposed) return;
     _audioSendPort?.send(
       _TransferablePcmChunk(
-        TransferableTypedData.fromList(<TypedData>[chunk]),
+        TransferableTypedData.fromList([chunk]),
       ),
     );
   }
