@@ -5,6 +5,13 @@
 
 namespace music_life {
 
+enum class FftBackend {
+    Auto,
+    Radix2,
+    Accelerate,
+    Fftw
+};
+
 /**
  * YIN pitch detection algorithm.
  *
@@ -23,6 +30,7 @@ public:
      * @param threshold     CMNDF threshold for peak detection (default 0.10).
      */
     Yin(int sample_rate, int buffer_size, float threshold = 0.10f);
+    ~Yin();
 
     /**
      * Estimate the fundamental frequency of the given audio samples.
@@ -36,6 +44,7 @@ public:
      * @return Fundamental frequency in Hz, or -1 if no pitch is detected.
      */
     float detect(const float* samples, std::vector<float>& workspace);
+    const char* fft_backend_name() const;
 
     /** Probability of the last detected pitch (0–1). */
     float probability() const { return probability_; }
@@ -59,6 +68,10 @@ private:
     // for k = 0 ... fft_size_/2 - 1.  Computed once in the constructor so the
     // hot audio path never calls std::cos / std::sin.
     std::vector<std::complex<float>> twiddle_;
+    FftBackend fft_backend_;
+
+    void* accelerate_forward_setup_;
+    void* accelerate_inverse_setup_;
 
 
     /** Step 2: Difference function. */

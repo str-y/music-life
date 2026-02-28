@@ -3,13 +3,21 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <string>
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
 #if defined(__SSE3__)
 #include <pmmintrin.h>
+#endif
+#if defined(ML_HAS_ACCELERATE)
+#include <Accelerate/Accelerate.h>
+#endif
+#if defined(ML_HAS_FFTW)
+#include <fftw3.h>
 #endif
 
 namespace music_life {
@@ -19,6 +27,62 @@ namespace music_life {
 // ---------------------------------------------------------------------------
 
 namespace {
+
+const char* backend_to_name(FftBackend backend) {
+    switch (backend) {
+        case FftBackend::Radix2: return "radix2";
+        case FftBackend::Accelerate: return "accelerate";
+        case FftBackend::Fftw: return "fftw";
+        default: return "auto";
+    }
+}
+
+bool backend_available(FftBackend backend) {
+    switch (backend) {
+        case FftBackend::Accelerate:
+#if defined(ML_HAS_ACCELERATE)
+            return true;
+#else
+            return false;
+#endif
+        case FftBackend::Fftw:
+#if defined(ML_HAS_FFTW)
+            return true;
+#else
+            return false;
+#endif
+        case FftBackend::Radix2:
+        case FftBackend::Auto:
+        default:
+            return true;
+    }
+}
+
+FftBackend parse_requested_backend() {
+    const char* env = std::getenv("ML_FFT_BACKEND");
+    if (env == nullptr || *env == '\0') {
+        return FftBackend::Auto;
+    }
+    const std::string value(env);
+    if (value == "radix2" || value == "manual") return FftBackend::Radix2;
+    if (value == "accelerate") return FftBackend::Accelerate;
+    if (value == "fftw") return FftBackend::Fftw;
+    return FftBackend::Auto;
+}
+
+FftBackend resolve_backend() {
+    const FftBackend requested = parse_requested_backend();
+    if (requested != FftBackend::Auto) {
+        return backend_available(requested) ? requested : FftBackend::Radix2;
+    }
+#if defined(ML_HAS_ACCELERATE)
+    return FftBackend::Accelerate;
+#elif defined(ML_HAS_FFTW)
+    return FftBackend::Fftw;
+#else
+    return FftBackend::Radix2;
+#endif
+}
 
 inline void multiply_conj_fft_bins(std::complex<float>* lhs,
                                    const std::complex<float>* rhs,
@@ -131,8 +195,8 @@ inline void compute_difference_from_corr(const std::vector<float>& sq_prefix,
 }
 
 // In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
-void fft_inplace(std::vector<std::complex<float>>& x,
-                 const std::vector<std::complex<float>>& twiddle) {
+void fft_inplace_radix2(std::vector<std::complex<float>>& x,
+                        const std::vector<std::complex<float>>& twiddle) {
     const int n = static_cast<int>(x.size());
 
     // Bit-reversal permutation
@@ -161,12 +225,111 @@ void fft_inplace(std::vector<std::complex<float>>& x,
 }
 
 // In-place IFFT via conjugate trick.
-void ifft_inplace(std::vector<std::complex<float>>& x,
-                  const std::vector<std::complex<float>>& twiddle) {
+void ifft_inplace_radix2(std::vector<std::complex<float>>& x,
+                         const std::vector<std::complex<float>>& twiddle) {
     for (auto& c : x) c = std::conj(c);
-    fft_inplace(x, twiddle);
+    fft_inplace_radix2(x, twiddle);
     const float inv_n = 1.0f / static_cast<float>(x.size());
     for (auto& c : x) c = std::conj(c) * inv_n;
+}
+
+#if defined(ML_HAS_ACCELERATE)
+void fft_inplace_accelerate(std::vector<std::complex<float>>& x, vDSP_DFT_Setup setup) {
+    const int n = static_cast<int>(x.size());
+    std::vector<float> in_real(static_cast<size_t>(n));
+    std::vector<float> in_imag(static_cast<size_t>(n));
+    std::vector<float> out_real(static_cast<size_t>(n));
+    std::vector<float> out_imag(static_cast<size_t>(n));
+    for (int i = 0; i < n; ++i) {
+        in_real[static_cast<size_t>(i)] = x[static_cast<size_t>(i)].real();
+        in_imag[static_cast<size_t>(i)] = x[static_cast<size_t>(i)].imag();
+    }
+    vDSP_DFT_Execute(setup,
+                     in_real.data(),
+                     in_imag.data(),
+                     out_real.data(),
+                     out_imag.data());
+    for (int i = 0; i < n; ++i) {
+        x[static_cast<size_t>(i)] = {out_real[static_cast<size_t>(i)], out_imag[static_cast<size_t>(i)]};
+    }
+}
+#endif
+
+#if defined(ML_HAS_FFTW)
+void fft_inplace_fftw(std::vector<std::complex<float>>& x, int sign) {
+    fftwf_complex* data = reinterpret_cast<fftwf_complex*>(x.data());
+    fftwf_plan plan = fftwf_plan_dft_1d(static_cast<int>(x.size()),
+                                        data,
+                                        data,
+                                        sign,
+                                        FFTW_ESTIMATE);
+    fftwf_execute(plan);
+    fftwf_destroy_plan(plan);
+}
+#endif
+
+void fft_inplace(std::vector<std::complex<float>>& x,
+                 const std::vector<std::complex<float>>& twiddle,
+                 FftBackend backend,
+                 void* accelerate_setup) {
+#if !defined(ML_HAS_ACCELERATE)
+    (void)accelerate_setup;
+#endif
+    switch (backend) {
+        case FftBackend::Accelerate:
+#if defined(ML_HAS_ACCELERATE)
+            fft_inplace_accelerate(x, static_cast<vDSP_DFT_Setup>(accelerate_setup));
+            for (auto& c : x) c /= static_cast<float>(x.size());
+            return;
+#else
+            break;
+#endif
+        case FftBackend::Fftw:
+#if defined(ML_HAS_FFTW)
+            fft_inplace_fftw(x, FFTW_FORWARD);
+            return;
+#else
+            break;
+#endif
+        case FftBackend::Radix2:
+        case FftBackend::Auto:
+        default:
+            fft_inplace_radix2(x, twiddle);
+            return;
+    }
+    fft_inplace_radix2(x, twiddle);
+}
+
+void ifft_inplace(std::vector<std::complex<float>>& x,
+                  const std::vector<std::complex<float>>& twiddle,
+                  FftBackend backend,
+                  void* accelerate_setup) {
+#if !defined(ML_HAS_ACCELERATE)
+    (void)accelerate_setup;
+#endif
+    switch (backend) {
+        case FftBackend::Accelerate:
+#if defined(ML_HAS_ACCELERATE)
+            fft_inplace_accelerate(x, static_cast<vDSP_DFT_Setup>(accelerate_setup));
+            return;
+#else
+            break;
+#endif
+        case FftBackend::Fftw:
+#if defined(ML_HAS_FFTW)
+            fft_inplace_fftw(x, FFTW_BACKWARD);
+            for (auto& c : x) c /= static_cast<float>(x.size());
+            return;
+#else
+            break;
+#endif
+        case FftBackend::Radix2:
+        case FftBackend::Auto:
+        default:
+            ifft_inplace_radix2(x, twiddle);
+            return;
+    }
+    ifft_inplace_radix2(x, twiddle);
 }
 
 } // anonymous namespace
@@ -196,6 +359,9 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
     , fft_G_(fft_size_, {0.0f, 0.0f})
     , sq_prefix_(buffer_size + 1, 0.0f)
     , twiddle_(fft_size_ / 2)
+    , fft_backend_(resolve_backend())
+    , accelerate_forward_setup_(nullptr)
+    , accelerate_inverse_setup_(nullptr)
 {
     // Pre-compute twiddle factors: twiddle_[k] = exp(-2pi*i*k / fft_size_).
     // These are computed once here so the real-time audio path is free of
@@ -206,6 +372,41 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
         const float ang = two_pi_over_n * static_cast<float>(k);
         twiddle_[k] = {std::cos(ang), std::sin(ang)};
     }
+
+#if defined(ML_HAS_ACCELERATE)
+    if (fft_backend_ == FftBackend::Accelerate) {
+        accelerate_forward_setup_ = static_cast<void*>(vDSP_DFT_zop_CreateSetup(
+            nullptr, static_cast<vDSP_Length>(fft_size_), vDSP_DFT_FORWARD));
+        accelerate_inverse_setup_ = static_cast<void*>(vDSP_DFT_zop_CreateSetup(
+            nullptr, static_cast<vDSP_Length>(fft_size_), vDSP_DFT_INVERSE));
+        if (accelerate_forward_setup_ == nullptr || accelerate_inverse_setup_ == nullptr) {
+            if (accelerate_forward_setup_ != nullptr) {
+                vDSP_DFT_DestroySetup(static_cast<vDSP_DFT_Setup>(accelerate_forward_setup_));
+                accelerate_forward_setup_ = nullptr;
+            }
+            if (accelerate_inverse_setup_ != nullptr) {
+                vDSP_DFT_DestroySetup(static_cast<vDSP_DFT_Setup>(accelerate_inverse_setup_));
+                accelerate_inverse_setup_ = nullptr;
+            }
+            fft_backend_ = FftBackend::Radix2;
+        }
+    }
+#endif
+}
+
+Yin::~Yin() {
+#if defined(ML_HAS_ACCELERATE)
+    if (accelerate_forward_setup_ != nullptr) {
+        vDSP_DFT_DestroySetup(static_cast<vDSP_DFT_Setup>(accelerate_forward_setup_));
+    }
+    if (accelerate_inverse_setup_ != nullptr) {
+        vDSP_DFT_DestroySetup(static_cast<vDSP_DFT_Setup>(accelerate_inverse_setup_));
+    }
+#endif
+}
+
+const char* Yin::fft_backend_name() const {
+    return backend_to_name(fft_backend_);
 }
 
 // ---------------------------------------------------------------------------
@@ -256,12 +457,12 @@ void Yin::difference(const float* samples, std::vector<float>& df) const {
     for (int j = 0; j < buffer_size_; ++j) fft_G_[j] = {samples[j], 0.0f};
     std::fill(fft_G_.begin() + buffer_size_, fft_G_.end(), std::complex<float>{0.0f, 0.0f});
 
-    fft_inplace(fft_F_, twiddle_);
-    fft_inplace(fft_G_, twiddle_);
+    fft_inplace(fft_F_, twiddle_, fft_backend_, accelerate_forward_setup_);
+    fft_inplace(fft_G_, twiddle_, fft_backend_, accelerate_forward_setup_);
 
     // Cross-correlation in frequency domain: conj(F) * G
     multiply_conj_fft_bins(fft_F_.data(), fft_G_.data(), fft_size_);
-    ifft_inplace(fft_F_, twiddle_);  // fft_F_[tau].real() == r(tau)
+    ifft_inplace(fft_F_, twiddle_, fft_backend_, accelerate_inverse_setup_);  // fft_F_[tau].real() == r(tau)
 
     // Prefix sums of squares for A and B(tau)
     compute_sq_prefix(samples, buffer_size_, sq_prefix_);
