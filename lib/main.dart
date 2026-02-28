@@ -74,14 +74,14 @@ class _AppSettingsScope extends InheritedWidget {
   bool updateShouldNotify(_AppSettingsScope old) => settings != old.settings;
 }
 
-class MusicLifeApp extends StatefulWidget {
+class MusicLifeApp extends ConsumerStatefulWidget {
   const MusicLifeApp({super.key});
 
   @override
-  State<MusicLifeApp> createState() => _MusicLifeAppState();
+  ConsumerState<MusicLifeApp> createState() => _MusicLifeAppState();
 }
 
-class _MusicLifeAppState extends State<MusicLifeApp> {
+class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   _AppSettings _settings = const _AppSettings();
 
   static const _kDarkMode = 'darkMode';
@@ -100,10 +100,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read(sharedPreferencesProvider);
+    final prefs = ref.read(sharedPreferencesProvider);
     if (!mounted) return;
     setState(() {
       _settings = _AppSettings(
@@ -115,10 +112,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
 
   Future<void> _updateSettings(_AppSettings updated) async {
     setState(() => _settings = updated);
-    final prefs = ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read(sharedPreferencesProvider);
+    final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool(_kDarkMode, updated.darkMode);
     await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }

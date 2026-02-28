@@ -18,7 +18,6 @@ class PracticeLogScreen extends ConsumerStatefulWidget {
 
 class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
-  late final RecordingRepository _repository;
   List<PracticeLogEntry> _entries = [];
   bool _loading = true;
   late DateTime _displayMonth;
@@ -27,12 +26,13 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   @override
   void initState() {
     super.initState();
-    _repository = ref.read(recordingRepositoryProvider);
     _tabController = TabController(length: 2, vsync: this);
     final now = DateTime.now();
     _displayMonth = DateTime(now.year, now.month);
     _loadEntries();
   }
+
+  RecordingRepository get _repository => ref.read(recordingRepositoryProvider);
 
   @override
   void dispose() {

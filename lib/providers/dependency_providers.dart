@@ -19,11 +19,11 @@ final pitchBridgeFactoryProvider = Provider<PitchBridgeFactory>((ref) {
 });
 
 final recordingRepositoryProvider = Provider<RecordingRepository>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
+  final prefs = ref.read(sharedPreferencesProvider);
   return RecordingRepository(prefs);
 });
 
 final compositionRepositoryProvider = Provider<CompositionRepository>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
+  final prefs = ref.read(sharedPreferencesProvider);
   return CompositionRepository(prefs);
 });
