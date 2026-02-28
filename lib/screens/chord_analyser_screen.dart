@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
-import '../service_locator.dart';
+import '../providers/dependency_providers.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
@@ -31,14 +32,14 @@ class ChordAnalyserScreen extends StatelessWidget {
 
 // ── Internal body (shown only after permission is granted) ────────────────────
 
-class _ChordAnalyserBody extends StatefulWidget {
+class _ChordAnalyserBody extends ConsumerStatefulWidget {
   const _ChordAnalyserBody();
 
   @override
-  State<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
+  ConsumerState<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
 }
 
-class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
+class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     with SingleTickerProviderStateMixin {
   NativePitchBridge? _bridge;
   StreamSubscription<String>? _subscription;
@@ -73,7 +74,7 @@ class _ChordAnalyserBodyState extends State<_ChordAnalyserBody>
   Future<void> _startCapture() async {
     setState(() => _loading = true);
 
-    final bridge = ServiceLocator.instance.pitchBridgeFactory(
+    final bridge = ref.read(pitchBridgeFactoryProvider)(
       onError: _onBridgeError,
     );
     final started = await bridge.startCapture();

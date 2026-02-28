@@ -1,22 +1,27 @@
 // Integration-level widget tests that exercise end-to-end app flows without
-// requiring a physical device.  They use ServiceLocator.overrideForTesting()
-// to inject mocked dependencies and SharedPreferences.setMockInitialValues()
+// requiring a physical device. They use Riverpod provider overrides
+// and SharedPreferences.setMockInitialValues()
 // to keep the tests hermetic.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/rhythm_screen.dart';
-import 'package:music_life/service_locator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-Widget _wrap(Widget child) {
+Future<Widget> _wrap(Widget child) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -25,26 +30,14 @@ Widget _wrap(Widget child) {
   );
 }
 
-// Sets up a test ServiceLocator backed by an empty SharedPreferences store.
-Future<void> _setupServiceLocator() async {
-  SharedPreferences.setMockInitialValues({});
-  final prefs = await SharedPreferences.getInstance();
-  ServiceLocator.overrideForTesting(
-    ServiceLocator.forTesting(prefs: prefs),
-  );
-}
-
 // ---------------------------------------------------------------------------
 // RhythmScreen – metronome controls flow
 // ---------------------------------------------------------------------------
 
 void main() {
-  setUp(_setupServiceLocator);
-  tearDown(ServiceLocator.reset);
-
   group('RhythmScreen – metronome controls flow', () {
     testWidgets('shows default BPM of 120 on launch', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('120'), findsOneWidget);
@@ -52,7 +45,7 @@ void main() {
 
     testWidgets('play button is visible and initially shows play icon',
         (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
@@ -60,7 +53,7 @@ void main() {
     });
 
     testWidgets('tapping play switches to stop icon', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.play_arrow));
@@ -71,7 +64,7 @@ void main() {
     });
 
     testWidgets('tapping stop after play restores play icon', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.play_arrow));
@@ -83,7 +76,7 @@ void main() {
     });
 
     testWidgets('+1 button increments BPM by 1', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('+1'));
@@ -93,7 +86,7 @@ void main() {
     });
 
     testWidgets('−1 button decrements BPM by 1', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('−1'));
@@ -103,7 +96,7 @@ void main() {
     });
 
     testWidgets('+10 button increments BPM by 10', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('+10'));
@@ -113,7 +106,7 @@ void main() {
     });
 
     testWidgets('−10 button decrements BPM by 10', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('−10'));
@@ -123,7 +116,7 @@ void main() {
     });
 
     testWidgets('BPM does not go below minimum (30)', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       // Tap −10 many times to drive BPM to the floor.
@@ -136,7 +129,7 @@ void main() {
     });
 
     testWidgets('BPM does not exceed maximum (240)', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       // Tap +10 many times to drive BPM to the ceiling.
@@ -149,7 +142,7 @@ void main() {
     });
 
     testWidgets('groove analysis section is visible', (tester) async {
-      await tester.pumpWidget(_wrap(const RhythmScreen()));
+      await tester.pumpWidget(await _wrap(const RhythmScreen()));
       await tester.pumpAndSettle();
 
       // The groove section shows an initial score readout.

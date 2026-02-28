@@ -3,11 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/composition_provider.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/screens/composition_helper_screen.dart';
-import 'package:music_life/service_locator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _wrap(Widget child) {
@@ -19,18 +17,8 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  setUp(() async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    ServiceLocator.overrideForTesting(ServiceLocator.forTesting(
-      prefs: prefs,
-      pitchBridgeFactory: ({FfiErrorHandler? onError}) =>
-          _FakeNativePitchBridge(),
-    ));
-  });
-
-  tearDown(() {
-    ServiceLocator.reset();
   });
 
   group('kMaxCompositions', () {
@@ -164,7 +152,5 @@ void main() {
     });
   });
 }
-
-class _FakeNativePitchBridge extends Fake implements NativePitchBridge {}
 
 class _MockCompositionRepository extends Mock implements CompositionRepository {}

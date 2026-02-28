@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dependency_providers.dart';
 import '../repositories/recording_repository.dart';
-import '../service_locator.dart';
 import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ class LibraryNotifier extends Notifier<LibraryState> {
     return const LibraryState();
   }
 
-  RecordingRepository get _repo => ServiceLocator.instance.recordingRepository;
+  RecordingRepository get _repo => ref.read(recordingRepositoryProvider);
 
   Future<void> _load() async {
     state = state.copyWith(loading: true, hasError: false);
