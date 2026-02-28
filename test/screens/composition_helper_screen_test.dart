@@ -4,6 +4,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/composition_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/screens/composition_helper_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,6 +67,42 @@ void main() {
       final result = await repo.load();
       expect(result.length, 1);
       expect(result.first.title, 'Test');
+    });
+  });
+
+  group('CompositionNotifier – AsyncValue states', () {
+    test('build resolves to AsyncData when repository load succeeds', () async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) async => []);
+
+      final container = ProviderContainer(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(compositionProvider).isLoading, isTrue);
+      await container.read(compositionProvider.future);
+      expect(container.read(compositionProvider).hasValue, isTrue);
+    });
+
+    test('build exposes AsyncError when repository load fails', () async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenThrow(Exception('test error'));
+
+      final container = ProviderContainer(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(compositionProvider.future),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(compositionProvider).hasError, isTrue);
     });
   });
 
