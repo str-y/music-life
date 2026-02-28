@@ -15,6 +15,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
+  static const int _schemaVersion = 3;
 
   Completer<Database>? _completer;
 
@@ -29,7 +30,7 @@ class AppDatabase {
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
-      version: 2,
+      version: _schemaVersion,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE recordings (
@@ -37,7 +38,8 @@ class AppDatabase {
             title TEXT NOT NULL,
             recorded_at TEXT NOT NULL,
             duration_seconds INTEGER NOT NULL,
-            waveform_data BLOB NOT NULL
+            waveform_data BLOB NOT NULL,
+            is_deleted INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -45,7 +47,8 @@ class AppDatabase {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
             duration_minutes INTEGER NOT NULL,
-            memo TEXT NOT NULL DEFAULT ''
+            memo TEXT NOT NULL DEFAULT '',
+            is_deleted INTEGER NOT NULL DEFAULT 0
           )
         ''');
         await db.execute('''
@@ -58,8 +61,15 @@ class AppDatabase {
         ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await _migrateV1ToV2(db);
+        for (final version in _migrationPlan(
+          oldVersion: oldVersion,
+          newVersion: newVersion,
+        )) {
+          final migration = _migrations[version];
+          if (migration == null) {
+            throw StateError('No migration registered for version $version');
+          }
+          await migration(db);
         }
       },
       onDowngrade: onDatabaseVersionChangeError,
@@ -72,7 +82,11 @@ class AppDatabase {
 
   Future<List<Map<String, Object?>>> queryAllRecordings() async {
     final db = await database;
-    return db.query('recordings', orderBy: 'recorded_at DESC');
+    return db.query(
+      'recordings',
+      where: 'is_deleted = 0',
+      orderBy: 'recorded_at DESC',
+    );
   }
 
   Future<void> insertRecording(Map<String, Object?> row) async {
@@ -87,9 +101,13 @@ class AppDatabase {
   Future<void> replaceAllRecordings(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('recordings');
+      await txn.update('recordings', {'is_deleted': 1});
       for (final row in rows) {
-        await txn.insert('recordings', row);
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     });
   }
@@ -100,15 +118,19 @@ class AppDatabase {
 
   Future<List<Map<String, Object?>>> queryAllPracticeLogs() async {
     final db = await database;
-    return db.query('practice_logs', orderBy: 'date DESC');
+    return db.query(
+      'practice_logs',
+      where: 'is_deleted = 0',
+      orderBy: 'date DESC',
+    );
   }
 
   Future<void> replaceAllPracticeLogs(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('practice_logs');
+      await txn.update('practice_logs', {'is_deleted': 1});
       for (final row in rows) {
-        await txn.insert('practice_logs', row);
+        await txn.insert('practice_logs', {...row, 'is_deleted': 0});
       }
     });
   }
@@ -122,13 +144,17 @@ class AppDatabase {
   }) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.delete('recordings');
+      await txn.update('recordings', {'is_deleted': 1});
       for (final row in recordings) {
-        await txn.insert('recordings', row);
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
-      await txn.delete('practice_logs');
+      await txn.update('practice_logs', {'is_deleted': 1});
       for (final row in practiceLogs) {
-        await txn.insert('practice_logs', row);
+        await txn.insert('practice_logs', {...row, 'is_deleted': 0});
       }
     });
   }
@@ -161,6 +187,28 @@ class AppDatabase {
   // ---------------------------------------------------------------------------
   // Migration helpers
   // ---------------------------------------------------------------------------
+
+  static final Map<int, Future<void> Function(DatabaseExecutor)> _migrations = {
+    2: _migrateV1ToV2,
+    3: _migrateV2ToV3,
+  };
+
+  static List<int> _migrationPlan({
+    required int oldVersion,
+    required int newVersion,
+  }) {
+    return [
+      for (var version = oldVersion + 1; version <= newVersion; version++)
+        version,
+    ];
+  }
+
+  static List<int> migrationPlanForTesting({
+    required int oldVersion,
+    required int newVersion,
+  }) {
+    return _migrationPlan(oldVersion: oldVersion, newVersion: newVersion);
+  }
 
   /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
   ///
@@ -218,5 +266,23 @@ class AppDatabase {
     }
     await db.execute('DROP TABLE recordings');
     await db.execute('ALTER TABLE recordings_new RENAME TO recordings');
+  }
+
+  static Future<void> _migrateV2ToV3(DatabaseExecutor db) async {
+    await _ensureSoftDeleteColumn(db, table: 'recordings');
+    await _ensureSoftDeleteColumn(db, table: 'practice_logs');
+  }
+
+  static Future<void> _ensureSoftDeleteColumn(
+    DatabaseExecutor db, {
+    required String table,
+  }) async {
+    final columns = await db.rawQuery("PRAGMA table_info($table)");
+    final hasIsDeleted = columns.any((row) => row['name'] == 'is_deleted');
+    if (!hasIsDeleted) {
+      await db.execute(
+        'ALTER TABLE $table ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      );
+    }
   }
 }
