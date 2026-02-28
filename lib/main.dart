@@ -9,7 +9,9 @@ import 'l10n/app_localizations.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
+import 'providers/app_settings_provider.dart';
 import 'providers/dependency_providers.dart';
+import 'repositories/settings_repository.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 import 'screens/composition_helper_screen.dart';
@@ -30,51 +32,6 @@ void main() async {
   );
 }
 
-class _AppSettings {
-  final bool darkMode;
-  final double referencePitch;
-
-  const _AppSettings({
-    this.darkMode = false,
-    this.referencePitch = 440.0,
-  });
-
-  _AppSettings copyWith({bool? darkMode, double? referencePitch}) {
-    return _AppSettings(
-      darkMode: darkMode ?? this.darkMode,
-      referencePitch: referencePitch ?? this.referencePitch,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is _AppSettings &&
-          darkMode == other.darkMode &&
-          referencePitch == other.referencePitch;
-
-  @override
-  int get hashCode => Object.hash(darkMode, referencePitch);
-}
-
-class _AppSettingsScope extends InheritedWidget {
-  final _AppSettings settings;
-  final ValueChanged<_AppSettings> onChanged;
-
-  const _AppSettingsScope({
-    required this.settings,
-    required super.child,
-    required this.onChanged,
-  });
-
-  static _AppSettingsScope of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<_AppSettingsScope>()!;
-  }
-
-  @override
-  bool updateShouldNotify(_AppSettingsScope old) => settings != old.settings;
-}
-
 class MusicLifeApp extends ConsumerStatefulWidget {
   const MusicLifeApp({super.key, this.initialLocation});
 
@@ -85,11 +42,7 @@ class MusicLifeApp extends ConsumerStatefulWidget {
 }
 
 class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
-  _AppSettings _settings = const _AppSettings();
   late final GoRouter _router;
-
-  static const _kDarkMode = 'darkMode';
-  static const _kReferencePitch = 'referencePitch';
 
   @override
   void initState() {
@@ -149,7 +102,6 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
         ),
       ],
     );
-    _loadSettings();
   }
 
   @override
@@ -159,47 +111,26 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
     super.dispose();
   }
 
-  Future<void> _loadSettings() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (!mounted) return;
-    setState(() {
-      _settings = _AppSettings(
-        darkMode: prefs.getBool(_kDarkMode) ?? false,
-        referencePitch: prefs.getDouble(_kReferencePitch) ?? 440.0,
-      );
-    });
-  }
-
-  Future<void> _updateSettings(_AppSettings updated) async {
-    setState(() => _settings = updated);
-    final prefs = ref.read(sharedPreferencesProvider);
-    await prefs.setBool(_kDarkMode, updated.darkMode);
-    await prefs.setDouble(_kReferencePitch, updated.referencePitch);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return _AppSettingsScope(
-      settings: _settings,
-      onChanged: _updateSettings,
-      child: MaterialApp.router(
-        onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.deepPurple,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: _settings.darkMode ? ThemeMode.dark : ThemeMode.light,
-        routerConfig: _router,
+    final settings = ref.watch(appSettingsProvider);
+    return MaterialApp.router(
+      onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+      routerConfig: _router,
     );
   }
 }
@@ -232,14 +163,14 @@ CustomTransitionPage<void> _slideUpPage({
   );
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
+class _MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
 
@@ -258,8 +189,7 @@ class _MainScreenState extends State<MainScreen>
     super.dispose();
   }
 
-  void _openSettings(BuildContext context) {
-    final scope = _AppSettingsScope.of(context);
+  void _openSettings(BuildContext context, AppSettings settings) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -267,8 +197,10 @@ class _MainScreenState extends State<MainScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _SettingsModal(
-        settings: scope.settings,
-        onChanged: scope.onChanged,
+        settings: settings,
+        onChanged: (updated) {
+          ref.read(appSettingsProvider.notifier).update(updated);
+        },
       ),
     );
   }
@@ -276,6 +208,7 @@ class _MainScreenState extends State<MainScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final settings = ref.watch(appSettingsProvider);
     final entranceCurve = CurvedAnimation(
       parent: _entranceCtrl,
       curve: Curves.easeOutCubic,
@@ -287,7 +220,7 @@ class _MainScreenState extends State<MainScreen>
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: l10n.settingsTooltip,
-            onPressed: () => _openSettings(context),
+            onPressed: () => _openSettings(context, settings),
           ),
         ],
       ),
@@ -382,8 +315,8 @@ class _MainScreenState extends State<MainScreen>
 }
 
 class _SettingsModal extends StatefulWidget {
-  final _AppSettings settings;
-  final ValueChanged<_AppSettings> onChanged;
+  final AppSettings settings;
+  final ValueChanged<AppSettings> onChanged;
 
   const _SettingsModal({required this.settings, required this.onChanged});
 
@@ -392,7 +325,7 @@ class _SettingsModal extends StatefulWidget {
 }
 
 class _SettingsModalState extends State<_SettingsModal> {
-  late _AppSettings _local;
+  late AppSettings _local;
 
   @override
   void initState() {
@@ -400,7 +333,7 @@ class _SettingsModalState extends State<_SettingsModal> {
     _local = widget.settings;
   }
 
-  void _emit(_AppSettings updated) {
+  void _emit(AppSettings updated) {
     setState(() => _local = updated);
     widget.onChanged(updated);
   }

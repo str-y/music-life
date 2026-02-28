@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../native_pitch_bridge.dart';
 import '../repositories/composition_repository.dart';
 import '../repositories/recording_repository.dart';
+import '../repositories/settings_repository.dart';
 
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
@@ -26,4 +27,9 @@ final recordingRepositoryProvider = Provider<RecordingRepository>((ref) {
 final compositionRepositoryProvider = Provider<CompositionRepository>((ref) {
   final prefs = ref.read(sharedPreferencesProvider);
   return CompositionRepository(prefs);
+});
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  final prefs = ref.read(sharedPreferencesProvider);
+  return SettingsRepository(prefs);
 });
