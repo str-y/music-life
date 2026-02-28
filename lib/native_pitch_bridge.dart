@@ -162,7 +162,7 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
       }
       while (sampleBuf.length >= setup.frameSize) {
         final frame = Float32List(setup.frameSize);
-        sampleBuf.readInto(frame);
+        if (!sampleBuf.readInto(frame)) break;
         processFrame(frame);
       }
     } else if (msg is Float32List) {

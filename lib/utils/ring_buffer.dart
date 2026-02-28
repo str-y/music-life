@@ -19,15 +19,26 @@ class RingBuffer {
   }
 
   void addAll(Iterable<double> values) {
-    for (final value in values) {
-      add(value);
+    final valuesList =
+        values is List<double> ? values : values.toList(growable: false);
+    _ensureCapacity(_length + valuesList.length);
+    for (final value in valuesList) {
+      _buffer[_tailIndex] = value;
+      _length++;
     }
   }
 
   bool readInto(Float32List target) {
     if (_length < target.length) return false;
-    for (int i = 0; i < target.length; i++) {
-      target[i] = _buffer[(_head + i) % _buffer.length];
+    final firstChunkLength = target.length <= (_buffer.length - _head)
+        ? target.length
+        : (_buffer.length - _head);
+    for (int i = 0; i < firstChunkLength; i++) {
+      target[i] = _buffer[_head + i];
+    }
+    final remaining = target.length - firstChunkLength;
+    for (int i = 0; i < remaining; i++) {
+      target[firstChunkLength + i] = _buffer[i];
     }
     _head = (_head + target.length) % _buffer.length;
     _length -= target.length;

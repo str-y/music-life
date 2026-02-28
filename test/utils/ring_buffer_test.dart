@@ -38,5 +38,19 @@ void main() {
       expect(buffer.readInto(second), isTrue);
       expect(second, orderedEquals([4.0, 5.0, 6.0, 7.0]));
     });
+
+    test('can read a frame that crosses the internal wrap boundary', () {
+      final buffer = RingBuffer(initialCapacity: 5);
+      buffer.addAll([1.0, 2.0, 3.0, 4.0, 5.0]);
+
+      final advance = Float32List(4);
+      expect(buffer.readInto(advance), isTrue);
+
+      buffer.addAll([6.0, 7.0, 8.0, 9.0]);
+
+      final wrapped = Float32List(5);
+      expect(buffer.readInto(wrapped), isTrue);
+      expect(wrapped, orderedEquals([5.0, 6.0, 7.0, 8.0, 9.0]));
+    });
   });
 }
