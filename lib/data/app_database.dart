@@ -11,11 +11,12 @@ import 'package:sqflite/sqflite.dart';
 ///   - recordings          : recording metadata (RecordingEntry)
 ///   - practice_logs       : practice log entries shown in LibraryScreen
 ///   - practice_log_entries: practice log entries managed in PracticeLogScreen
+///   - compositions        : composition chord progressions
 class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _schemaVersion = 4;
+  static const int _schemaVersion = 5;
 
   Completer<Database>? _completer;
 
@@ -58,6 +59,13 @@ class AppDatabase {
             date TEXT NOT NULL,
             duration_minutes INTEGER NOT NULL,
             note TEXT NOT NULL DEFAULT ''
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE compositions (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            chords TEXT NOT NULL
           )
         ''');
       },
@@ -189,6 +197,7 @@ class AppDatabase {
     required List<Map<String, Object?>> recordings,
     required List<Map<String, Object?>> practiceLogs,
     required List<Map<String, Object?>> practiceLogEntries,
+    required List<Map<String, Object?>> compositions,
   }) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -220,6 +229,10 @@ class AppDatabase {
       for (final row in practiceLogEntries) {
         await txn.insert('practice_log_entries', row);
       }
+      await txn.delete('compositions');
+      for (final row in compositions) {
+        await txn.insert('compositions', row);
+      }
     });
   }
 
@@ -235,6 +248,47 @@ class AppDatabase {
   Future<void> insertPracticeLogEntry(Map<String, Object?> row) async {
     final db = await database;
     await db.insert('practice_log_entries', row);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Compositions
+  // ---------------------------------------------------------------------------
+
+  Future<List<Map<String, Object?>>> queryAllCompositions() async {
+    final db = await database;
+    return db.query('compositions', orderBy: 'title ASC');
+  }
+
+  Future<void> insertComposition(Map<String, Object?> row) async {
+    final db = await database;
+    await db.insert(
+      'compositions',
+      row,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> deleteComposition(String id) async {
+    final db = await database;
+    await db.delete(
+      'compositions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> replaceAllCompositions(List<Map<String, Object?>> rows) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('compositions');
+      for (final row in rows) {
+        await txn.insert(
+          'compositions',
+          row,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   /// Closes the underlying SQLite connection and resets the lazy future so that
@@ -256,6 +310,7 @@ class AppDatabase {
     2: _migrateV1ToV2,
     3: _migrateV2ToV3,
     4: _migrateV3ToV4,
+    5: _migrateV4ToV5,
   };
 
   static List<int> _migrationPlan({
@@ -371,5 +426,15 @@ class AppDatabase {
     if (!hasAudioPath) {
       await db.execute('ALTER TABLE recordings ADD COLUMN audio_file_path TEXT');
     }
+  }
+
+  static Future<void> _migrateV4ToV5(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS compositions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        chords TEXT NOT NULL
+      )
+    ''');
   }
 }

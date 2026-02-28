@@ -51,7 +51,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
     final updated = [...previous, composition];
     state = AsyncValue.data(updated);
     try {
-      await _repo.save(updated);
+      await _repo.saveOne(composition);
     } catch (e, st) {
       AppLogger.reportError(
         'CompositionNotifier: failed to save composition',
@@ -74,7 +74,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
     final updated = previous.where((c) => c.id != id).toList();
     state = AsyncValue.data(updated);
     try {
-      await _repo.save(updated);
+      await _repo.deleteOne(id);
     } catch (e, st) {
       AppLogger.reportError(
         'CompositionNotifier: failed to delete composition',
