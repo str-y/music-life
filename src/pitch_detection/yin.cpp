@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <complex>
+#include <cstring>
 #include <limits>
 
 namespace music_life {
@@ -96,8 +97,11 @@ Yin::Yin(int sample_rate, int buffer_size, float threshold)
 // ---------------------------------------------------------------------------
 
 float Yin::detect(const float* samples, std::vector<float>& workspace) {
-    workspace.resize(half_buffer_);
-    std::fill(workspace.begin(), workspace.end(), 0.0f);
+    if (static_cast<int>(workspace.size()) < half_buffer_) {
+        probability_ = 0.0f;
+        return -1.0f;
+    }
+    std::memset(workspace.data(), 0, static_cast<size_t>(half_buffer_) * sizeof(float));
 
     difference(samples, workspace);
     cmndf(workspace);
@@ -128,17 +132,13 @@ float Yin::detect(const float* samples, std::vector<float>& workspace) {
 void Yin::difference(const float* samples, std::vector<float>& df) const {
     const int W = half_buffer_;
 
-    // Re-use pre-allocated buffers.  The full fft_size_ range must be zeroed
-    // because after fft_inplace / ifft_inplace every element is written, so
-    // residual values from the previous call would corrupt the zero-padding.
-    std::fill(fft_F_.begin(), fft_F_.end(), std::complex<float>{0.0f, 0.0f});
-    std::fill(fft_G_.begin(), fft_G_.end(), std::complex<float>{0.0f, 0.0f});
-
     // f = x[0..W-1], zero-padded to fft_size_
     for (int j = 0; j < W; ++j) fft_F_[j] = {samples[j], 0.0f};
+    std::fill(fft_F_.begin() + W, fft_F_.end(), std::complex<float>{0.0f, 0.0f});
 
     // g = x[0..buffer_size_-1], zero-padded to fft_size_
     for (int j = 0; j < buffer_size_; ++j) fft_G_[j] = {samples[j], 0.0f};
+    std::fill(fft_G_.begin() + buffer_size_, fft_G_.end(), std::complex<float>{0.0f, 0.0f});
 
     fft_inplace(fft_F_, twiddle_);
     fft_inplace(fft_G_, twiddle_);
