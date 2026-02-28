@@ -102,8 +102,11 @@ inline void compute_difference_from_corr(const std::vector<float>& sq_prefix,
         const float32x4_t b_lo = vld1q_f32(sq_prefix.data() + tau);
         const float32x4_t b_hi = vld1q_f32(sq_prefix.data() + tau + W);
         const float32x4_t b = vsubq_f32(b_hi, b_lo);
-        const float32x4_t r = {corr[tau].real(), corr[tau + 1].real(),
-                               corr[tau + 2].real(), corr[tau + 3].real()};
+        float32x4_t r = vmovq_n_f32(0.0f);
+        r = vsetq_lane_f32(corr[tau].real(), r, 0);
+        r = vsetq_lane_f32(corr[tau + 1].real(), r, 1);
+        r = vsetq_lane_f32(corr[tau + 2].real(), r, 2);
+        r = vsetq_lane_f32(corr[tau + 3].real(), r, 3);
         const float32x4_t out = vsubq_f32(vaddq_f32(a_vec, b), vmulq_n_f32(r, 2.0f));
         vst1q_f32(df.data() + tau, out);
     }
