@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -290,42 +291,53 @@ class WaveformPainter extends CustomPainter {
   final List<double> data;
   final Color color;
   final double breathPhase;
+  // Keep cache bounded for list scrolling scenarios while avoiding unbounded
+  // picture/path growth in memory.
   static const int _maxCacheEntries = 128;
-  static final Map<String, Path> _pathCache = <String, Path>{};
-  static final Map<String, ui.Picture> _pictureCache = <String, ui.Picture>{};
+  static const double _breathScaleFactor = 0.22;
+  static final LinkedHashMap<String, Path> _pathCache =
+      LinkedHashMap<String, Path>();
+  static final LinkedHashMap<String, ui.Picture> _pictureCache =
+      LinkedHashMap<String, ui.Picture>();
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
 
     final centerY = size.height / 2;
-    final breathScale = 1.0 + breathPhase * 0.22;
+    final breathScale = 1.0 + breathPhase * _breathScaleFactor;
+    // Cache is per recording waveform list instance from repository data.
+    final dataHash = identityHashCode(data);
     final cacheKey =
-        '${identityHashCode(data)}:${size.width.toStringAsFixed(2)}:${size.height.toStringAsFixed(2)}';
-    if (_pathCache.length >= _maxCacheEntries && !_pathCache.containsKey(cacheKey)) {
-      _pathCache.remove(_pathCache.keys.first);
+        '$dataHash:${size.width.toStringAsFixed(2)}:${size.height.toStringAsFixed(2)}';
+    var basePath = _pathCache.remove(cacheKey);
+    if (basePath != null) {
+      _pathCache[cacheKey] = basePath;
+    } else {
+      if (_pathCache.length >= _maxCacheEntries) {
+        // Path does not own external resources and does not require disposal.
+        _pathCache.remove(_pathCache.keys.first);
+      }
+      basePath = _buildBasePath(data, size);
+      _pathCache[cacheKey] = basePath;
     }
-    final basePath =
-        _pathCache.putIfAbsent(cacheKey, () => _buildBasePath(data, size));
     final pictureKey = '$cacheKey:${color.value}';
-    if (_pictureCache.length >= _maxCacheEntries &&
-        !_pictureCache.containsKey(pictureKey)) {
-      final firstKey = _pictureCache.keys.first;
-      _pictureCache.remove(firstKey)?.dispose();
+    var picture = _pictureCache.remove(pictureKey);
+    if (picture != null) {
+      _pictureCache[pictureKey] = picture;
+    } else {
+      if (_pictureCache.length >= _maxCacheEntries) {
+        final firstKey = _pictureCache.keys.first;
+        _pictureCache.remove(firstKey)?.dispose();
+      }
+      picture = _recordPicture(basePath, color);
+      _pictureCache[pictureKey] = picture;
     }
-    final picture = _pictureCache.putIfAbsent(
-      pictureKey,
-      () => _recordPicture(basePath, color),
-    );
 
     canvas.save();
-    canvas.transform(
-      (Matrix4.identity()
-            ..translate(0.0, centerY)
-            ..scale(1.0, breathScale)
-            ..translate(0.0, -centerY))
-          .storage,
-    );
+    canvas.translate(0.0, centerY);
+    canvas.scale(1.0, breathScale);
+    canvas.translate(0.0, -centerY);
     canvas.drawPicture(picture);
     canvas.restore();
   }
@@ -355,8 +367,7 @@ class WaveformPainter extends CustomPainter {
     final paint = Paint()
       ..color = waveformColor
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
+      ..strokeWidth = 2.5;
     recorderCanvas.drawPath(path, paint);
     return recorder.endRecording();
   }
