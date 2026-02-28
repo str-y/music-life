@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 
 import 'l10n/app_localizations.dart';
 import 'app_constants.dart';
+import 'utils/metronome_utils.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -58,9 +59,7 @@ class _RhythmScreenState extends State<RhythmScreen>
   late final Animation<double> _tapRingAnim;
 
   // ── Timing helpers ───────────────────────────────────────────────────────
-  Duration get _beatDuration => Duration(
-        microseconds: (60 * 1000 * 1000 ~/ _bpm),
-      );
+  Duration get _beatDuration => beatDurationFor(_bpm);
 
   void _startMetronome() {
     _metTicker?.dispose();
@@ -127,14 +126,12 @@ class _RhythmScreenState extends State<RhythmScreen>
     final elapsedMs =
         now.difference(_lastBeatTime!).inMilliseconds.toDouble();
 
-    // Map elapsed time to [-beatMs/2, +beatMs/2].
-    double offset = elapsedMs;
-    if (offset > beatMs / 2) offset -= beatMs;
+    final offset = computeGrooveTapOffset(elapsedMs: elapsedMs, beatMs: beatMs);
 
     setState(() {
       _lastOffsetMs = offset;
       // Score penalty: proportional to |offset| / (beatMs/2), capped at 20 pts.
-      final penalty = (offset.abs() / (beatMs / 2)) * 20;
+      final penalty = computeScorePenalty(offsetMs: offset, beatMs: beatMs);
       _timingScore = (_timingScore - penalty).clamp(0, 100);
     });
 

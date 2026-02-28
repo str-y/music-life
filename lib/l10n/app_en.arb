@@ -478,6 +478,14 @@
     "description": "Fallback title used when the user saves a composition with an empty name"
   },
 
+  "compositionLimitReached": "Save limit of {max} compositions reached. Please delete some first.",
+  "@compositionLimitReached": {
+    "description": "Snackbar message shown when the user tries to save a composition but the limit is already reached",
+    "placeholders": {
+      "max": { "type": "int" }
+    }
+  },
+
   "bpmLabel": "BPM",
   "@bpmLabel": {
     "description": "Label displayed beneath the BPM number on the Rhythm screen"
@@ -537,7 +545,6 @@
   "@recordingSavedSuccess": {
     "description": "SnackBar message shown after a recording is successfully saved"
   },
-
   "practicedLabel": "practiced",
   "@practicedLabel": {
     "description": "Accessibility indicator appended to a calendar day cell when the user practiced on that day"
@@ -551,5 +558,34 @@
   "currentNoteSemanticLabel": "Detected note",
   "@currentNoteSemanticLabel": {
     "description": "Accessibility label for the live detected-note region on the Chord Analyser screen"
+  },
+
+  "chordAnalyserError": "Could not start chord detection. Please try again.",
+  "@chordAnalyserError": {
+    "description": "SnackBar message shown when the chord analyser bridge fails to start or encounters a runtime error"
+  },
+  "compositionSaveError": "Could not save composition. Please try again.",
+  "@compositionSaveError": {
+    "description": "SnackBar message shown when saving a composition fails"
+  },
+  "compositionLoadError": "Could not load compositions.",
+  "@compositionLoadError": {
+    "description": "SnackBar message shown when loading saved compositions fails"
+  },
+  "compositionDeleteError": "Could not delete composition.",
+  "@compositionDeleteError": {
+    "description": "SnackBar message shown when deleting a composition fails"
+  },
+  "tapToRecord": "Tap to record",
+  "@tapToRecord": {
+    "description": "Hint shown on the record button before recording starts"
+  },
+  "tapToStop": "Tap to stop",
+  "@tapToStop": {
+    "description": "Hint shown on the stop button while recording is in progress"
+  },
+  "micPermissionNeeded": "Microphone permission is required to record.",
+  "@micPermissionNeeded": {
+    "description": "Message shown in the recording dialog when microphone permission is not granted"
   }
 }

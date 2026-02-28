@@ -44,6 +44,27 @@
 _codeql_build_dir/
 _codeql_detected_source_root
 
+# Flutter/Dart
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock # Optional, but often ignored in libraries; usually kept in apps. 
+             # I'll keep it for now as it's modified and likely intended to be tracked.
+
+# Tools
+.claude/
+.gemini/
+.agents/
+.agent/
+_agents/
+_agent/
+
+# Generated Flutter/iOS files
+ios/Runner/GeneratedPluginRegistrant.*
+lib/l10n/app_localizations*.dart
+
 # CMake build directories
 build/
 CMakeFiles/
