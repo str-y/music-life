@@ -145,6 +145,7 @@ class _AddRecordingDialog extends StatefulWidget {
 }
 
 class _AddRecordingDialogState extends State<_AddRecordingDialog> {
+  static const double _amplitudeFloorDb = -60.0;
   final _titleCtrl = TextEditingController();
   final _recorder = AudioRecorder();
   final List<double> _amplitudeData = [];
@@ -182,12 +183,26 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
     final bucket = source.length / targetPoints;
     return List<double>.generate(targetPoints, (i) {
       final start = (i * bucket).floor();
-      final end =
-          ((i + 1) * bucket).ceil().clamp(start + 1, source.length) as int;
-      final segment = source.sublist(start, end);
+      final end = ((i + 1) * bucket).ceil();
+      final boundedEnd = _boundWaveformEnd(
+        end: end,
+        min: start + 1,
+        max: source.length,
+      );
+      final segment = source.sublist(start, boundedEnd);
       final sum = segment.fold<double>(0, (acc, value) => acc + value);
       return (sum / segment.length).clamp(0.0, 1.0).toDouble();
     });
+  }
+
+  int _boundWaveformEnd({
+    required int end,
+    required int min,
+    required int max,
+  }) {
+    if (end < min) return min;
+    if (end > max) return max;
+    return end;
   }
 
   Future<void> _startRecording() async {
@@ -217,7 +232,10 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
     _amplitudeSub = _recorder
         .onAmplitudeChanged(const Duration(milliseconds: 120))
         .listen((amp) {
-      final normalised = ((amp.current + 60) / 60).clamp(0.0, 1.0).toDouble();
+      // Convert dBFS (typically in [-60, 0]) into normalized [0, 1] waveform.
+      final normalised = ((amp.current - _amplitudeFloorDb) / -_amplitudeFloorDb)
+          .clamp(0.0, 1.0)
+          .toDouble();
       _amplitudeData.add(normalised);
     });
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {

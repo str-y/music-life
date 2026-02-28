@@ -147,14 +147,22 @@ class RecordingTile extends StatelessWidget {
               ),
               if (isActive) ...[
                 const SizedBox(height: 6),
-                Slider(value: progress, onChanged: onSeek),
+                Semantics(
+                  label: 'Seek position in recording',
+                  value: '${(progress * 100).round()}%',
+                  child: Slider(value: progress, onChanged: onSeek),
+                ),
                 Row(
                   children: [
                     const Icon(Icons.volume_down, size: 16),
                     Expanded(
-                      child: Slider(
-                        value: volume,
-                        onChanged: onVolumeChanged,
+                      child: Semantics(
+                        label: 'Adjust volume',
+                        value: '${(volume * 100).round()}%',
+                        child: Slider(
+                          value: volume,
+                          onChanged: onVolumeChanged,
+                        ),
                       ),
                     ),
                     const Icon(Icons.volume_up, size: 16),
