@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dependency_providers.dart';
 import '../repositories/composition_repository.dart';
-import '../service_locator.dart';
 import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
@@ -35,10 +35,6 @@ class CompositionState {
 // ---------------------------------------------------------------------------
 // Notifier
 // ---------------------------------------------------------------------------
-
-final compositionRepositoryProvider = Provider<CompositionRepository>((ref) {
-  return ServiceLocator.instance.compositionRepository;
-});
 
 /// Maximum number of compositions a user can save.
 const int kMaxCompositions = 50;

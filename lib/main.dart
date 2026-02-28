@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'data/app_database.dart';
@@ -7,9 +8,9 @@ import 'l10n/app_localizations.dart';
 import 'screens/library_screen.dart';
 import 'screens/tuner_screen.dart';
 import 'screens/practice_log_screen.dart';
+import 'providers/dependency_providers.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
-import 'service_locator.dart';
 import 'screens/composition_helper_screen.dart';
 
 const String _privacyPolicyUrl =
@@ -17,8 +18,15 @@ const String _privacyPolicyUrl =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ServiceLocator.initialize();
-  runApp(const ProviderScope(child: MusicLifeApp()));
+  final prefs = await SharedPreferences.getInstance();
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const MusicLifeApp(),
+    ),
+  );
 }
 
 class _AppSettings {
@@ -66,14 +74,14 @@ class _AppSettingsScope extends InheritedWidget {
   bool updateShouldNotify(_AppSettingsScope old) => settings != old.settings;
 }
 
-class MusicLifeApp extends StatefulWidget {
+class MusicLifeApp extends ConsumerStatefulWidget {
   const MusicLifeApp({super.key});
 
   @override
-  State<MusicLifeApp> createState() => _MusicLifeAppState();
+  ConsumerState<MusicLifeApp> createState() => _MusicLifeAppState();
 }
 
-class _MusicLifeAppState extends State<MusicLifeApp> {
+class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   _AppSettings _settings = const _AppSettings();
 
   static const _kDarkMode = 'darkMode';
@@ -92,7 +100,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = ServiceLocator.instance.prefs;
+    final prefs = ref.read(sharedPreferencesProvider);
     if (!mounted) return;
     setState(() {
       _settings = _AppSettings(
@@ -104,7 +112,7 @@ class _MusicLifeAppState extends State<MusicLifeApp> {
 
   Future<void> _updateSettings(_AppSettings updated) async {
     setState(() => _settings = updated);
-    final prefs = ServiceLocator.instance.prefs;
+    final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setBool(_kDarkMode, updated.darkMode);
     await prefs.setDouble(_kReferencePitch, updated.referencePitch);
   }

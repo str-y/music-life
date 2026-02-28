@@ -35,6 +35,9 @@ typedef PitchBridgeFactory = NativePitchBridge Function(
 ///   pitchBridgeFactory: ({FfiErrorHandler? onError}) => FakeNativePitchBridge(),
 /// ));
 /// ```
+@Deprecated(
+  'Use Riverpod dependency providers from providers/dependency_providers.dart.',
+)
 class ServiceLocator {
   ServiceLocator._({
     required SharedPreferences prefs,
