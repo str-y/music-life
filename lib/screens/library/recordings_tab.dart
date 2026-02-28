@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/recording_playback_provider.dart';
@@ -95,15 +96,12 @@ class RecordingTile extends StatelessWidget {
   final ValueChanged<double>? onSeek;
   final ValueChanged<double>? onVolumeChanged;
 
-  String _formatDate(DateTime dt) {
-    return '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final dateFormat = DateFormat.yMd(locale).add_Hm();
     final canPlay = entry.audioFilePath?.isNotEmpty == true;
     final isActive = onSeek != null;
 
@@ -123,7 +121,7 @@ class RecordingTile extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
-            _formatDate(entry.recordedAt),
+            dateFormat.format(entry.recordedAt),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           trailing: Text(

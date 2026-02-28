@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library/recordings_tab.dart';
 
-Widget _wrap(Widget child) {
+Widget _wrap(Widget child, {Locale? locale}) {
   return MaterialApp(
+    locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: ProviderScope(child: Scaffold(body: child)),
@@ -57,6 +59,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('01:05'), findsOneWidget);
+    });
+
+    testWidgets('formats recording date based on locale', (tester) async {
+      final recordedAt = DateTime(2024, 2, 20, 9, 5);
+      final recordings = [
+        RecordingEntry(
+          id: '1',
+          title: 'Localized Date',
+          recordedAt: recordedAt,
+          durationSeconds: 65,
+          waveformData: const [],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          RecordingsTab(recordings: recordings),
+          locale: const Locale('ja'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(DateFormat.yMd('ja').add_Hm().format(recordedAt)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('lists all recordings when multiple entries provided',
