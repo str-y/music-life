@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -35,6 +36,10 @@ void main() {
     expect(
       container.read(compositionRepositoryProvider),
       isA<CompositionRepository>(),
+    );
+    expect(
+      container.read(settingsRepositoryProvider),
+      isA<SettingsRepository>(),
     );
   });
 }
