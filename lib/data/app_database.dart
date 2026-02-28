@@ -183,6 +183,45 @@ class AppDatabase {
     });
   }
 
+  /// Atomically replaces all backup-eligible data tables.
+  Future<void> replaceAllBackupData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+    required List<Map<String, Object?>> practiceLogEntries,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
+      for (final row in recordings) {
+        await txn.insert(
+          'recordings',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
+      for (final row in practiceLogs) {
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await txn.delete('practice_log_entries');
+      for (final row in practiceLogEntries) {
+        await txn.insert('practice_log_entries', row);
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // Practice log entries (PracticeLogScreen)
   // ---------------------------------------------------------------------------
