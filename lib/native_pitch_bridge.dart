@@ -108,6 +108,17 @@ class _IsolateError {
   final String stack;
 }
 
+class _TransferablePcmChunk {
+  const _TransferablePcmChunk(this.data);
+  final TransferableTypedData data;
+}
+
+class _TransferableFloatFrame {
+  const _TransferableFloatFrame(this.data, this.sampleCount);
+  final TransferableTypedData data;
+  final int sampleCount;
+}
+
 /// Entry point for the background isolate.
 void _audioProcessingIsolate(_IsolateSetup setup) {
   final DynamicLibrary lib;
@@ -146,6 +157,19 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
     }
   }
 
+  void processPcmChunk(Uint8List chunk) {
+    for (int i = 0; i + 1 < chunk.length; i += 2) {
+      int s = chunk[i] | (chunk[i + 1] << 8);
+      if (s >= 0x8000) s -= 0x10000;
+      sampleBuf.add(s / 32768.0);
+    }
+    while (sampleBuf.length >= setup.frameSize) {
+      final frame = Float32List(setup.frameSize);
+      if (!sampleBuf.readInto(frame)) break;
+      processFrame(frame);
+    }
+  }
+
   final port = ReceivePort();
   setup.resultPort.send(port.sendPort);
 
@@ -154,17 +178,12 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
       port.close();
       return;
     }
-    if (msg is Uint8List) {
-      for (int i = 0; i + 1 < msg.length; i += 2) {
-        int s = msg[i] | (msg[i + 1] << 8);
-        if (s >= 0x8000) s -= 0x10000;
-        sampleBuf.add(s / 32768.0);
-      }
-      while (sampleBuf.length >= setup.frameSize) {
-        final frame = Float32List(setup.frameSize);
-        if (!sampleBuf.readInto(frame)) break;
-        processFrame(frame);
-      }
+    if (msg is _TransferablePcmChunk) {
+      processPcmChunk(msg.data.materialize().asUint8List());
+    } else if (msg is Uint8List) {
+      processPcmChunk(msg);
+    } else if (msg is _TransferableFloatFrame) {
+      processFrame(msg.data.materialize().asFloat32List(0, msg.sampleCount));
     } else if (msg is Float32List) {
       processFrame(msg);
     }
@@ -270,7 +289,10 @@ class NativePitchBridge implements Finalizable {
       samples.length <= _frameSize,
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
-    _audioSendPort?.send(samples);
+    _audioSendPort?.send(_TransferableFloatFrame(
+      TransferableTypedData.fromList(<TypedData>[samples]),
+      samples.length,
+    ));
   }
 
   Future<bool> startCapture() async {
@@ -380,7 +402,11 @@ class NativePitchBridge implements Finalizable {
 
   void _onAudioChunk(Uint8List chunk) {
     if (_disposed) return;
-    _audioSendPort?.send(chunk);
+    _audioSendPort?.send(
+      _TransferablePcmChunk(
+        TransferableTypedData.fromList(<TypedData>[chunk]),
+      ),
+    );
   }
 
   void _onPitchResult(Map<dynamic, dynamic> msg) {
