@@ -63,6 +63,11 @@ typedef _MLSetLogCallbackDart = void Function(
 typedef _MLInstallCrashHandlersNative = Void Function();
 typedef _MLInstallCrashHandlersDart = void Function();
 
+const int _mlLogLevelTrace = 0;
+const int _mlLogLevelDebug = 1;
+const int _mlLogLevelInfo = 2;
+const int _mlLogLevelError = 3;
+
 // ── Native library loading ────────────────────────────────────────────────────
 
 DynamicLibrary _loadNativeLib() {
@@ -342,19 +347,19 @@ class NativePitchBridge implements Finalizable {
         ? 'Native log callback received null message'
         : messagePointer.toDartString();
     switch (level) {
-      case 0:
+      case _mlLogLevelTrace:
         AppLogger.trace('[native] $message');
         break;
-      case 1:
+      case _mlLogLevelDebug:
         AppLogger.debug('[native] $message');
         break;
-      case 2:
+      case _mlLogLevelInfo:
         AppLogger.info('[native] $message');
         break;
-      case 3:
+      case _mlLogLevelError:
         AppLogger.reportError(
           '[native] $message',
-          error: Exception(message),
+          error: StateError('Native C++ error'),
           stackTrace: StackTrace.current,
         );
         break;

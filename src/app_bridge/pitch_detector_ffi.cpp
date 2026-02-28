@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <memory>
 #include <signal.h>
+#include <unistd.h>
 
 namespace {
 
@@ -24,24 +25,41 @@ void emit_log(int level, const char* fmt, ...) {
     }
 }
 
-const char* signal_name(int signal_number) {
-    switch (signal_number) {
-        case SIGABRT: return "SIGABRT";
-        case SIGILL: return "SIGILL";
-        case SIGFPE: return "SIGFPE";
-        case SIGSEGV: return "SIGSEGV";
-#ifdef SIGBUS
-        case SIGBUS: return "SIGBUS";
-#endif
-#ifdef SIGTRAP
-        case SIGTRAP: return "SIGTRAP";
-#endif
-        default: return "UNKNOWN_SIGNAL";
-    }
+void write_signal_message(const char* message, size_t length) {
+    const ssize_t written = ::write(STDERR_FILENO, message, length);
+    (void)written;
 }
 
 void fatal_signal_handler(int signal_number) {
-    emit_log(ML_LOG_LEVEL_ERROR, "native fatal signal: %s (%d)", signal_name(signal_number), signal_number);
+#define ML_WRITE_SIGNAL(msg) write_signal_message(msg, sizeof(msg) - 1)
+    switch (signal_number) {
+        case SIGABRT:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGABRT\n");
+            break;
+        case SIGILL:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGILL\n");
+            break;
+        case SIGFPE:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGFPE\n");
+            break;
+        case SIGSEGV:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGSEGV\n");
+            break;
+#ifdef SIGBUS
+        case SIGBUS:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGBUS\n");
+            break;
+#endif
+#ifdef SIGTRAP
+        case SIGTRAP:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal: SIGTRAP\n");
+            break;
+#endif
+        default:
+            ML_WRITE_SIGNAL("[music-life] native fatal signal\n");
+            break;
+    }
+#undef ML_WRITE_SIGNAL
     ::signal(signal_number, SIG_DFL);
     raise(signal_number);
 }
