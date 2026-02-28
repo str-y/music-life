@@ -50,6 +50,19 @@ typedef _MLProcessNative = MLPitchResult Function(
 typedef _MLProcessDart = MLPitchResult Function(
     Pointer<Void> handle, Pointer<Float> samples, int numSamples);
 
+typedef _MLNativeLogCallbackNative = Void Function(
+    Int32 level, Pointer<Utf8> message);
+typedef _MLNativeLogCallbackDart = void Function(
+    int level, Pointer<Utf8> message);
+
+typedef _MLSetLogCallbackNative = Void Function(
+    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
+typedef _MLSetLogCallbackDart = void Function(
+    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
+
+typedef _MLInstallCrashHandlersNative = Void Function();
+typedef _MLInstallCrashHandlersDart = void Function();
+
 // ── Native library loading ────────────────────────────────────────────────────
 
 DynamicLibrary _loadNativeLib() {
@@ -212,6 +225,11 @@ class NativePitchBridge implements Finalizable {
   static const int defaultFrameSize = AppConstants.audioFrameSize;
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
+  static bool _nativeLoggingConfigured = false;
+  static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
+      NativeCallable<_MLNativeLogCallbackNative>.listener(
+    _onNativeLog,
+  );
 
   final NativeFinalizer _handleFinalizer;
   static final NativeFinalizer _bufferFinalizer =
@@ -269,6 +287,7 @@ class NativePitchBridge implements Finalizable {
     FfiErrorHandler? onError,
   }) {
     final lib = _loadNativeLib();
+    _configureNativeLogging(lib);
     final handleFinalizer = NativeFinalizer(
       lib.lookup<NativeFunction<Void Function(Pointer<Void>)>>(
           'ml_pitch_detector_destroy'),
@@ -291,6 +310,57 @@ class NativePitchBridge implements Finalizable {
       handleFinalizer: handleFinalizer,
       onError: onError,
     );
+  }
+
+  static void _configureNativeLogging(DynamicLibrary lib) {
+    if (_nativeLoggingConfigured) return;
+    _nativeLoggingConfigured = true;
+    try {
+      lib
+          .lookupFunction<_MLSetLogCallbackNative, _MLSetLogCallbackDart>(
+            'ml_pitch_detector_set_log_callback',
+          )
+          .call(_nativeLogCallback.nativeFunction);
+      lib
+          .lookupFunction<_MLInstallCrashHandlersNative,
+              _MLInstallCrashHandlersDart>(
+            'ml_pitch_detector_install_crash_handlers',
+          )
+          .call();
+    } catch (e, stack) {
+      _nativeLoggingConfigured = false;
+      AppLogger.reportError(
+        'Failed to configure native logging bridge',
+        error: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  static void _onNativeLog(int level, Pointer<Utf8> messagePointer) {
+    final message = messagePointer == nullptr
+        ? 'Native log callback received null message'
+        : messagePointer.toDartString();
+    switch (level) {
+      case 0:
+        AppLogger.trace('[native] $message');
+        break;
+      case 1:
+        AppLogger.debug('[native] $message');
+        break;
+      case 2:
+        AppLogger.info('[native] $message');
+        break;
+      case 3:
+        AppLogger.reportError(
+          '[native] $message',
+          error: Exception(message),
+          stackTrace: StackTrace.current,
+        );
+        break;
+      default:
+        AppLogger.info('[native][unknown:$level] $message');
+    }
   }
 
   void processAudioFrame(Float32List samples) {
