@@ -12,6 +12,7 @@
 #include "yin.h"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -176,6 +177,21 @@ static bool test_yin_non_simd_multiple_frame_size() {
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
     ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
+    return true;
+}
+
+static bool test_yin_manual_backend_selection() {
+    const char* original = std::getenv("ML_FFT_BACKEND");
+    std::string original_value = original ? original : "";
+    setenv("ML_FFT_BACKEND", "manual", 1);
+    Yin yin(44100, 2048, 0.10f);
+    const bool ok = std::strcmp(yin.fft_backend_name(), "radix2") == 0;
+    if (original != nullptr) {
+        setenv("ML_FFT_BACKEND", original_value.c_str(), 1);
+    } else {
+        unsetenv("ML_FFT_BACKEND");
+    }
+    ASSERT_TRUE(ok);
     return true;
 }
 
@@ -474,6 +490,7 @@ int main() {
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
     run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
+    run_test("yin: supports backend override",       test_yin_manual_backend_selection);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
