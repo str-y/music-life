@@ -96,15 +96,12 @@ class RecordingTile extends StatelessWidget {
   final ValueChanged<double>? onSeek;
   final ValueChanged<double>? onVolumeChanged;
 
-  String _formatDate(BuildContext context, DateTime dt) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    return DateFormat.yMd(locale).add_Hm().format(dt);
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final dateFormat = DateFormat.yMd(locale).add_Hm();
     final canPlay = entry.audioFilePath?.isNotEmpty == true;
     final isActive = onSeek != null;
 
@@ -124,7 +121,7 @@ class RecordingTile extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
-            _formatDate(context, entry.recordedAt),
+            dateFormat.format(entry.recordedAt),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           trailing: Text(
