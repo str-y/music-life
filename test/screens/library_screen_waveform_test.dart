@@ -20,5 +20,11 @@ void main() {
 
       expect(result, equals(<double>[0.25, 1.0]));
     });
+
+    test('clamps averages above 1.0 to 1.0', () {
+      final result = downsampleWaveform(<double>[0.0, 2.0, 3.0, 1.0], 2);
+
+      expect(result, equals(<double>[1.0, 1.0]));
+    });
   });
 }

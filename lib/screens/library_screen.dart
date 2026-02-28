@@ -197,6 +197,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _amplitudeSub?.cancel();
     unawaited(_disposeRecorder());
     _titleCtrl.dispose();
     super.dispose();
@@ -214,17 +215,9 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
 
   Future<void> _disposeRecorder() async {
     try {
-      await _amplitudeSub?.cancel();
-      _amplitudeSub = null;
-    } catch (error, stackTrace) {
-      AppLogger.reportError(
-        'Failed to cancel amplitude stream while disposing recorder dialog.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-    try {
-      await _recorder.stop();
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
     } catch (error, stackTrace) {
       AppLogger.reportError(
         'Failed to stop recorder while disposing recorder dialog.',
@@ -236,7 +229,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       await _recorder.dispose();
     } catch (error, stackTrace) {
       AppLogger.reportError(
-        'Failed to dispose recorder in recorder dialog.',
+        'Failed to dispose audio recorder.',
         error: error,
         stackTrace: stackTrace,
       );
@@ -266,6 +259,10 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       );
       if (!mounted) {
         await _recorder.stop();
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+        }
         return;
       }
 
@@ -309,7 +306,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       if (!mounted) return;
       final data = await compute<Map<String, Object>, List<double>>(
         _downsampleWaveformInIsolate,
-        {'source': List<double>.from(_amplitudeData), 'targetPoints': 40},
+        {'source': _amplitudeData, 'targetPoints': 40},
       );
       if (!mounted) return;
       setState(() {
