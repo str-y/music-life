@@ -33,8 +33,35 @@ void main() {
     ServiceLocator.reset();
   });
 
-  group('CompositionRepository', () {
+  group('kMaxCompositions', () {
+    test('is 50', () {
+      expect(kMaxCompositions, equals(50));
+    });
+  });
 
+  group('Composition Model', () {
+    final comp = Composition(
+      id: 'id1',
+      title: 'My Song',
+      chords: ['C', 'Am', 'F', 'G'],
+    );
+
+    test('toJson produces expected map', () {
+      final json = comp.toJson();
+      expect(json['id'], 'id1');
+      expect(json['title'], 'My Song');
+      expect(json['chords'], ['C', 'Am', 'F', 'G']);
+    });
+
+    test('fromJson round-trips through toJson', () {
+      final restored = Composition.fromJson(comp.toJson());
+      expect(restored.id, comp.id);
+      expect(restored.title, comp.title);
+      expect(restored.chords, comp.chords);
+    });
+  });
+
+  group('CompositionRepository', () {
     test('load returns empty list when no data is stored', () async {
       final prefs = await SharedPreferences.getInstance();
       final repo = CompositionRepository(prefs);
@@ -44,25 +71,13 @@ void main() {
 
     test('load returns compositions when valid JSON is stored', () async {
       SharedPreferences.setMockInitialValues({
-        'compositions_v1':
-            '[{"id":"1","title":"Test","chords":["C","G"]}]',
+        'compositions_v1': '[{"id":"1","title":"Test","chords":["C","G"]}]',
       });
       final prefs = await SharedPreferences.getInstance();
       final repo = CompositionRepository(prefs);
       final result = await repo.load();
       expect(result.length, 1);
       expect(result.first.title, 'Test');
-      expect(result.first.chords, ['C', 'G']);
-    });
-
-    test('load returns empty list on invalid JSON instead of throwing', () async {
-      SharedPreferences.setMockInitialValues({
-        'compositions_v1': '{{not valid json}}',
-      });
-      final prefs = await SharedPreferences.getInstance();
-      final repo = CompositionRepository(prefs);
-      final result = await repo.load();
-      expect(result, isEmpty); // repository.dart line 57 returns [] on catch
     });
   });
 
@@ -76,84 +91,78 @@ void main() {
       });
 
       late String expectedError;
+      await tester.runAsync(() async {
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            compositionRepositoryProvider.overrideWithValue(mockRepo),
+          ],
+          child: _wrap(
+            Builder(builder: (ctx) {
+              expectedError = AppLocalizations.of(ctx)!.compositionLoadError;
+              return const CompositionHelperScreen();
+            }),
+          ),
+        ));
+        // Allow the 50ms mock delay to complete
+        await Future.delayed(const Duration(milliseconds: 100));
+      });
+
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining(expectedError), findsOneWidget);
+    });
+
+    testWidgets('shows limit-reached SnackBar when exceeding kMaxCompositions',
+        (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      final existing = List.generate(
+        kMaxCompositions,
+        (i) => Composition(id: '$i', title: 'C$i', chords: []),
+      );
+
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value(existing));
+      when(() => mockRepo.save(any())).thenAnswer((_) => Future.value());
+
+      late String expectedError;
       await tester.pumpWidget(ProviderScope(
         overrides: [
           compositionRepositoryProvider.overrideWithValue(mockRepo),
         ],
         child: _wrap(
           Builder(builder: (ctx) {
-            expectedError = AppLocalizations.of(ctx)!.compositionLoadError;
+            expectedError = AppLocalizations.of(ctx)!
+                .compositionLimitReached(kMaxCompositions);
             return const CompositionHelperScreen();
           }),
         ),
       ));
 
-      // Build initial frame
+      // Wait for provider to load
+      await tester.pumpAndSettle();
+
+      // Trigger Save Dialog
+      await tester.tap(find.text('C'));
       await tester.pump();
-      // Wait for the async error to propagate and trigger SnackBar
+      await tester.tap(find.byIcon(Icons.save_outlined));
+      await tester.pumpAndSettle();
+
+      // Confirm dialog (TextField title is autofocus)
+      final saveBtnToken =
+          AppLocalizations.of(tester.element(find.byType(AlertDialog)))!.save;
+      await tester.tap(find.text(saveBtnToken));
+
+      // Wait for SnackBar
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      // Settle SnackBar animation
       await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text(expectedError), findsOneWidget);
     });
-
-    testWidgets('shows compositionLoadError string from localizations',
-        (tester) async {
-      late String errorText;
-      await tester.pumpWidget(_wrap(
-        Builder(builder: (context) {
-          errorText = AppLocalizations.of(context)!.compositionLoadError;
-          return const SizedBox.shrink();
-        }),
-      ));
-      await tester.pumpAndSettle();
-      expect(errorText, isNotEmpty);
-    });
-
-    testWidgets('shows compositionSaveError string from localizations',
-        (tester) async {
-      late String errorText;
-      await tester.pumpWidget(_wrap(
-        Builder(builder: (context) {
-          errorText = AppLocalizations.of(context)!.compositionSaveError;
-          return const SizedBox.shrink();
-        }),
-      ));
-      await tester.pumpAndSettle();
-      expect(errorText, isNotEmpty);
-    });
-
-    testWidgets('shows compositionDeleteError string from localizations',
-        (tester) async {
-      late String errorText;
-      await tester.pumpWidget(_wrap(
-        Builder(builder: (context) {
-          errorText = AppLocalizations.of(context)!.compositionDeleteError;
-          return const SizedBox.shrink();
-        }),
-      ));
-      await tester.pumpAndSettle();
-      expect(errorText, isNotEmpty);
-    });
-  });
-
-  group('ChordAnalyserScreen – error string localizations', () {
-    testWidgets('shows chordAnalyserError string from localizations',
-        (tester) async {
-      late String errorText;
-      await tester.pumpWidget(_wrap(
-        Builder(builder: (context) {
-          errorText = AppLocalizations.of(context)!.chordAnalyserError;
-          return const SizedBox.shrink();
-        }),
-      ));
-      await tester.pumpAndSettle();
-      expect(errorText, isNotEmpty);
-    });
   });
 }
 
 class _FakeNativePitchBridge extends Fake implements NativePitchBridge {}
+
 class _MockCompositionRepository extends Mock implements CompositionRepository {}

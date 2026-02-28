@@ -144,6 +144,12 @@ class _CompositionHelperScreenState
     );
     try {
       await ref.read(compositionProvider.notifier).saveComposition(composition);
+    } on CompositionLimitReachedException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.compositionLimitReached(e.max))),
+      );
+      return;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -40,17 +40,27 @@ final compositionRepositoryProvider = Provider<CompositionRepository>((ref) {
   return ServiceLocator.instance.compositionRepository;
 });
 
+/// Maximum number of compositions a user can save.
+const int kMaxCompositions = 50;
+
+class CompositionLimitReachedException implements Exception {
+  final int max;
+  CompositionLimitReachedException(this.max);
+  @override
+  String toString() => 'Save limit of $max compositions reached.';
+}
+
 class CompositionNotifier extends Notifier<CompositionState> {
   @override
   CompositionState build() {
-    _load();
-    return const CompositionState();
+    // Start loading after the build completes to avoid uninitialized state access.
+    Future.delayed(Duration.zero, _load);
+    return const CompositionState(loading: true);
   }
 
   CompositionRepository get _repo => ref.read(compositionRepositoryProvider);
 
   Future<void> _load() async {
-    state = state.copyWith(loading: true, hasError: false);
     try {
       final compositions = await _repo.load();
       state = CompositionState(compositions: compositions, loading: false);
@@ -66,6 +76,9 @@ class CompositionNotifier extends Notifier<CompositionState> {
 
   /// Appends [composition] to the list and persists the change.
   Future<void> saveComposition(Composition composition) async {
+    if (state.compositions.length >= kMaxCompositions) {
+      throw CompositionLimitReachedException(kMaxCompositions);
+    }
     final previous = state.compositions;
     final updated = [...previous, composition];
     state = state.copyWith(compositions: updated);
@@ -78,6 +91,7 @@ class CompositionNotifier extends Notifier<CompositionState> {
         stackTrace: st,
       );
       state = state.copyWith(compositions: previous);
+      rethrow;
     }
   }
 
@@ -95,6 +109,7 @@ class CompositionNotifier extends Notifier<CompositionState> {
         stackTrace: st,
       );
       state = state.copyWith(compositions: previous);
+      rethrow;
     }
   }
 }
