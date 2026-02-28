@@ -101,7 +101,11 @@ class AppDatabase {
   Future<void> replaceAllRecordings(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.update('recordings', {'is_deleted': 1});
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in rows) {
         await txn.insert(
           'recordings',
@@ -128,9 +132,17 @@ class AppDatabase {
   Future<void> replaceAllPracticeLogs(List<Map<String, Object?>> rows) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.update('practice_logs', {'is_deleted': 1});
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in rows) {
-        await txn.insert('practice_logs', {...row, 'is_deleted': 0});
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     });
   }
@@ -144,7 +156,11 @@ class AppDatabase {
   }) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.update('recordings', {'is_deleted': 1});
+      await txn.update(
+        'recordings',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in recordings) {
         await txn.insert(
           'recordings',
@@ -152,9 +168,17 @@ class AppDatabase {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
-      await txn.update('practice_logs', {'is_deleted': 1});
+      await txn.update(
+        'practice_logs',
+        {'is_deleted': 1},
+        where: 'is_deleted = 0',
+      );
       for (final row in practiceLogs) {
-        await txn.insert('practice_logs', {...row, 'is_deleted': 0});
+        await txn.insert(
+          'practice_logs',
+          {...row, 'is_deleted': 0},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     });
   }
@@ -277,12 +301,22 @@ class AppDatabase {
     DatabaseExecutor db, {
     required String table,
   }) async {
-    final columns = await db.rawQuery("PRAGMA table_info($table)");
+    final tableInfoQuery = switch (table) {
+      'recordings' => 'PRAGMA table_info(recordings)',
+      'practice_logs' => 'PRAGMA table_info(practice_logs)',
+      _ => throw ArgumentError.value(table, 'table', 'Unsupported table'),
+    };
+    final addSoftDeleteColumnQuery = switch (table) {
+      'recordings' =>
+        'ALTER TABLE recordings ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      'practice_logs' =>
+        'ALTER TABLE practice_logs ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+      _ => throw ArgumentError.value(table, 'table', 'Unsupported table'),
+    };
+    final columns = await db.rawQuery(tableInfoQuery);
     final hasIsDeleted = columns.any((row) => row['name'] == 'is_deleted');
     if (!hasIsDeleted) {
-      await db.execute(
-        'ALTER TABLE $table ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
-      );
+      await db.execute(addSoftDeleteColumnQuery);
     }
   }
 }
