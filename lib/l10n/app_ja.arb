@@ -15,6 +15,7 @@
   "darkMode": "ダークモード",
   "calibration": "キャリブレーション",
   "referencePitchLabel": "基準ピッチ A =",
+  "tunerTranspositionLabel": "チューナー移調",
   "backupAndRestore": "バックアップと復元",
   "exportBackup": "バックアップをエクスポート",
   "importBackup": "バックアップをインポート",

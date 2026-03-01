@@ -9,21 +9,31 @@ import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/tuner_provider.dart';
+import '../utils/tuner_transposition.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
 class TunerScreen extends StatelessWidget {
-  const TunerScreen({super.key, this.useMicPermissionGate = true});
+  const TunerScreen({
+    super.key,
+    this.useMicPermissionGate = true,
+    this.showTranspositionControl = true,
+  });
 
   final bool useMicPermissionGate;
+  final bool showTranspositionControl;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
       body: useMicPermissionGate
-          ? const MicPermissionGate(child: _TunerBodyWrapper())
-          : const _TunerBodyWrapper(),
+          ? MicPermissionGate(
+              child: _TunerBodyWrapper(
+                showTranspositionControl: showTranspositionControl,
+              ),
+            )
+          : _TunerBodyWrapper(showTranspositionControl: showTranspositionControl),
     );
   }
 }
@@ -31,7 +41,9 @@ class TunerScreen extends StatelessWidget {
 // ── Internal body wrapper (handles provider & animation) ─────────────────────
 
 class _TunerBodyWrapper extends ConsumerStatefulWidget {
-  const _TunerBodyWrapper();
+  const _TunerBodyWrapper({required this.showTranspositionControl});
+
+  final bool showTranspositionControl;
 
   @override
   ConsumerState<_TunerBodyWrapper> createState() => _TunerBodyWrapperState();
@@ -86,6 +98,9 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     });
 
     final state = ref.watch(tunerProvider);
+    final transposition = ref.watch(
+      appSettingsProvider.select((settings) => settings.tunerTransposition),
+    );
 
     if (state.loading) return const Center(child: CircularProgressIndicator());
 
@@ -99,6 +114,14 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
       child: _TunerBody(
         latest: state.latest,
         pulseCtrl: _pulseCtrl,
+        transposition: transposition,
+        showTranspositionControl: widget.showTranspositionControl,
+        onTranspositionChanged: (value) {
+          final currentSettings = ref.read(appSettingsProvider);
+          ref.read(appSettingsProvider.notifier).update(
+                currentSettings.copyWith(tunerTransposition: value),
+              );
+        },
       ),
     );
   }
@@ -107,10 +130,19 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
 // ── Tuner body ────────────────────────────────────────────────────────────────
 
 class _TunerBody extends StatelessWidget {
-  const _TunerBody({required this.latest, required this.pulseCtrl});
+  const _TunerBody({
+    required this.latest,
+    required this.pulseCtrl,
+    required this.transposition,
+    required this.showTranspositionControl,
+    required this.onTranspositionChanged,
+  });
 
   final PitchResult? latest;
   final AnimationController pulseCtrl;
+  final String transposition;
+  final bool showTranspositionControl;
+  final ValueChanged<String> onTranspositionChanged;
 
   /// Maps cents offset (−50 … +50) to a colour between red → green → red.
   Color _centColor(BuildContext context, double cents) {
@@ -125,7 +157,12 @@ class _TunerBody extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    final noteName = latest?.noteName ?? '---';
+    final noteName = latest != null
+        ? transposedNoteNameFromMidi(
+            midiNote: latest!.midiNote,
+            transposition: transposition,
+          )
+        : '---';
     final freqText = latest != null
         ? '${latest!.frequency.toStringAsFixed(1)} Hz'
         : '-- Hz';
@@ -141,6 +178,25 @@ class _TunerBody extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          if (showTranspositionControl) ...[
+            DropdownButtonFormField<String>(
+              value: transposition,
+              decoration:
+                  InputDecoration(labelText: l10n.tunerTranspositionLabel),
+              items: TunerTransposition.supported
+                  .map(
+                    (value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) onTranspositionChanged(value);
+              },
+            ),
+            const SizedBox(height: 24),
+          ],
           // ── Note name ──────────────────────────────────────────────
           Semantics(
             label: l10n.currentNoteSemanticLabel,

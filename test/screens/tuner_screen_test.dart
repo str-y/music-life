@@ -63,12 +63,15 @@ void main() {
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
-        const TunerScreen(useMicPermissionGate: false),
-        overrides: [
-          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
-        ],
-      ),
+        _wrap(
+          const TunerScreen(
+            useMicPermissionGate: false,
+            showTranspositionControl: false,
+          ),
+          overrides: [
+            pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+          ],
+        ),
     );
 
     // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
@@ -80,6 +83,26 @@ void main() {
       find.byType(TunerScreen),
       matchesGoldenFile('goldens/tuner_screen.png'),
     );
+  });
+
+  testWidgets('shows transposition selector on tuner screen', (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.pitchStream)
+        .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.pumpWidget(
+      _wrap(
+        const TunerScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
   });
 
   group('TunerScreen – pitch and waveform semantics', () {

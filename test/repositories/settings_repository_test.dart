@@ -19,6 +19,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         AppConfig.defaultDarkModeStorageKey: true,
         AppConfig.defaultReferencePitchStorageKey: 442.0,
+        AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -27,13 +28,18 @@ void main() {
 
       expect(settings.darkMode, isTrue);
       expect(settings.referencePitch, 442.0);
+      expect(settings.tunerTransposition, 'Bb');
     });
 
     test('save persists settings values', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
-      const updated = AppSettings(darkMode: true, referencePitch: 445.0);
+      const updated = AppSettings(
+        darkMode: true,
+        referencePitch: 445.0,
+        tunerTransposition: 'Eb',
+      );
 
       await repository.save(updated);
 
@@ -41,6 +47,10 @@ void main() {
       expect(
         prefs.getDouble(AppConfig.defaultReferencePitchStorageKey),
         445.0,
+      );
+      expect(
+        prefs.getString(AppConfig.defaultTunerTranspositionStorageKey),
+        'Eb',
       );
     });
   });

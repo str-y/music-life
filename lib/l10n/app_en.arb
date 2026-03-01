@@ -71,6 +71,11 @@
     "description": "Label for the reference pitch slider"
   },
 
+  "tunerTranspositionLabel": "Tuner transposition",
+  "@tunerTranspositionLabel": {
+    "description": "Label for selecting instrument transposition in tuner settings"
+  },
+
   "backupAndRestore": "Backup & Restore",
   "@backupAndRestore": {
     "description": "Section header for backup and restore actions"
