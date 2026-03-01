@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
+import 'service_error_handler.dart';
 
 final adServiceProvider = Provider<IAdService>((ref) {
   return GoogleMobileAdsService(ref.read(appConfigProvider));
@@ -88,12 +89,22 @@ class GoogleMobileAdsService implements IAdService {
               loadInterstitialAd();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
+              ServiceErrorHandler.report(
+                'AdService: failed to show interstitial ad',
+                error: error,
+                stackTrace: StackTrace.current,
+              );
               ad.dispose();
               loadInterstitialAd();
             },
           );
         },
         onAdFailedToLoad: (error) {
+          ServiceErrorHandler.report(
+            'AdService: failed to load interstitial ad',
+            error: error,
+            stackTrace: StackTrace.current,
+          );
           _interstitialLoadAttempts++;
           _interstitialAd = null;
           if (_interstitialLoadAttempts <= maxFailedLoadAttempts) {
@@ -125,6 +136,11 @@ class GoogleMobileAdsService implements IAdService {
           _rewardedLoadAttempts = 0;
         },
         onAdFailedToLoad: (error) {
+          ServiceErrorHandler.report(
+            'AdService: failed to load rewarded ad',
+            error: error,
+            stackTrace: StackTrace.current,
+          );
           _rewardedLoadAttempts++;
           _rewardedAd = null;
           if (_rewardedLoadAttempts <= _maxRewardedLoadAttempts) {
@@ -154,6 +170,11 @@ class GoogleMobileAdsService implements IAdService {
         completer.complete(rewarded);
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
+        ServiceErrorHandler.report(
+          'AdService: failed to show rewarded ad',
+          error: error,
+          stackTrace: StackTrace.current,
+        );
         ad.dispose();
         loadRewardedAd();
         completer.complete(false);
