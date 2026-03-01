@@ -14,7 +14,7 @@ void main() {
       testRewardedIdAndroid: 'rewarded_android',
       testRewardedIdIos: 'rewarded_ios',
     );
-    final service = AdService(config);
+    final service = GoogleMobileAdsService(config);
 
     final expectedBannerId =
         Platform.isAndroid ? 'banner_android' : 'banner_ios';
@@ -26,5 +26,6 @@ void main() {
     expect(service.bannerAdUnitId, expectedBannerId);
     expect(service.interstitialAdUnitId, expectedInterstitialId);
     expect(service.rewardedAdUnitId, expectedRewardedId);
+    expect(service, isA<IAdService>());
   });
 }

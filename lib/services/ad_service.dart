@@ -5,15 +5,29 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 
-final adServiceProvider = Provider<AdService>((ref) {
-  return AdService(ref.read(appConfigProvider));
+final adServiceProvider = Provider<IAdService>((ref) {
+  return GoogleMobileAdsService(ref.read(appConfigProvider));
 });
 
-class AdService {
-  const AdService(this._config);
+abstract class IAdService {
+  String get bannerAdUnitId;
+  String get interstitialAdUnitId;
+  String get rewardedAdUnitId;
+
+  Future<void> loadInterstitialAd();
+  void showInterstitialAd();
+  Future<void> loadRewardedAd();
+  Future<bool> showRewardedAd({
+    required void Function(RewardItem reward) onUserEarnedReward,
+  });
+}
+
+class GoogleMobileAdsService implements IAdService {
+  const GoogleMobileAdsService(this._config);
 
   final AppConfig _config;
 
+  @override
   String get bannerAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -26,6 +40,7 @@ class AdService {
         : _config.testBannerIdIos;
   }
 
+  @override
   String get interstitialAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -38,6 +53,7 @@ class AdService {
         : _config.testInterstitialIdIos;
   }
 
+  @override
   String get rewardedAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -57,6 +73,7 @@ class AdService {
   int _rewardedLoadAttempts = 0;
   static const int _maxRewardedLoadAttempts = 3;
 
+  @override
   Future<void> loadInterstitialAd() async {
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
@@ -87,6 +104,7 @@ class AdService {
     );
   }
 
+  @override
   void showInterstitialAd() {
     if (_interstitialAd != null) {
       _interstitialAd!.show();
@@ -96,6 +114,7 @@ class AdService {
     }
   }
 
+  @override
   Future<void> loadRewardedAd() async {
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
@@ -116,6 +135,7 @@ class AdService {
     );
   }
 
+  @override
   Future<bool> showRewardedAd({
     required void Function(RewardItem reward) onUserEarnedReward,
   }) async {
