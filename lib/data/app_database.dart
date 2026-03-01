@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 /// Singleton SQLite database used throughout the app.
 ///
@@ -17,6 +17,10 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const int _schemaVersion = 5;
+  static const String _databasePassword = String.fromEnvironment(
+    'MUSIC_LIFE_DB_PASSWORD',
+    defaultValue: 'music_life_practice_logs',
+  );
 
   Completer<Database>? _completer;
 
@@ -31,6 +35,7 @@ class AppDatabase {
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
+      password: _databasePassword,
       version: _schemaVersion,
       onCreate: (db, _) async {
         await db.execute('''
