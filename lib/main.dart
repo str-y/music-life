@@ -12,6 +12,28 @@ import 'providers/dependency_providers.dart';
 import 'router/app_router.dart';
 import 'utils/app_logger.dart';
 
+const Map<String, Color> _keyThemeColors = <String, Color>{
+  'C': Colors.red,
+  'C#': Colors.deepOrange,
+  'Db': Colors.deepOrange,
+  'D': Colors.orange,
+  'D#': Colors.amber,
+  'Eb': Colors.amber,
+  'E': Colors.yellow,
+  'F': Colors.green,
+  'F#': Colors.teal,
+  'Gb': Colors.teal,
+  'G': Colors.blue,
+  'G#': Colors.indigo,
+  'Ab': Colors.indigo,
+  'A': Colors.purple,
+  'A#': Colors.pink,
+  'Bb': Colors.pink,
+  'B': Colors.cyan,
+};
+const double _minThemeColorWeight = 0.4;
+const double _themeColorEnergyWeightRange = 0.6;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -51,6 +73,22 @@ class MusicLifeApp extends ConsumerStatefulWidget {
 class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   late final GoRouter _router;
 
+  Color _themeSeedColor(String? noteName, double energy) {
+    if (noteName == null || noteName.isEmpty) return Colors.deepPurple;
+    final match = RegExp(r'^[A-G](?:#|b)?').firstMatch(noteName);
+    final key = match?.group(0);
+    final base = _keyThemeColors[key] ?? Colors.deepPurple;
+    final clampedEnergy = energy.clamp(0.0, 1.0).toDouble();
+    // Interpolate from 40%→100% base color intensity as energy moves 0→1.
+    return Color.lerp(
+          Colors.blueGrey,
+          base,
+          _minThemeColorWeight +
+              (clampedEnergy * _themeColorEnergyWeightRange),
+        ) ??
+        base;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,17 +105,21 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
+    final seedColor = _themeSeedColor(
+      settings.dynamicThemeNote,
+      settings.dynamicThemeEnergy,
+    );
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: seedColor,
           brightness: Brightness.dark,
         ),
         useMaterial3: true,

@@ -5,16 +5,30 @@ import '../config/app_config.dart';
 class AppSettings {
   final bool darkMode;
   final double referencePitch;
+  final String? dynamicThemeNote;
+  final double dynamicThemeEnergy;
 
   const AppSettings({
     this.darkMode = false,
     this.referencePitch = 440.0,
+    this.dynamicThemeNote,
+    this.dynamicThemeEnergy = 0.0,
   });
 
-  AppSettings copyWith({bool? darkMode, double? referencePitch}) {
+  AppSettings copyWith({
+    bool? darkMode,
+    double? referencePitch,
+    String? dynamicThemeNote,
+    double? dynamicThemeEnergy,
+    bool clearDynamicThemeNote = false,
+  }) {
     return AppSettings(
       darkMode: darkMode ?? this.darkMode,
       referencePitch: referencePitch ?? this.referencePitch,
+      dynamicThemeNote: clearDynamicThemeNote
+          ? null
+          : (dynamicThemeNote ?? this.dynamicThemeNote),
+      dynamicThemeEnergy: dynamicThemeEnergy ?? this.dynamicThemeEnergy,
     );
   }
 
@@ -23,10 +37,13 @@ class AppSettings {
       identical(this, other) ||
       other is AppSettings &&
           darkMode == other.darkMode &&
-          referencePitch == other.referencePitch;
+          referencePitch == other.referencePitch &&
+          dynamicThemeNote == other.dynamicThemeNote &&
+          dynamicThemeEnergy == other.dynamicThemeEnergy;
 
   @override
-  int get hashCode => Object.hash(darkMode, referencePitch);
+  int get hashCode =>
+      Object.hash(darkMode, referencePitch, dynamicThemeNote, dynamicThemeEnergy);
 }
 
 class SettingsRepository {

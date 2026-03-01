@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
+import '../providers/app_settings_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
@@ -74,6 +75,9 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
   Widget build(BuildContext context) {
     ref.listen<TunerState>(tunerProvider, (prev, next) {
       if (next.latest != null && next.latest != prev?.latest) {
+        ref
+            .read(appSettingsProvider.notifier)
+            .updateDynamicThemeFromPitch(next.latest!);
         if (!_pulseCtrl.isAnimating) {
           _pulseCtrl.repeat(reverse: true);
         }
