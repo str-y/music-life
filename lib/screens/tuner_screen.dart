@@ -173,11 +173,10 @@ class _TunerBody extends StatelessWidget {
     final inTune = latest != null && cents.abs() <= AppConstants.tunerInTuneThresholdCents;
     final l10n = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideLayout = constraints.maxWidth >= 900;
+        final leftPaneChildren = <Widget>[
           if (showTranspositionControl) ...[
             DropdownButtonFormField<String>(
               value: transposition,
@@ -197,7 +196,6 @@ class _TunerBody extends StatelessWidget {
             ),
             const SizedBox(height: 24),
           ],
-          // ── Note name ──────────────────────────────────────────────
           Semantics(
             label: l10n.currentNoteSemanticLabel,
             value: latest != null ? '$noteName, $freqText' : null,
@@ -220,8 +218,6 @@ class _TunerBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // ── Frequency ─────────────────────────────────────────────
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             child: Text(
@@ -231,8 +227,8 @@ class _TunerBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-
-          // ── Cents meter ───────────────────────────────────────────
+        ];
+        final rightPaneChildren = <Widget>[
           Semantics(
             label: l10n.centsMeterSemanticLabel,
             value: '$centsText cents',
@@ -258,14 +254,14 @@ class _TunerBody extends StatelessWidget {
               '$centsText cents',
               key: ValueKey(centsText),
               style: tt.bodyLarge?.copyWith(
-                color: latest != null ? _centColor(context, cents) : cs.onSurfaceVariant,
+                color:
+                    latest != null ? _centColor(context, cents) : cs.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(height: 32),
-
-          // ── Listening indicator ───────────────────────────────────
+        ];
+        final statusChildren = <Widget>[
           if (latest == null) ...[
             ListeningIndicator(controller: pulseCtrl, color: cs.primary),
             const SizedBox(height: 8),
@@ -281,8 +277,52 @@ class _TunerBody extends StatelessWidget {
               style: tt.bodyMedium?.copyWith(color: Colors.green),
             ),
           ],
-        ],
-      ),
+        ];
+
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isWideLayout ? 1200 : 560),
+              child: isWideLayout
+                  ? Row(
+                      key: const ValueKey('tuner-wide-layout'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ...leftPaneChildren,
+                              ...statusChildren,
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: rightPaneChildren,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      key: const ValueKey('tuner-compact-layout'),
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ...leftPaneChildren,
+                        ...rightPaneChildren,
+                        const SizedBox(height: 32),
+                        ...statusChildren,
+                      ],
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

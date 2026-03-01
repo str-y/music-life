@@ -115,16 +115,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryProvider);
+    final isWideLayout = MediaQuery.of(context).size.width >= 900;
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.libraryTitle),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(icon: const Icon(Icons.mic), text: AppLocalizations.of(context)!.recordingsTab),
-            Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.logsTab),
-          ],
-        ),
+        bottom: isWideLayout
+            ? null
+            : TabBar(
+                controller: _tabController,
+                tabs: [
+                  Tab(icon: const Icon(Icons.mic), text: AppLocalizations.of(context)!.recordingsTab),
+                  Tab(icon: const Icon(Icons.calendar_month), text: AppLocalizations.of(context)!.logsTab),
+                ],
+              ),
       ),
       body: state.loading
           ? Center(
@@ -153,17 +156,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                     ],
                   ),
                 )
-              : TabBarView(
-              controller: _tabController,
-              children: [
-                RecordingsTab(recordings: state.recordings),
-                LogTab(monthlyLogStatsByMonth: state.monthlyLogStats),
-              ],
-            ),
+              : isWideLayout
+                  ? Row(
+                      key: const ValueKey('library-wide-layout'),
+                      children: [
+                        Expanded(child: RecordingsTab(recordings: state.recordings)),
+                        const VerticalDivider(width: 1),
+                        Expanded(child: LogTab(monthlyLogStatsByMonth: state.monthlyLogStats)),
+                      ],
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        RecordingsTab(recordings: state.recordings),
+                        LogTab(monthlyLogStatsByMonth: state.monthlyLogStats),
+                      ],
+                    ),
       floatingActionButton: ListenableBuilder(
         listenable: _tabController,
         builder: (context, _) {
-          if (_tabController.index != 0 || state.loading || state.hasError) {
+          if ((!isWideLayout && _tabController.index != 0) || state.loading || state.hasError) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton(

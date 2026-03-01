@@ -105,6 +105,30 @@ void main() {
     expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
   });
 
+  testWidgets('uses two-pane adaptive layout on large screens', (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.pitchStream)
+        .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.binding.setSurfaceSize(const Size(1200, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _wrap(
+        const TunerScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('tuner-wide-layout')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tuner-compact-layout')), findsNothing);
+  });
+
   group('TunerScreen – pitch and waveform semantics', () {
     testWidgets('pitch and waveform labels are non-empty localized strings',
         (tester) async {
