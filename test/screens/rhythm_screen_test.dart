@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/rhythm_screen.dart';
+import 'golden_test_utils.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -46,5 +48,15 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       });
     }
+  });
+
+  testWidgets('matches rhythm screen golden baseline', (tester) async {
+    await tester.pumpWidget(_wrap(const RhythmScreen()));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await expectScreenGolden(
+      find.byType(RhythmScreen),
+      'goldens/rhythm_screen.png',
+    );
   });
 }
