@@ -94,12 +94,13 @@ final adStateProvider = NotifierProvider<AdStateNotifier, AdState>(
 final adServiceProvider = Provider<AdService>((ref) {
   return AdService(
     ref.read(appConfigProvider),
-    ref.read(adStateProvider.notifier),
+    stateNotifier: ref.read(adStateProvider.notifier),
   );
 });
 
 class AdService {
-  const AdService(this._config, [this._stateNotifier]);
+  const AdService(this._config, {AdStateNotifier? stateNotifier})
+      : _stateNotifier = stateNotifier;
 
   final AppConfig _config;
   final AdStateNotifier? _stateNotifier;
@@ -186,7 +187,9 @@ class AdService {
       _interstitialAd!.show();
       _interstitialAd = null;
     } else {
-      _stateNotifier?.setInterstitialError('Interstitial ad is not ready');
+      _stateNotifier?.setInterstitialError(
+        'Interstitial ad failed to load or is still loading. Please try again.',
+      );
       loadInterstitialAd();
     }
   }
@@ -219,7 +222,9 @@ class AdService {
   }) async {
     final ad = _rewardedAd;
     if (ad == null) {
-      _stateNotifier?.setRewardedError('Rewarded ad is not ready');
+      _stateNotifier?.setRewardedError(
+        'Rewarded ad failed to load or is still loading. Please try again.',
+      );
       loadRewardedAd();
       return false;
     }
