@@ -8,6 +8,7 @@ import '../providers/app_settings_provider.dart';
 import '../providers/library_provider.dart';
 import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
+import '../router/routes.dart';
 import '../services/ad_service.dart';
 import '../services/review_service.dart';
 import '../services/service_error_handler.dart';
@@ -350,7 +351,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.tunerSubtitle,
                     delay: 0.0,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/tuner'),
+                    onTap: () => _showAdAndPush(const TunerRoute().location),
                   ),
                   _FeatureTile(
                     icon: Icons.graphic_eq,
@@ -358,7 +359,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.practiceLogSubtitle,
                     delay: 0.08,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/practice-log'),
+                    onTap: () =>
+                        _showAdAndPush(const PracticeLogRoute().location),
                   ),
                   _FeatureTile(
                     icon: Icons.library_music,
@@ -366,7 +368,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.librarySubtitle,
                     delay: 0.16,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/library'),
+                    onTap: () => _showAdAndPush(const LibraryRoute().location),
                   ),
                   _FeatureTile(
                     icon: Icons.av_timer,
@@ -374,7 +376,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.rhythmSubtitle,
                     delay: 0.24,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/rhythm'),
+                    onTap: () => _showAdAndPush(const RhythmRoute().location),
                   ),
                   _FeatureTile(
                     icon: Icons.piano,
@@ -382,7 +384,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.chordAnalyserSubtitle,
                     delay: 0.32,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/chord-analyser'),
+                    onTap: () =>
+                        _showAdAndPush(const ChordAnalyserRoute().location),
                   ),
                   _FeatureTile(
                     icon: Icons.piano_outlined,
@@ -390,7 +393,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.compositionHelperSubtitle,
                     delay: 0.4,
                     animation: entranceCurve,
-                    onTap: () => _showAdAndPush('/composition-helper'),
+                    onTap: () =>
+                        _showAdAndPush(const CompositionHelperRoute().location),
                   ),
                 ],
               ),
