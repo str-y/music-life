@@ -41,6 +41,16 @@
     "description": "Snackbar message when the privacy policy URL fails to open"
   },
 
+  "rateThisApp": "Rate this app",
+  "@rateThisApp": {
+    "description": "Action label to request the standard store review dialog"
+  },
+
+  "reviewDialogUnavailable": "Could not show the review dialog.",
+  "@reviewDialogUnavailable": {
+    "description": "Snackbar message when the store review dialog cannot be shown"
+  },
+
   "themeSection": "Theme",
   "@themeSection": {
     "description": "Section header for theme settings"

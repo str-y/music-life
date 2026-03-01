@@ -8,6 +8,7 @@ import '../providers/app_settings_provider.dart';
 import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ad_service.dart';
+import '../services/review_service.dart';
 import '../widgets/banner_ad_widget.dart';
 import '../utils/app_logger.dart';
 
@@ -67,6 +68,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         },
         onExportBackup: () => _exportBackupData(context),
         onImportBackup: () => _importBackupData(context),
+        onRequestReview: () => _requestStoreReview(context),
       ),
     );
   }
@@ -110,6 +112,29 @@ class _MainScreenState extends ConsumerState<MainScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.backupImportFailed)),
       );
+    }
+  }
+
+  Future<void> _requestStoreReview(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final shown = await ref
+          .read(reviewServiceProvider)
+          .requestReviewIfAvailable();
+      if (!context.mounted || shown) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.reviewDialogUnavailable)));
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to request store review',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.reviewDialogUnavailable)));
     }
   }
 
@@ -331,12 +356,14 @@ class _SettingsModal extends StatefulWidget {
   final ValueChanged<AppSettings> onChanged;
   final Future<void> Function() onExportBackup;
   final Future<void> Function() onImportBackup;
+  final Future<void> Function() onRequestReview;
 
   const _SettingsModal({
     required this.settings,
     required this.onChanged,
     required this.onExportBackup,
     required this.onImportBackup,
+    required this.onRequestReview,
   });
 
   @override
@@ -446,6 +473,12 @@ class _SettingsModalState extends State<_SettingsModal> {
                 }
               }
             },
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.star_rate_outlined),
+            title: Text(l10n.rateThisApp),
+            onTap: widget.onRequestReview,
           ),
           const SizedBox(height: 8),
         ],

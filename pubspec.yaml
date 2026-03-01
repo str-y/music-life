@@ -26,6 +26,7 @@ dependencies:
   audio_service: ^0.18.18
   share_plus: ^11.1.0
   google_mobile_ads: ^7.0.0
+  in_app_review: ^2.0.9
 
 dev_dependencies:
   flutter_test:

@@ -9,6 +9,8 @@
   "micPermissionDenied": "マイクのアクセスが拒否されています。設定から許可してください。",
   "privacyPolicy": "プライバシーポリシー",
   "privacyPolicyOpenError": "プライバシーポリシーを開けませんでした",
+  "rateThisApp": "このアプリを評価する",
+  "reviewDialogUnavailable": "レビューダイアログを表示できませんでした",
   "themeSection": "テーマ",
   "darkMode": "ダークモード",
   "calibration": "キャリブレーション",
