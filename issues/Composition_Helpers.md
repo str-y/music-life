@@ -15,3 +15,6 @@ To empower users with easy-to-use tools for creating music, we aim to develop a 
 - Assemble wireframes for the interface design and user flow.  
 - Implement real-time audio preview for chord sequences.  
 - Ensure extensibility for future features like lyrics integration.
+
+**Immediate Next Task:**  
+Implement real-time audio preview for chord sequences.
