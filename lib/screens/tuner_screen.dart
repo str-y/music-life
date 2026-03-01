@@ -153,7 +153,14 @@ class _TunerBody extends StatelessWidget {
           const SizedBox(height: 8),
 
           // ── Frequency ─────────────────────────────────────────────
-          Text(freqText, style: tt.titleLarge),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: Text(
+              freqText,
+              key: ValueKey(freqText),
+              style: tt.titleLarge,
+            ),
+          ),
           const SizedBox(height: 32),
 
           // ── Cents meter ───────────────────────────────────────────
@@ -162,12 +169,26 @@ class _TunerBody extends StatelessWidget {
             value: '$centsText cents',
             child: _CentsMeter(cents: cents, hasReading: latest != null),
           ),
+          const SizedBox(height: 12),
+          AnimatedBuilder(
+            animation: pulseCtrl,
+            builder: (_, __) => _TunerWaveform(
+              hasReading: latest != null,
+              cents: cents,
+              phase: pulseCtrl.value,
+              color: latest != null ? _centColor(context, cents) : cs.primary,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(
-            '$centsText cents',
-            style: tt.bodyLarge?.copyWith(
-              color: latest != null ? _centColor(context, cents) : cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            child: Text(
+              '$centsText cents',
+              key: ValueKey(centsText),
+              style: tt.bodyLarge?.copyWith(
+                color: latest != null ? _centColor(context, cents) : cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -192,6 +213,95 @@ class _TunerBody extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TunerWaveform extends StatelessWidget {
+  const _TunerWaveform({
+    required this.hasReading,
+    required this.cents,
+    required this.phase,
+    required this.color,
+  });
+
+  final bool hasReading;
+  final double cents;
+  final double phase;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 36,
+      child: RepaintBoundary(
+        child: CustomPaint(
+          painter: _TunerWavePainter(
+            hasReading: hasReading,
+            cents: cents,
+            phase: phase,
+            color: color,
+            trackColor: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TunerWavePainter extends CustomPainter {
+  static const double _baseAmplitude = 2.0;
+  static const double _maxCentsForScale = 50.0;
+  static const double _amplitudeScale = 8.0;
+  static const double _idleAmplitude = 2.5;
+  static const double _waveCycles = 2.5;
+
+  const _TunerWavePainter({
+    required this.hasReading,
+    required this.cents,
+    required this.phase,
+    required this.color,
+    required this.trackColor,
+  });
+
+  final bool hasReading;
+  final double cents;
+  final double phase;
+  final Color color;
+  final Color trackColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerY = size.height / 2;
+    final basePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2
+      ..color = hasReading ? color : trackColor;
+    final path = Path();
+    final amp = hasReading
+        ? (_baseAmplitude +
+            (cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
+                _amplitudeScale)
+        : _idleAmplitude;
+    for (double x = 0; x <= size.width; x += 2) {
+      final t = x / size.width;
+      final y = centerY + math.sin((t * _waveCycles + phase) * 2 * math.pi) * amp;
+      if (x == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(path, basePaint);
+  }
+
+  @override
+  bool shouldRepaint(_TunerWavePainter oldDelegate) =>
+      oldDelegate.hasReading != hasReading ||
+      oldDelegate.cents != cents ||
+      oldDelegate.phase != phase ||
+      oldDelegate.color != color ||
+      oldDelegate.trackColor != trackColor;
 }
 
 // ── Cents meter ───────────────────────────────────────────────────────────────
