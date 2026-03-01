@@ -7,12 +7,14 @@ final reviewServiceProvider = Provider<ReviewService>((ref) {
   return ReviewService();
 });
 
+/// Abstraction over in-app review APIs for easier testing.
 abstract class InAppReviewApi {
   Future<bool> isAvailable();
 
   Future<void> requestReview();
 }
 
+/// Production [InAppReviewApi] that delegates to `in_app_review`.
 class InAppReviewClient implements InAppReviewApi {
   const InAppReviewClient();
 
@@ -23,6 +25,7 @@ class InAppReviewClient implements InAppReviewApi {
   Future<void> requestReview() => InAppReview.instance.requestReview();
 }
 
+/// Coordinates safe review prompts with centralized error handling.
 class ReviewService {
   ReviewService({InAppReviewApi? api}) : _api = api ?? const InAppReviewClient();
 

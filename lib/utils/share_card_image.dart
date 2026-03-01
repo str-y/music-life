@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
+/// Renders a shareable square PNG card and returns it as an [XFile].
 Future<XFile> generateShareCardImage({
   required String title,
   required List<String> lines,
