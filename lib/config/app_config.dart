@@ -16,8 +16,10 @@ class AppConfig {
     this.compositionsMigratedStorageKey = defaultCompositionsMigratedStorageKey,
     this.darkModeStorageKey = defaultDarkModeStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
+    this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
     this.defaultDarkMode = false,
     this.defaultReferencePitch = 440.0,
+    this.defaultTunerTransposition = defaultTunerTransposition,
   });
 
   static const int defaultAudioFrameSize = 2048;
@@ -41,6 +43,8 @@ class AppConfig {
       'compositions_db_migrated_v1';
   static const String defaultDarkModeStorageKey = 'darkMode';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
+  static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
+  static const String defaultTunerTransposition = 'C';
 
   final int audioFrameSize;
   final int audioSampleRate;
@@ -58,9 +62,11 @@ class AppConfig {
   final String compositionsMigratedStorageKey;
   final String darkModeStorageKey;
   final String referencePitchStorageKey;
+  final String tunerTranspositionStorageKey;
 
   final bool defaultDarkMode;
   final double defaultReferencePitch;
+  final String defaultTunerTransposition;
 }
 
 final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());
