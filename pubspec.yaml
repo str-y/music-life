@@ -25,6 +25,7 @@ dependencies:
   just_audio_background: ^0.0.1-beta.17
   audio_service: ^0.18.18
   share_plus: ^11.1.0
+  google_mobile_ads: ^7.0.0
 
 dev_dependencies:
   flutter_test:

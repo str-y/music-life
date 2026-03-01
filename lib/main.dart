@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'data/app_database.dart';
 import 'l10n/app_localizations.dart';
@@ -14,6 +15,7 @@ import 'utils/app_logger.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await MobileAds.instance.initialize();
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.stry.musiclife.audio',
       androidNotificationChannelName: 'Music Life Playback',

@@ -7,6 +7,8 @@ import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
 import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
+import '../services/ad_service.dart';
+import '../widgets/banner_ad_widget.dart';
 import '../utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
@@ -31,12 +33,24 @@ class _MainScreenState extends ConsumerState<MainScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+
+    // Pre-load interstitial ad
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adServiceProvider).loadInterstitialAd();
+    });
   }
 
   @override
   void dispose() {
     _entranceCtrl.dispose();
     super.dispose();
+  }
+
+  void _showAdAndPush(String route) {
+    // Show interstitial with some probability or frequency logic
+    // For now, let's try to show it, the service handles loading state
+    ref.read(adServiceProvider).showInterstitialAd();
+    context.push(route);
   }
 
   void _openSettings(BuildContext context, AppSettings settings) {
@@ -176,7 +190,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.tunerSubtitle,
                     delay: 0.0,
                     animation: entranceCurve,
-                    onTap: () => context.push('/tuner'),
+                    onTap: () => _showAdAndPush('/tuner'),
                   ),
                   _FeatureTile(
                     icon: Icons.graphic_eq,
@@ -184,7 +198,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.practiceLogSubtitle,
                     delay: 0.08,
                     animation: entranceCurve,
-                    onTap: () => context.push('/practice-log'),
+                    onTap: () => _showAdAndPush('/practice-log'),
                   ),
                   _FeatureTile(
                     icon: Icons.library_music,
@@ -192,7 +206,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.librarySubtitle,
                     delay: 0.16,
                     animation: entranceCurve,
-                    onTap: () => context.push('/library'),
+                    onTap: () => _showAdAndPush('/library'),
                   ),
                   _FeatureTile(
                     icon: Icons.av_timer,
@@ -200,7 +214,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.rhythmSubtitle,
                     delay: 0.24,
                     animation: entranceCurve,
-                    onTap: () => context.push('/rhythm'),
+                    onTap: () => _showAdAndPush('/rhythm'),
                   ),
                   _FeatureTile(
                     icon: Icons.piano,
@@ -208,7 +222,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.chordAnalyserSubtitle,
                     delay: 0.32,
                     animation: entranceCurve,
-                    onTap: () => context.push('/chord-analyser'),
+                    onTap: () => _showAdAndPush('/chord-analyser'),
                   ),
                   _FeatureTile(
                     icon: Icons.piano_outlined,
@@ -216,10 +230,12 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.compositionHelperSubtitle,
                     delay: 0.4,
                     animation: entranceCurve,
-                    onTap: () => context.push('/composition-helper'),
+                    onTap: () => _showAdAndPush('/composition-helper'),
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+              const BannerAdWidget(),
             ],
           ),
         ),
