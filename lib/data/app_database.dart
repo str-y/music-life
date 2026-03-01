@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 /// Singleton SQLite database used throughout the app.
@@ -17,10 +20,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const int _schemaVersion = 5;
-  static const String _databasePassword = String.fromEnvironment(
-    'MUSIC_LIFE_DB_PASSWORD',
-    defaultValue: 'music_life_practice_logs',
-  );
+  static const String _databasePasswordKey = 'database_password';
 
   Completer<Database>? _completer;
 
@@ -35,7 +35,7 @@ class AppDatabase {
   Future<Database> _open() async {
     return openDatabase(
       join(await getDatabasesPath(), 'music_life.db'),
-      password: _databasePassword,
+      password: await _resolveDatabasePassword(),
       version: _schemaVersion,
       onCreate: (db, _) async {
         await db.execute('''
@@ -333,6 +333,26 @@ class AppDatabase {
     required int newVersion,
   }) {
     return _migrationPlan(oldVersion: oldVersion, newVersion: newVersion);
+  }
+
+  @visibleForTesting
+  static Future<String> databasePasswordForTesting() {
+    return _resolveDatabasePassword();
+  }
+
+  static Future<String> _resolveDatabasePassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingPassword = prefs.getString(_databasePasswordKey);
+    if (existingPassword != null && existingPassword.isNotEmpty) {
+      return existingPassword;
+    }
+
+    final random = Random.secure();
+    final generatedPassword = base64UrlEncode(
+      List<int>.generate(32, (_) => random.nextInt(256)),
+    );
+    await prefs.setString(_databasePasswordKey, generatedPassword);
+    return generatedPassword;
   }
 
   /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
