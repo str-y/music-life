@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/repositories/recording_repository.dart';
@@ -29,6 +30,7 @@ void main() {
     addTearDown(container.dispose);
 
     expect(container.read(sharedPreferencesProvider), same(prefs));
+    expect(container.read(appConfigProvider), isA<AppConfig>());
     expect(
       container.read(recordingRepositoryProvider),
       isA<RecordingRepository>(),

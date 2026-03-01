@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../data/app_database.dart';
 import '../utils/app_logger.dart';
 
@@ -36,10 +37,8 @@ class Composition {
 // ── Repository ────────────────────────────────────────────────────────────────
 
 class CompositionRepository {
-  const CompositionRepository(this._prefs);
-
-  static const _key = 'compositions_v1';
-  static const _migratedKey = 'compositions_db_migrated_v1';
+  const CompositionRepository(this._prefs, {AppConfig config = const AppConfig()})
+      : _config = config;
 
   /// Guards against concurrent migration calls.  Non-null while a migration is
   /// in progress; subsequent callers await this future instead of starting a
@@ -48,6 +47,7 @@ class CompositionRepository {
   static Completer<void>? _migrationCompleter;
 
   final SharedPreferences _prefs;
+  final AppConfig _config;
 
   Future<void> _migrateIfNeeded() async {
     // Already completed successfully in this session.
@@ -57,7 +57,7 @@ class CompositionRepository {
 
     _migrationCompleter = Completer<void>();
     try {
-      if (_prefs.getBool(_migratedKey) == true) {
+      if (_prefs.getBool(_config.compositionsMigratedStorageKey) == true) {
         _migrationCompleter!.complete();
         return;
       }
@@ -67,7 +67,7 @@ class CompositionRepository {
       final compositionRows = <Map<String, Object?>>[];
       var migrationSucceeded = true;
 
-      final jsonStr = _prefs.getString(_key);
+      final jsonStr = _prefs.getString(_config.compositionsStorageKey);
       if (jsonStr != null) {
         try {
           final list = jsonDecode(jsonStr) as List;
@@ -93,7 +93,7 @@ class CompositionRepository {
       if (migrationSucceeded) {
         try {
           await AppDatabase.instance.replaceAllCompositions(compositionRows);
-          await _prefs.setBool(_migratedKey, true);
+          await _prefs.setBool(_config.compositionsMigratedStorageKey, true);
         } catch (e, st) {
           AppLogger.reportError(
             'CompositionRepository: migration DB write failed',
