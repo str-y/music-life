@@ -11,6 +11,8 @@ import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
+import '../utils/app_logger.dart';
+
 /// Singleton Drift database used throughout the app.
 ///
 /// Tables:
@@ -40,8 +42,58 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final file = File(join(dbPath, 'music_life.db'));
     final db = _DriftDatabase(NativeDatabase.createInBackground(file));
-    await _migrateIfNeeded(db);
-    return db;
+    try {
+      await _verifyIntegrity(db);
+      await _migrateIfNeeded(db);
+      return db;
+    } catch (error, stackTrace) {
+      if (!_isCorruptionError(error)) rethrow;
+      AppLogger.reportError(
+        'Detected SQLite corruption. Recreating database.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      await db.close();
+      if (await file.exists()) {
+        await file.delete();
+      }
+      final recoveredDb = _DriftDatabase(NativeDatabase.createInBackground(file));
+      await _migrateIfNeeded(recoveredDb);
+      return recoveredDb;
+    }
+  }
+
+  Future<void> ensureHealthy() async {
+    await _database;
+  }
+
+  Future<void> _verifyIntegrity(_DriftDatabase db) async {
+    final checkRows = await db.customSelect('PRAGMA quick_check').get();
+    if (checkRows.length != 1) {
+      throw StateError(
+        'SQLite integrity check failed: found ${checkRows.length} issue reports',
+      );
+    }
+    // PRAGMA quick_check returns a single-column row: 'ok' when healthy.
+    final values = checkRows.first.data.values;
+    final result = values.isEmpty ? null : values.first;
+    if (!_isIntegrityCheckOk(result)) {
+      throw StateError('SQLite integrity check failed: $result');
+    }
+  }
+
+  static bool _isIntegrityCheckOk(Object? result) {
+    return result?.toString().trim().toLowerCase() == 'ok';
+  }
+
+  static bool _isCorruptionError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (error is StateError && message.contains('sqlite integrity check failed')) {
+      return true;
+    }
+    return message.contains('database disk image is malformed') ||
+        message.contains('file is not a database') ||
+        message.contains('database corruption');
   }
 
   Future<void> _migrateIfNeeded(_DriftDatabase db) async {
@@ -408,6 +460,16 @@ class AppDatabase {
   @visibleForTesting
   static Future<String> databasePasswordForTesting() {
     return _resolveDatabasePassword();
+  }
+
+  @visibleForTesting
+  static bool integrityCheckResultIsOkForTesting(Object? result) {
+    return _isIntegrityCheckOk(result);
+  }
+
+  @visibleForTesting
+  static bool isCorruptionErrorForTesting(Object error) {
+    return _isCorruptionError(error);
   }
 
   static Future<String> _resolveDatabasePassword() async {

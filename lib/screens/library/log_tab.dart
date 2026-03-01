@@ -8,9 +8,14 @@ import '../../providers/library_provider.dart';
 // ---------------------------------------------------------------------------
 
 class LogTab extends StatefulWidget {
-  const LogTab({super.key, required this.monthlyLogStatsByMonth});
+  const LogTab({
+    super.key,
+    required this.monthlyLogStatsByMonth,
+    this.onRecordPractice,
+  });
 
   final Map<String, MonthlyPracticeStats> monthlyLogStatsByMonth;
+  final VoidCallback? onRecordPractice;
 
   @override
   State<LogTab> createState() => _LogTabState();
@@ -35,6 +40,45 @@ class _LogTabState extends State<LogTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.monthlyLogStatsByMonth.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.insights_outlined,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.noPracticeRecords,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.addRecordHint,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: widget.onRecordPractice,
+                icon: const Icon(Icons.edit_note),
+                label: Text(l10n.recordPractice),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final year = _displayMonth.year;
     final month = _displayMonth.month;
     final monthKey = '$year-${month.toString().padLeft(2, '0')}';

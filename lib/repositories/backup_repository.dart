@@ -13,9 +13,13 @@ const _backupTypeGroups = [
   ),
 ];
 
+/// Handles export and import of database backups as JSON bundles.
 class BackupRepository {
   const BackupRepository();
 
+  /// Prompts for a save location and writes the current backup JSON bundle.
+  ///
+  /// Returns the written file path, or `null` when the picker is cancelled.
   Future<String?> exportWithFilePicker() async {
     final location = await getSaveLocation(
       suggestedName: 'music-life-backup.json',
@@ -33,6 +37,9 @@ class BackupRepository {
     return location.path;
   }
 
+  /// Prompts for a backup file, imports it, and returns the selected path.
+  ///
+  /// Returns `null` when the picker is cancelled.
   Future<String?> importWithFilePicker() async {
     final file = await openFile(acceptedTypeGroups: _backupTypeGroups);
     if (file == null) return null;
@@ -41,6 +48,7 @@ class BackupRepository {
     return file.path;
   }
 
+  /// Exports all backup-supported tables as a single JSON bundle string.
   Future<String> exportJsonBundle() async {
     final recordings = await AppDatabase.instance.queryAllRecordings();
     final practiceLogs = await AppDatabase.instance.queryAllPracticeLogs();
@@ -55,6 +63,7 @@ class BackupRepository {
     return jsonEncode(bundle.toJson());
   }
 
+  /// Imports backup data from [jsonContent], replacing existing backup data.
   Future<void> importJsonBundle(String jsonContent) async {
     final decoded = jsonDecode(jsonContent) as Map<String, dynamic>;
     final bundle = BackupBundle.fromJson(decoded);
@@ -67,6 +76,7 @@ class BackupRepository {
   }
 }
 
+/// Serializable container used when converting backup data to and from JSON.
 class BackupBundle {
   BackupBundle({
     required this.recordingRows,

@@ -28,25 +28,22 @@ void main() {
       expect(find.text('No recordings'), findsOneWidget);
     });
 
-    testWidgets('uses colorScheme.onSurfaceVariant for empty-state text',
-        (tester) async {
-      const expectedColor = Color(0xFF123456);
-      final theme = ThemeData(
-        colorScheme: const ColorScheme.light(
-          onSurfaceVariant: expectedColor,
-        ),
-      );
-
+    testWidgets('empty-state CTA calls onCreateRecording', (tester) async {
+      var tapped = false;
       await tester.pumpWidget(
         _wrap(
-          const RecordingsTab(recordings: []),
-          theme: theme,
+          RecordingsTab(
+            recordings: const [],
+            onCreateRecording: () => tapped = true,
+          ),
         ),
       );
       await tester.pumpAndSettle();
 
-      final text = tester.widget<Text>(find.text('No recordings'));
-      expect(text.style?.color, expectedColor);
+      await tester.tap(find.text('New Recording'));
+      await tester.pump();
+
+      expect(tapped, isTrue);
     });
 
     testWidgets('shows recording title when list has one entry', (tester) async {

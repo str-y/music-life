@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import 'service_error_handler.dart';
 
+/// Indicates the current load lifecycle state for an ad slot.
 enum AdLoadStatus { idle, loading, loaded, error }
 
+/// Immutable state describing interstitial and rewarded ad load status.
 class AdState {
   const AdState({
     this.interstitialStatus = AdLoadStatus.idle,
@@ -21,6 +23,7 @@ class AdState {
   final AdLoadStatus rewardedStatus;
   final String? rewardedError;
 
+  /// Returns a new [AdState] with selected fields updated.
   AdState copyWith({
     AdLoadStatus? interstitialStatus,
     String? interstitialError,
@@ -41,10 +44,12 @@ class AdState {
   }
 }
 
+/// Riverpod notifier for mutating and exposing [AdState].
 class AdStateNotifier extends Notifier<AdState> {
   @override
   AdState build() => const AdState();
 
+  /// Marks interstitial ad loading as in progress.
   void setInterstitialLoading() {
     state = state.copyWith(
       interstitialStatus: AdLoadStatus.loading,
@@ -52,6 +57,7 @@ class AdStateNotifier extends Notifier<AdState> {
     );
   }
 
+  /// Marks interstitial ad as successfully loaded.
   void setInterstitialLoaded() {
     state = state.copyWith(
       interstitialStatus: AdLoadStatus.loaded,
@@ -59,6 +65,7 @@ class AdStateNotifier extends Notifier<AdState> {
     );
   }
 
+  /// Marks interstitial ad loading/showing as failed with [error].
   void setInterstitialError(String error) {
     state = state.copyWith(
       interstitialStatus: AdLoadStatus.error,
@@ -66,6 +73,7 @@ class AdStateNotifier extends Notifier<AdState> {
     );
   }
 
+  /// Marks rewarded ad loading as in progress.
   void setRewardedLoading() {
     state = state.copyWith(
       rewardedStatus: AdLoadStatus.loading,
@@ -73,6 +81,7 @@ class AdStateNotifier extends Notifier<AdState> {
     );
   }
 
+  /// Marks rewarded ad as successfully loaded.
   void setRewardedLoaded() {
     state = state.copyWith(
       rewardedStatus: AdLoadStatus.loaded,
@@ -80,6 +89,7 @@ class AdStateNotifier extends Notifier<AdState> {
     );
   }
 
+  /// Marks rewarded ad loading/showing as failed with [error].
   void setRewardedError(String error) {
     state = state.copyWith(
       rewardedStatus: AdLoadStatus.error,
@@ -99,9 +109,13 @@ final adServiceProvider = Provider<IAdService>((ref) {
   );
 });
 
+/// Interface for loading and showing banner/interstitial/rewarded ads.
 abstract class IAdService {
+  /// Ad unit ID used for banner ads.
   String get bannerAdUnitId;
+  /// Ad unit ID used for interstitial ads.
   String get interstitialAdUnitId;
+  /// Ad unit ID used for rewarded ads.
   String get rewardedAdUnitId;
 
   Future<void> loadInterstitialAd();
@@ -112,6 +126,7 @@ abstract class IAdService {
   });
 }
 
+/// Google Mobile Ads implementation of [IAdService].
 class GoogleMobileAdsService implements IAdService {
   GoogleMobileAdsService(
     this._config, {

@@ -31,6 +31,7 @@ List<double> _blobToWaveform(Uint8List blob) {
 // Data models
 // ---------------------------------------------------------------------------
 
+/// Metadata for a single recording persisted by the app.
 class RecordingEntry {
   const RecordingEntry({
     required this.id,
@@ -79,6 +80,7 @@ class RecordingEntry {
   }
 }
 
+/// Aggregated daily practice log data.
 class PracticeLogEntry {
   const PracticeLogEntry({
     required this.date,
@@ -111,6 +113,7 @@ class PracticeLogEntry {
 // performed automatically on the first access.
 // ---------------------------------------------------------------------------
 
+/// Persists recordings and practice logs with one-time legacy migration support.
 class RecordingRepository {
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
   const RecordingRepository(this._prefs, {AppConfig config = const AppConfig()})

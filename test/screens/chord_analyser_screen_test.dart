@@ -133,6 +133,30 @@ void main() {
     );
   });
 
+  testWidgets('disposing ChordAnalyserScreen does not leak animation tickers',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.chordStream)
+        .thenAnswer((_) => const Stream<String>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.pumpWidget(
+      _wrap(
+        const ChordAnalyserScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   group('ChordAnalyserScreen – chord history semantics', () {
     testWidgets('chordHistory label is a non-empty localized string',
         (tester) async {

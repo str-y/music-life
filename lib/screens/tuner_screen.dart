@@ -11,6 +11,7 @@ import '../providers/app_settings_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../utils/tuner_transposition.dart';
 import '../widgets/listening_indicator.dart';
+import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
 
 Color _tunerInTuneColor(ColorScheme colorScheme) => colorScheme.tertiary;

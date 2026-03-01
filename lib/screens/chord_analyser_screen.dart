@@ -11,6 +11,7 @@ import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
+import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
 
 
