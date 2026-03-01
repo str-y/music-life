@@ -105,9 +105,10 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
+    final selectedThemeNote = settings.themeColorNote ?? settings.dynamicThemeNote;
     final seedColor = _themeSeedColor(
-      settings.dynamicThemeNote,
-      settings.dynamicThemeEnergy,
+      selectedThemeNote,
+      settings.themeColorNote == null ? settings.dynamicThemeEnergy : 1.0,
     );
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
@@ -124,7 +125,9 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
         ),
         useMaterial3: true,
       ),
-      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: settings.useSystemTheme
+          ? ThemeMode.system
+          : (settings.darkMode ? ThemeMode.dark : ThemeMode.light),
       routerConfig: _router,
     );
   }

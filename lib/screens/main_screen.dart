@@ -15,6 +15,20 @@ import '../utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
+const List<String> _themeColorNoteOptions = <String>[
+  'C',
+  'C#',
+  'D',
+  'D#',
+  'E',
+  'F',
+  'F#',
+  'G',
+  'G#',
+  'A',
+  'A#',
+  'B',
+];
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -487,9 +501,39 @@ class _SettingsModalState extends State<_SettingsModal> {
           Text(l10n.themeSection, style: textTheme.titleSmall),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(l10n.darkMode),
-            value: _local.darkMode,
-            onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
+            title: Text(l10n.followSystemTheme),
+            value: _local.useSystemTheme,
+            onChanged: (v) => _emit(_local.copyWith(useSystemTheme: v)),
+          ),
+          if (!_local.useSystemTheme)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.darkMode),
+              value: _local.darkMode,
+              onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
+            ),
+          DropdownButtonFormField<String>(
+            value: _local.themeColorNote ?? '',
+            decoration: InputDecoration(
+              labelText: l10n.themeColorLabel,
+            ),
+            items: <DropdownMenuItem<String>>[
+              DropdownMenuItem<String>(
+                value: '',
+                child: Text(l10n.themeColorAuto),
+              ),
+              ..._themeColorNoteOptions.map(
+                (note) => DropdownMenuItem<String>(
+                  value: note,
+                  child: Text(note),
+                ),
+              ),
+            ],
+            onChanged: (value) => _emit(
+              value == null || value.isEmpty
+                  ? _local.copyWith(clearThemeColorNote: true)
+                  : _local.copyWith(themeColorNote: value),
+            ),
           ),
           const Divider(height: 32),
           Text(l10n.calibration, style: textTheme.titleSmall),

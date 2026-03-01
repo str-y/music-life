@@ -18,6 +18,8 @@ void main() {
     test('load returns persisted settings values', () async {
       SharedPreferences.setMockInitialValues({
         AppConfig.defaultDarkModeStorageKey: true,
+        AppConfig.defaultUseSystemThemeStorageKey: false,
+        AppConfig.defaultThemeColorNoteStorageKey: 'F#',
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
       });
@@ -27,6 +29,8 @@ void main() {
       final settings = repository.load();
 
       expect(settings.darkMode, isTrue);
+      expect(settings.useSystemTheme, isFalse);
+      expect(settings.themeColorNote, 'F#');
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
     });
@@ -37,6 +41,8 @@ void main() {
       final repository = SettingsRepository(prefs);
       const updated = AppSettings(
         darkMode: true,
+        useSystemTheme: false,
+        themeColorNote: 'A',
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
       );
@@ -44,6 +50,8 @@ void main() {
       await repository.save(updated);
 
       expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
+      expect(prefs.getBool(AppConfig.defaultUseSystemThemeStorageKey), isFalse);
+      expect(prefs.getString(AppConfig.defaultThemeColorNoteStorageKey), 'A');
       expect(
         prefs.getDouble(AppConfig.defaultReferencePitchStorageKey),
         445.0,

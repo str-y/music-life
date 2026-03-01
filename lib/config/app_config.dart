@@ -15,9 +15,12 @@ class AppConfig {
     this.compositionsStorageKey = defaultCompositionsStorageKey,
     this.compositionsMigratedStorageKey = defaultCompositionsMigratedStorageKey,
     this.darkModeStorageKey = defaultDarkModeStorageKey,
+    this.useSystemThemeStorageKey = defaultUseSystemThemeStorageKey,
+    this.themeColorNoteStorageKey = defaultThemeColorNoteStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
     this.defaultDarkMode = false,
+    this.defaultUseSystemTheme = true,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = defaultTunerTransposition,
   });
@@ -42,6 +45,8 @@ class AppConfig {
   static const String defaultCompositionsMigratedStorageKey =
       'compositions_db_migrated_v1';
   static const String defaultDarkModeStorageKey = 'darkMode';
+  static const String defaultUseSystemThemeStorageKey = 'useSystemTheme';
+  static const String defaultThemeColorNoteStorageKey = 'themeColorNote';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
   static const String defaultTunerTransposition = 'C';
@@ -61,10 +66,13 @@ class AppConfig {
   final String compositionsStorageKey;
   final String compositionsMigratedStorageKey;
   final String darkModeStorageKey;
+  final String useSystemThemeStorageKey;
+  final String themeColorNoteStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
 
   final bool defaultDarkMode;
+  final bool defaultUseSystemTheme;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
 }
