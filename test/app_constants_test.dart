@@ -81,7 +81,7 @@ void main() {
           AppConstants.pitchDetectionThreshold);
     });
 
-    test('captureRecordConfig applies low-latency Android settings', () {
+    test('captureRecordConfig returns expected settings', () {
       final config = NativePitchBridge.captureRecordConfig(
         sampleRate: 48000,
         frameSize: 2048,
