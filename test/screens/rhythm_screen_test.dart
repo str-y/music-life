@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/rhythm_screen.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -46,5 +47,16 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       });
     }
+  });
+
+  testWidgets('disposing RhythmScreen does not leak animation tickers',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const RhythmScreen()));
+    await tester.pump();
+
+    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   });
 }
