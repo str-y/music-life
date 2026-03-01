@@ -66,6 +66,26 @@ void main() {
     final settings = container.read(appSettingsProvider);
     expect(settings.dynamicThemeNote, 'A4');
     expect(settings.dynamicThemeEnergy, 0.5);
+
+    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+          const PitchResult(
+            noteName: 'C4',
+            frequency: 261.63,
+            centsOffset: 0.0,
+            midiNote: 60,
+          ),
+        );
+    expect(container.read(appSettingsProvider).dynamicThemeEnergy, 0.0);
+
+    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+          const PitchResult(
+            noteName: 'B4',
+            frequency: 493.88,
+            centsOffset: 60.0,
+            midiNote: 71,
+          ),
+        );
+    expect(container.read(appSettingsProvider).dynamicThemeEnergy, 1.0);
     expect(prefs.getString('dynamicThemeNote'), isNull);
     expect(prefs.getDouble('dynamicThemeEnergy'), isNull);
   });
