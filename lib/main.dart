@@ -52,6 +52,15 @@ void main() async {
     );
   }
   final prefs = await SharedPreferences.getInstance();
+  try {
+    await AppDatabase.instance.ensureHealthy();
+  } catch (e, stackTrace) {
+    AppLogger.reportError(
+      'Database health check failed on startup',
+      error: e,
+      stackTrace: stackTrace,
+    );
+  }
   runApp(
     ProviderScope(
       overrides: [
