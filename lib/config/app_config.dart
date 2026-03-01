@@ -26,7 +26,7 @@ class AppConfig {
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
     this.defaultReferencePitch = 440.0,
-    this.defaultTunerTransposition = defaultTunerTransposition,
+    this.defaultTunerTransposition = _defaultTunerTransposition,
   });
 
   static const int defaultAudioFrameSize = 2048;
@@ -59,7 +59,7 @@ class AppConfig {
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
-  static const String defaultTunerTransposition = 'C';
+  static const String _defaultTunerTransposition = 'C';
 
   final int audioFrameSize;
   final int audioSampleRate;

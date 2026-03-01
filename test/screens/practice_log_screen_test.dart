@@ -62,17 +62,17 @@ void main() {
   group('PracticeLogScreen analytics helpers', () {
     final now = DateTime(2026, 2, 14);
     final logs = [
-      const PracticeLogEntry(
+      PracticeLogEntry(
         date: DateTime(2026, 2, 14),
         durationMinutes: 30,
         memo: 'Guitar: scales',
       ),
-      const PracticeLogEntry(
+      PracticeLogEntry(
         date: DateTime(2026, 2, 10),
         durationMinutes: 20,
         memo: 'Piano: arpeggio',
       ),
-      const PracticeLogEntry(
+      PracticeLogEntry(
         date: DateTime(2026, 1, 20),
         durationMinutes: 40,
         memo: '',

@@ -150,5 +150,9 @@
   "micPermissionNeeded": "録音するにはマイクのアクセス許可が必要です。",
   "shareRecording": "共有",
   "recordingUnavailableForShare": "共有する録音ファイルが見つかりません。",
-  "recordingShareFailed": "録音を共有できませんでした。"
+  "recordingShareFailed": "録音を共有できませんでした。",
+  "exportCsv": "CSVをエクスポート",
+  "exportPdf": "PDFをエクスポート",
+  "shareSummary": "サマリーカードを共有",
+  "exportAndShare": "エクスポートと共有"
 }

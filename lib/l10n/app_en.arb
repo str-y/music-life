@@ -744,5 +744,21 @@
   "recordingShareFailed": "Could not share recording.",
   "@recordingShareFailed": {
     "description": "Snackbar message shown when sharing a recording fails"
+  },
+  "exportCsv": "Export CSV",
+  "@exportCsv": {
+    "description": "Menu item to export practice logs as CSV"
+  },
+  "exportPdf": "Export PDF",
+  "@exportPdf": {
+    "description": "Menu item to export practice logs as PDF"
+  },
+  "shareSummary": "Share Summary Card",
+  "@shareSummary": {
+    "description": "Menu item to share a monthly summary card"
+  },
+  "exportAndShare": "Export & Share",
+  "@exportAndShare": {
+    "description": "Tooltip for the combined export and share menu"
   }
 }

@@ -45,7 +45,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
-      const updated = AppSettings(
+      final updated = AppSettings(
         darkMode: true,
         useSystemTheme: false,
         themeColorNote: 'A',
