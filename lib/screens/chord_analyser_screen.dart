@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../providers/dependency_providers.dart';
+import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
 import '../widgets/listening_indicator.dart';
@@ -55,8 +56,9 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
   /// Ordered list of recently detected chords (newest first).
   final List<_ChordEntry> _history = [];
 
-  /// Key for the animated history list.
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  final TextEditingController _chordFilterController = TextEditingController();
+  DateTime? _selectedFilterDate;
+  String _chordNameFilter = '';
 
   /// Controller for the pulsing "listening" indicator.
   late final AnimationController _listeningCtrl;
@@ -71,6 +73,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
+    _loadHistory();
     _startCapture();
     _scheduleIdleStop();
   }
@@ -101,26 +104,158 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       }
       _scheduleIdleStop();
       setState(() => _currentChord = chord);
-      _history.insert(0, _ChordEntry(chord: chord, time: DateTime.now()));
-      _listKey.currentState?.insertItem(
-        0,
-        duration: const Duration(milliseconds: 300),
+      unawaited(
+        _persistChordAndRefresh(
+          _ChordEntry(chord: chord, time: DateTime.now()),
+        ),
       );
-      if (_history.length > AppConstants.chordHistoryMaxEntries) {
-        final removed = _history.removeLast();
-        _listKey.currentState?.removeItem(
-          AppConstants.chordHistoryMaxEntries,
-          (context, animation) => _ChordHistoryTile(
-            entry: removed,
-            isLatest: false,
-            colorScheme: Theme.of(context).colorScheme,
-            animation: animation,
-          ),
-          duration: Duration.zero,
-        );
-      }
     });
     setState(() => _loading = false);
+  }
+
+  Future<void> _persistChordAndRefresh(_ChordEntry entry) async {
+    try {
+      final repository = ref.read(chordHistoryRepositoryProvider);
+      await repository.addEntry(
+        ChordHistoryEntry(chord: entry.chord, time: entry.time),
+      );
+      await _loadHistory();
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to persist chord analysis entry',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final repository = ref.read(chordHistoryRepositoryProvider);
+      final entries = await repository.loadEntries(
+        day: _selectedFilterDate,
+        chordNameFilter: _chordNameFilter,
+      );
+      if (!mounted) return;
+      setState(() {
+        _history
+          ..clear()
+          ..addAll(entries.map((e) => _ChordEntry(chord: e.chord, time: e.time)));
+      });
+    } catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to load chord analysis history',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<void> _openFilterSheet() async {
+    final localizations = AppLocalizations.of(context)!;
+    final initialDate = _selectedFilterDate;
+    final initialChordName = _chordNameFilter;
+    _chordFilterController.text = initialChordName;
+    DateTime? pendingDate = initialDate;
+
+    final action = await showModalBottomSheet<_HistoryFilterAction>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final dateLabel = pendingDate == null
+                ? '-'
+                : formatDateYMD(pendingDate!);
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _chordFilterController,
+                    decoration: InputDecoration(
+                      labelText: localizations.currentChord,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('${localizations.practiceDate}: $dateLabel'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: pendingDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setModalState(() => pendingDate = picked);
+                          }
+                        },
+                        child: Text(localizations.practiceDate),
+                      ),
+                      TextButton(
+                        onPressed: () => setModalState(() => pendingDate = null),
+                        child: Text(localizations.cancel),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop(_HistoryFilterAction.clear),
+                        child: Text(localizations.retry),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(localizations.cancel),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop(_HistoryFilterAction.apply),
+                        child: Text(localizations.save),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted || action == null) return;
+
+    if (action == _HistoryFilterAction.apply) {
+      setState(() {
+        _selectedFilterDate = pendingDate;
+        _chordNameFilter = _chordFilterController.text.trim();
+      });
+      await _loadHistory();
+      return;
+    }
+
+    setState(() {
+      _selectedFilterDate = null;
+      _chordNameFilter = '';
+      _chordFilterController.clear();
+    });
+    await _loadHistory();
   }
 
   /// Called when the [NativePitchBridge] reports a runtime error.
@@ -151,6 +286,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _idleTimer?.cancel();
     _subscription?.cancel();
     _bridge?.dispose();
+    _chordFilterController.dispose();
     _listeningCtrl.dispose();
     super.dispose();
   }
@@ -217,19 +353,22 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         const Divider(height: 1),
 
         // ── Chord history timeline ──────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              Icon(Icons.history, size: 18, color: colorScheme.secondary),
-              const SizedBox(width: 6),
-              Text(
-                AppLocalizations.of(context)!.chordHistory,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: colorScheme.secondary,
-                    ),
-              ),
-            ],
+        InkWell(
+          onTap: _openFilterSheet,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.history, size: 18, color: colorScheme.secondary),
+                const SizedBox(width: 6),
+                Text(
+                  AppLocalizations.of(context)!.chordHistory,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: colorScheme.secondary,
+                      ),
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -246,12 +385,11 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                             ),
                       ),
                     )
-                  : AnimatedList(
-                      key: _listKey,
+                  : ListView.builder(
                       padding:
                           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      initialItemCount: _history.length,
-                      itemBuilder: (context, index, animation) {
+                      itemCount: _history.length,
+                      itemBuilder: (context, index) {
                         final entry = _history[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
@@ -259,7 +397,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                             entry: entry,
                             isLatest: index == 0,
                             colorScheme: colorScheme,
-                            animation: animation,
+                            animation: kAlwaysCompleteAnimation,
                           ),
                         );
                       },
@@ -285,6 +423,8 @@ class _ChordEntry {
   final String chord;
   final DateTime time;
 }
+
+enum _HistoryFilterAction { apply, clear }
 
 // ── Chord history tile ────────────────────────────────────────────────────────
 

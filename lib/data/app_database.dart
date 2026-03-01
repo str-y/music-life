@@ -15,11 +15,12 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 ///   - practice_logs       : practice log entries shown in LibraryScreen
 ///   - practice_log_entries: practice log entries managed in PracticeLogScreen
 ///   - compositions        : composition chord progressions
+///   - chord_analysis_history: persisted chord analysis timeline
 class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _schemaVersion = 5;
+  static const int _schemaVersion = 6;
   static const String _databasePasswordKey = 'database_password';
 
   Completer<Database>? _completer;
@@ -71,6 +72,13 @@ class AppDatabase {
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
             chords TEXT NOT NULL
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE chord_analysis_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chord_name TEXT NOT NULL,
+            detected_at TEXT NOT NULL
           )
         ''');
       },
@@ -296,6 +304,46 @@ class AppDatabase {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Chord analysis history
+  // ---------------------------------------------------------------------------
+
+  Future<void> insertChordAnalysisHistory(Map<String, Object?> row) async {
+    final db = await database;
+    await db.insert('chord_analysis_history', row);
+  }
+
+  Future<List<Map<String, Object?>>> queryChordAnalysisHistory({
+    DateTime? from,
+    DateTime? to,
+    String? chordName,
+  }) async {
+    final db = await database;
+    final clauses = <String>[];
+    final args = <Object?>[];
+
+    if (from != null) {
+      clauses.add('detected_at >= ?');
+      args.add(from.toIso8601String());
+    }
+    if (to != null) {
+      clauses.add('detected_at < ?');
+      args.add(to.toIso8601String());
+    }
+    final normalizedChord = chordName?.trim();
+    if (normalizedChord != null && normalizedChord.isNotEmpty) {
+      clauses.add('LOWER(chord_name) LIKE ?');
+      args.add('%${normalizedChord.toLowerCase()}%');
+    }
+
+    return db.query(
+      'chord_analysis_history',
+      where: clauses.isEmpty ? null : clauses.join(' AND '),
+      whereArgs: clauses.isEmpty ? null : args,
+      orderBy: 'detected_at DESC',
+    );
+  }
+
   /// Closes the underlying SQLite connection and resets the lazy future so that
   /// the database can be re-opened on the next access.  Call this when the app
   /// is disposed to release the file handle promptly.
@@ -316,6 +364,7 @@ class AppDatabase {
     3: _migrateV2ToV3,
     4: _migrateV3ToV4,
     5: _migrateV4ToV5,
+    6: _migrateV5ToV6,
   };
 
   static List<int> _migrationPlan({
@@ -459,6 +508,16 @@ class AppDatabase {
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         chords TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _migrateV5ToV6(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chord_analysis_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chord_name TEXT NOT NULL,
+        detected_at TEXT NOT NULL
       )
     ''');
   }
