@@ -353,21 +353,24 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         const Divider(height: 1),
 
         // ── Chord history timeline ──────────────────────────────────
-        InkWell(
-          onTap: _openFilterSheet,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(Icons.history, size: 18, color: colorScheme.secondary),
-                const SizedBox(width: 6),
-                Text(
-                  AppLocalizations.of(context)!.chordHistory,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: colorScheme.secondary,
-                      ),
-                ),
-              ],
+        Semantics(
+          button: true,
+          child: InkWell(
+            onTap: _openFilterSheet,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.history, size: 18, color: colorScheme.secondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    AppLocalizations.of(context)!.chordHistory,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: colorScheme.secondary,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
