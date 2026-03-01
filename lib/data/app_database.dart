@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
-/// Singleton SQLite database used throughout the app.
+/// Singleton Drift database used throughout the app.
 ///
 /// Tables:
 ///   - recordings          : recording metadata (RecordingEntry)
@@ -23,116 +26,181 @@ class AppDatabase {
   static const int _schemaVersion = 6;
   static const String _databasePasswordKey = 'database_password';
 
-  Completer<Database>? _completer;
+  Completer<_DriftDatabase>? _completer;
 
-  Future<Database> get database {
+  Future<_DriftDatabase> get _database {
     if (_completer == null) {
-      _completer = Completer<Database>();
+      _completer = Completer<_DriftDatabase>();
       _open().then(_completer!.complete, onError: _completer!.completeError);
     }
     return _completer!.future;
   }
 
-  Future<Database> _open() async {
-    return openDatabase(
-      join(await getDatabasesPath(), 'music_life.db'),
-      password: await _resolveDatabasePassword(),
-      version: _schemaVersion,
-      onCreate: (db, _) async {
-        await db.execute('''
-          CREATE TABLE recordings (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            recorded_at TEXT NOT NULL,
-            duration_seconds INTEGER NOT NULL,
-            waveform_data BLOB NOT NULL,
-            audio_file_path TEXT,
-            is_deleted INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE practice_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            duration_minutes INTEGER NOT NULL,
-            memo TEXT NOT NULL DEFAULT '',
-            is_deleted INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE practice_log_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            duration_minutes INTEGER NOT NULL,
-            note TEXT NOT NULL DEFAULT ''
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE compositions (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            chords TEXT NOT NULL
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE chord_analysis_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            chord_name TEXT NOT NULL,
-            detected_at TEXT NOT NULL
-          )
-        ''');
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        for (final version in _migrationPlan(
-          oldVersion: oldVersion,
-          newVersion: newVersion,
-        )) {
-          final migration = _migrations[version];
-          if (migration == null) {
-            throw StateError('No migration registered for version $version');
-          }
-          await migration(db);
-        }
-      },
-      onDowngrade: onDatabaseVersionChangeError,
+  Future<_DriftDatabase> _open() async {
+    final dbPath = await getDatabasesPath();
+    final file = File(join(dbPath, 'music_life.db'));
+    final db = _DriftDatabase(NativeDatabase.createInBackground(file));
+    await _migrateIfNeeded(db);
+    return db;
+  }
+
+  Future<void> _migrateIfNeeded(_DriftDatabase db) async {
+    final versionRow =
+        await db.customSelect('PRAGMA user_version').getSingle();
+    final currentVersion = (versionRow.data['user_version'] as int?) ?? 0;
+
+    if (currentVersion == 0) {
+      await _createAllTables(db);
+      await db.customStatement('PRAGMA user_version = $_schemaVersion');
+      return;
+    }
+
+    if (currentVersion > _schemaVersion) {
+      throw StateError(
+        'Database version $currentVersion is newer than supported version $_schemaVersion',
+      );
+    }
+
+    for (final version in _migrationPlan(
+      oldVersion: currentVersion,
+      newVersion: _schemaVersion,
+    )) {
+      final migration = _migrations[version];
+      if (migration == null) {
+        throw StateError('No migration registered for version $version');
+      }
+      await migration(db);
+    }
+
+    await db.customStatement('PRAGMA user_version = $_schemaVersion');
+  }
+
+  Future<void> _createAllTables(_DriftDatabase db) async {
+    await db.customStatement('''
+      CREATE TABLE IF NOT EXISTS recordings (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL,
+        waveform_data BLOB NOT NULL,
+        audio_file_path TEXT,
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.customStatement('''
+      CREATE TABLE IF NOT EXISTS practice_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL,
+        memo TEXT NOT NULL DEFAULT '',
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await db.customStatement('''
+      CREATE TABLE IF NOT EXISTS practice_log_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL,
+        note TEXT NOT NULL DEFAULT ''
+      )
+    ''');
+    await db.customStatement('''
+      CREATE TABLE IF NOT EXISTS compositions (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        chords TEXT NOT NULL
+      )
+    ''');
+    await db.customStatement('''
+      CREATE TABLE IF NOT EXISTS chord_analysis_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chord_name TEXT NOT NULL,
+        detected_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<List<Map<String, Object?>>> _select(
+    String sql, {
+    List<Variable> variables = const [],
+  }) async {
+    final db = await _database;
+    final rows = await db.customSelect(sql, variables: variables).get();
+    return rows.map((row) => Map<String, Object?>.from(row.data)).toList();
+  }
+
+  Future<void> _statement(String sql, [List<Object?> args = const []]) async {
+    final db = await _database;
+    await db.customStatement(sql, args);
+  }
+
+  Future<void> _transaction(Future<void> Function() action) async {
+    final db = await _database;
+    await db.transaction(action);
+  }
+
+  Future<void> _insert(
+    String table,
+    Map<String, Object?> row, {
+    bool replace = false,
+  }) {
+    final command = replace ? 'INSERT OR REPLACE' : 'INSERT';
+    final columns = row.keys.join(', ');
+    final placeholders = List.filled(row.length, '?').join(', ');
+    return _statement(
+      '$command INTO $table ($columns) VALUES ($placeholders)',
+      row.values.toList(growable: false),
     );
+  }
+
+  Future<void> _update(
+    String table,
+    Map<String, Object?> values, {
+    required String where,
+    List<Object?> whereArgs = const [],
+  }) {
+    final entries = values.entries.toList(growable: false);
+    final assignments = entries.map((entry) => '${entry.key} = ?').join(', ');
+    return _statement(
+      'UPDATE $table SET $assignments WHERE $where',
+      [
+        ...entries.map((entry) => entry.value),
+        ...whereArgs,
+      ],
+    );
+  }
+
+  Future<void> _delete(
+    String table, {
+    String? where,
+    List<Object?> whereArgs = const [],
+  }) {
+    final clause = where == null ? '' : ' WHERE $where';
+    return _statement('DELETE FROM $table$clause', whereArgs);
   }
 
   // ---------------------------------------------------------------------------
   // Recordings
   // ---------------------------------------------------------------------------
 
-  Future<List<Map<String, Object?>>> queryAllRecordings() async {
-    final db = await database;
-    return db.query(
-      'recordings',
-      where: 'is_deleted = 0',
-      orderBy: 'recorded_at DESC',
+  Future<List<Map<String, Object?>>> queryAllRecordings() {
+    return _select(
+      'SELECT * FROM recordings WHERE is_deleted = 0 ORDER BY recorded_at DESC',
     );
   }
 
-  Future<void> insertRecording(Map<String, Object?> row) async {
-    final db = await database;
-    await db.insert(
-      'recordings',
-      row,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  Future<void> insertRecording(Map<String, Object?> row) {
+    return _insert('recordings', row, replace: true);
   }
 
   Future<void> replaceAllRecordings(List<Map<String, Object?>> rows) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.update(
-        'recordings',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+    await _transaction(() async {
+      await _update('recordings', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in rows) {
-        await txn.insert(
+        await _insert(
           'recordings',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
     });
@@ -142,28 +210,20 @@ class AppDatabase {
   // Practice logs (LibraryScreen / RecordingRepository)
   // ---------------------------------------------------------------------------
 
-  Future<List<Map<String, Object?>>> queryAllPracticeLogs() async {
-    final db = await database;
-    return db.query(
-      'practice_logs',
-      where: 'is_deleted = 0',
-      orderBy: 'date DESC',
+  Future<List<Map<String, Object?>>> queryAllPracticeLogs() {
+    return _select(
+      'SELECT * FROM practice_logs WHERE is_deleted = 0 ORDER BY date DESC',
     );
   }
 
   Future<void> replaceAllPracticeLogs(List<Map<String, Object?>> rows) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.update(
-        'practice_logs',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+    await _transaction(() async {
+      await _update('practice_logs', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in rows) {
-        await txn.insert(
+        await _insert(
           'practice_logs',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
     });
@@ -176,30 +236,21 @@ class AppDatabase {
     required List<Map<String, Object?>> recordings,
     required List<Map<String, Object?>> practiceLogs,
   }) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.update(
-        'recordings',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+    await _transaction(() async {
+      await _update('recordings', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in recordings) {
-        await txn.insert(
+        await _insert(
           'recordings',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
-      await txn.update(
-        'practice_logs',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+      await _update('practice_logs', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in practiceLogs) {
-        await txn.insert(
+        await _insert(
           'practice_logs',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
     });
@@ -212,39 +263,30 @@ class AppDatabase {
     required List<Map<String, Object?>> practiceLogEntries,
     required List<Map<String, Object?>> compositions,
   }) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.update(
-        'recordings',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+    await _transaction(() async {
+      await _update('recordings', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in recordings) {
-        await txn.insert(
+        await _insert(
           'recordings',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
-      await txn.update(
-        'practice_logs',
-        {'is_deleted': 1},
-        where: 'is_deleted = 0',
-      );
+      await _update('practice_logs', {'is_deleted': 1}, where: 'is_deleted = 0');
       for (final row in practiceLogs) {
-        await txn.insert(
+        await _insert(
           'practice_logs',
           {...row, 'is_deleted': 0},
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          replace: true,
         );
       }
-      await txn.delete('practice_log_entries');
+      await _delete('practice_log_entries');
       for (final row in practiceLogEntries) {
-        await txn.insert('practice_log_entries', row);
+        await _insert('practice_log_entries', row);
       }
-      await txn.delete('compositions');
+      await _delete('compositions');
       for (final row in compositions) {
-        await txn.insert('compositions', row);
+        await _insert('compositions', row);
       }
     });
   }
@@ -253,53 +295,35 @@ class AppDatabase {
   // Practice log entries (PracticeLogScreen)
   // ---------------------------------------------------------------------------
 
-  Future<List<Map<String, Object?>>> queryAllPracticeLogEntries() async {
-    final db = await database;
-    return db.query('practice_log_entries', orderBy: 'date DESC');
+  Future<List<Map<String, Object?>>> queryAllPracticeLogEntries() {
+    return _select('SELECT * FROM practice_log_entries ORDER BY date DESC');
   }
 
-  Future<void> insertPracticeLogEntry(Map<String, Object?> row) async {
-    final db = await database;
-    await db.insert('practice_log_entries', row);
+  Future<void> insertPracticeLogEntry(Map<String, Object?> row) {
+    return _insert('practice_log_entries', row);
   }
 
   // ---------------------------------------------------------------------------
   // Compositions
   // ---------------------------------------------------------------------------
 
-  Future<List<Map<String, Object?>>> queryAllCompositions() async {
-    final db = await database;
-    return db.query('compositions', orderBy: 'title ASC');
+  Future<List<Map<String, Object?>>> queryAllCompositions() {
+    return _select('SELECT * FROM compositions ORDER BY title ASC');
   }
 
-  Future<void> insertComposition(Map<String, Object?> row) async {
-    final db = await database;
-    await db.insert(
-      'compositions',
-      row,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+  Future<void> insertComposition(Map<String, Object?> row) {
+    return _insert('compositions', row, replace: true);
   }
 
-  Future<void> deleteComposition(String id) async {
-    final db = await database;
-    await db.delete(
-      'compositions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+  Future<void> deleteComposition(String id) {
+    return _delete('compositions', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> replaceAllCompositions(List<Map<String, Object?>> rows) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete('compositions');
+    await _transaction(() async {
+      await _delete('compositions');
       for (final row in rows) {
-        await txn.insert(
-          'compositions',
-          row,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        await _insert('compositions', row, replace: true);
       }
     });
   }
@@ -308,44 +332,41 @@ class AppDatabase {
   // Chord analysis history
   // ---------------------------------------------------------------------------
 
-  Future<void> insertChordAnalysisHistory(Map<String, Object?> row) async {
-    final db = await database;
-    await db.insert('chord_analysis_history', row);
+  Future<void> insertChordAnalysisHistory(Map<String, Object?> row) {
+    return _insert('chord_analysis_history', row);
   }
 
   Future<List<Map<String, Object?>>> queryChordAnalysisHistory({
     DateTime? from,
     DateTime? to,
     String? chordName,
-  }) async {
-    final db = await database;
+  }) {
     final clauses = <String>[];
-    final args = <Object?>[];
+    final variables = <Variable>[];
 
     if (from != null) {
       clauses.add('detected_at >= ?');
-      args.add(from.toIso8601String());
+      variables.add(Variable.withString(from.toIso8601String()));
     }
     if (to != null) {
       clauses.add('detected_at < ?');
-      args.add(to.toIso8601String());
+      variables.add(Variable.withString(to.toIso8601String()));
     }
     final normalizedChord = chordName?.trim();
     if (normalizedChord != null && normalizedChord.isNotEmpty) {
       clauses.add('LOWER(chord_name) LIKE ?');
-      args.add('%${normalizedChord.toLowerCase()}%');
+      variables.add(Variable.withString('%${normalizedChord.toLowerCase()}%'));
     }
 
-    return db.query(
-      'chord_analysis_history',
-      where: clauses.isEmpty ? null : clauses.join(' AND '),
-      whereArgs: clauses.isEmpty ? null : args,
-      orderBy: 'detected_at DESC',
+    final whereClause = clauses.isEmpty ? '' : ' WHERE ${clauses.join(' AND ')}';
+    return _select(
+      'SELECT * FROM chord_analysis_history$whereClause ORDER BY detected_at DESC',
+      variables: variables,
     );
   }
 
-  /// Closes the underlying SQLite connection and resets the lazy future so that
-  /// the database can be re-opened on the next access.  Call this when the app
+  /// Closes the underlying Drift connection and resets the lazy future so that
+  /// the database can be re-opened on the next access. Call this when the app
   /// is disposed to release the file handle promptly.
   Future<void> close() async {
     if (_completer != null) {
@@ -359,7 +380,7 @@ class AppDatabase {
   // Migration helpers
   // ---------------------------------------------------------------------------
 
-  static final Map<int, Future<void> Function(DatabaseExecutor)> _migrations = {
+  static final Map<int, Future<void> Function(_DriftDatabase)> _migrations = {
     2: _migrateV1ToV2,
     3: _migrateV2ToV3,
     4: _migrateV3ToV4,
@@ -412,25 +433,27 @@ class AppDatabase {
   ///   • If [recordings] was already dropped but [recordings_new] was not yet
   ///     renamed (interrupted between DROP and RENAME), only the rename is
   ///     performed to complete the migration.
-  static Future<void> _migrateV1ToV2(DatabaseExecutor db) async {
-    final tables = await db.rawQuery(
+  static Future<void> _migrateV1ToV2(_DriftDatabase db) async {
+    final tables = await db.customSelect(
       "SELECT name FROM sqlite_master WHERE type='table'"
       " AND name IN ('recordings', 'recordings_new')",
-    );
-    final tableNames = tables.map((r) => r['name'] as String).toSet();
+    ).get();
+    final tableNames = tables
+        .map((row) => row.data['name'])
+        .whereType<String>()
+        .toSet();
 
     // Interrupted between DROP TABLE recordings and RENAME — just finish.
     if (!tableNames.contains('recordings') &&
         tableNames.contains('recordings_new')) {
-      await db.execute(
-          'ALTER TABLE recordings_new RENAME TO recordings');
+      await db.customStatement('ALTER TABLE recordings_new RENAME TO recordings');
       return;
     }
 
     // Drop any leftover partial table so the migration can restart cleanly.
-    await db.execute('DROP TABLE IF EXISTS recordings_new');
+    await db.customStatement('DROP TABLE IF EXISTS recordings_new');
 
-    await db.execute('''
+    await db.customStatement('''
       CREATE TABLE recordings_new (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -439,40 +462,51 @@ class AppDatabase {
         waveform_data BLOB NOT NULL
       )
     ''');
-    final rows = await db.query('recordings');
-    for (final row in rows) {
+    final rows = await db.customSelect('SELECT * FROM recordings').get();
+    for (final resultRow in rows) {
+      final row = resultRow.data;
       final jsonStr = row['waveform_data'] as String;
-      final doubles = (jsonDecode(jsonStr) as List)
-          .map((e) => (e as num).toDouble())
-          .toList();
+      final doubles =
+          (jsonDecode(jsonStr) as List).map((e) => (e as num).toDouble()).toList();
       // Encoding matches _waveformToBlob in recording_repository.dart.
       final byteData = ByteData(doubles.length * 8);
       for (var i = 0; i < doubles.length; i++) {
         byteData.setFloat64(i * 8, doubles[i], Endian.little);
       }
-      await db.insert('recordings_new', {
-        'id': row['id'],
-        'title': row['title'],
-        'recorded_at': row['recorded_at'],
-        'duration_seconds': row['duration_seconds'],
-        'waveform_data': byteData.buffer.asUint8List(),
-      });
+      await db.customStatement(
+        '''
+        INSERT INTO recordings_new (
+          id,
+          title,
+          recorded_at,
+          duration_seconds,
+          waveform_data
+        ) VALUES (?, ?, ?, ?, ?)
+        ''',
+        [
+          row['id'],
+          row['title'],
+          row['recorded_at'],
+          row['duration_seconds'],
+          byteData.buffer.asUint8List(),
+        ],
+      );
     }
-    await db.execute('DROP TABLE recordings');
-    await db.execute('ALTER TABLE recordings_new RENAME TO recordings');
+    await db.customStatement('DROP TABLE recordings');
+    await db.customStatement('ALTER TABLE recordings_new RENAME TO recordings');
   }
 
-  static Future<void> _migrateV2ToV3(DatabaseExecutor db) async {
+  static Future<void> _migrateV2ToV3(_DriftDatabase db) async {
     await _ensureSoftDeleteColumn(db, table: 'recordings');
     await _ensureSoftDeleteColumn(db, table: 'practice_logs');
   }
 
-  static Future<void> _migrateV3ToV4(DatabaseExecutor db) async {
+  static Future<void> _migrateV3ToV4(_DriftDatabase db) async {
     await _ensureAudioFilePathColumn(db);
   }
 
   static Future<void> _ensureSoftDeleteColumn(
-    DatabaseExecutor db, {
+    _DriftDatabase db, {
     required String table,
   }) async {
     final tableInfoQuery = switch (table) {
@@ -487,23 +521,23 @@ class AppDatabase {
         'ALTER TABLE practice_logs ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
       _ => throw ArgumentError.value(table, 'table', 'Unsupported table'),
     };
-    final columns = await db.rawQuery(tableInfoQuery);
-    final hasIsDeleted = columns.any((row) => row['name'] == 'is_deleted');
+    final columns = await db.customSelect(tableInfoQuery).get();
+    final hasIsDeleted = columns.any((row) => row.data['name'] == 'is_deleted');
     if (!hasIsDeleted) {
-      await db.execute(addSoftDeleteColumnQuery);
+      await db.customStatement(addSoftDeleteColumnQuery);
     }
   }
 
-  static Future<void> _ensureAudioFilePathColumn(DatabaseExecutor db) async {
-    final columns = await db.rawQuery('PRAGMA table_info(recordings)');
-    final hasAudioPath = columns.any((row) => row['name'] == 'audio_file_path');
+  static Future<void> _ensureAudioFilePathColumn(_DriftDatabase db) async {
+    final columns = await db.customSelect('PRAGMA table_info(recordings)').get();
+    final hasAudioPath = columns.any((row) => row.data['name'] == 'audio_file_path');
     if (!hasAudioPath) {
-      await db.execute('ALTER TABLE recordings ADD COLUMN audio_file_path TEXT');
+      await db.customStatement('ALTER TABLE recordings ADD COLUMN audio_file_path TEXT');
     }
   }
 
-  static Future<void> _migrateV4ToV5(DatabaseExecutor db) async {
-    await db.execute('''
+  static Future<void> _migrateV4ToV5(_DriftDatabase db) async {
+    await db.customStatement('''
       CREATE TABLE IF NOT EXISTS compositions (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -512,8 +546,8 @@ class AppDatabase {
     ''');
   }
 
-  static Future<void> _migrateV5ToV6(DatabaseExecutor db) async {
-    await db.execute('''
+  static Future<void> _migrateV5ToV6(_DriftDatabase db) async {
+    await db.customStatement('''
       CREATE TABLE IF NOT EXISTS chord_analysis_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         chord_name TEXT NOT NULL,
@@ -521,4 +555,10 @@ class AppDatabase {
       )
     ''');
   }
+
+}
+
+class _DriftDatabase extends DatabaseConnectionUser {
+  _DriftDatabase(QueryExecutor executor)
+      : super(DatabaseConnection.fromExecutor(executor));
 }
