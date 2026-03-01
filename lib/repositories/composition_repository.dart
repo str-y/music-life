@@ -9,6 +9,7 @@ import '../utils/app_logger.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
+/// Represents a saved composition and its chord progression.
 class Composition {
   Composition({
     required this.id,
@@ -36,6 +37,7 @@ class Composition {
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
+/// Persists compositions and migrates legacy stored data into SQLite.
 class CompositionRepository {
   const CompositionRepository(this._prefs, {AppConfig config = const AppConfig()})
       : _config = config;
@@ -127,6 +129,7 @@ class CompositionRepository {
     }
   }
 
+  /// Loads all saved compositions from the database.
   Future<List<Composition>> load() async {
     await _migrateIfNeeded();
     try {
@@ -150,6 +153,7 @@ class CompositionRepository {
     }
   }
 
+  /// Replaces all saved compositions in the database.
   Future<void> save(List<Composition> compositions) async {
     await AppDatabase.instance.replaceAllCompositions(
       compositions
