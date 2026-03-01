@@ -6,6 +6,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/library_screen.dart';
 import 'package:music_life/screens/main_screen.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
+import 'package:music_life/router/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _pumpApp(WidgetTester tester, {String? initialLocation}) async {
@@ -33,14 +34,20 @@ void main() {
 
     testWidgets('deep link /recordings opens the recording view',
         (tester) async {
-      await _pumpApp(tester, initialLocation: '/recordings');
+      await _pumpApp(
+        tester,
+        initialLocation: const RecordingsRoute().location,
+      );
 
       expect(find.byType(LibraryScreen), findsOneWidget);
     });
 
     testWidgets('deep link /practice-log opens the practice log view',
         (tester) async {
-      await _pumpApp(tester, initialLocation: '/practice-log');
+      await _pumpApp(
+        tester,
+        initialLocation: const PracticeLogRoute().location,
+      );
 
       expect(find.byType(PracticeLogScreen), findsOneWidget);
     });
