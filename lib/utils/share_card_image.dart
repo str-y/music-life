@@ -14,7 +14,7 @@ Future<XFile> generateShareCardImage({
   const height = 1080;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
-  final rect = const Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
+  const rect = Rect.fromLTWH(0, 0, 1080, 1080);
 
   canvas.drawRect(rect, Paint()..color = const Color(0xFFF8F7FF));
   canvas.drawRRect(
