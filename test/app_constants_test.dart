@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/app_constants.dart';
 import 'package:music_life/native_pitch_bridge.dart';
+import 'package:record/record.dart';
 
 void main() {
   group('AppConstants', () {
@@ -78,6 +79,26 @@ void main() {
     test('defaultThreshold matches AppConstants', () {
       expect(NativePitchBridge.defaultThreshold,
           AppConstants.pitchDetectionThreshold);
+    });
+
+    test('captureRecordConfig applies low-latency Android settings', () {
+      final config = NativePitchBridge.captureRecordConfig(
+        sampleRate: 48000,
+        frameSize: 2048,
+      );
+      expect(config.encoder, AudioEncoder.pcm16bits);
+      expect(config.sampleRate, 48000);
+      expect(config.numChannels, 1);
+      expect(config.streamBufferSize, 4096);
+      expect(
+        config.androidConfig.audioSource,
+        AndroidAudioSource.voiceRecognition,
+      );
+      expect(
+        config.androidConfig.audioManagerMode,
+        AudioManagerMode.modeInCommunication,
+      );
+      expect(config.androidConfig.useLegacy, isFalse);
     });
   });
 }

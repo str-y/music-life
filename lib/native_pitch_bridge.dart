@@ -266,6 +266,23 @@ class NativePitchBridge implements Finalizable {
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _audioSub;
 
+  static RecordConfig captureRecordConfig({
+    required int sampleRate,
+    required int frameSize,
+  }) {
+    return RecordConfig(
+      encoder: AudioEncoder.pcm16bits,
+      sampleRate: sampleRate,
+      numChannels: 1,
+      streamBufferSize: frameSize * Int16List.bytesPerElement,
+      androidConfig: const AndroidRecordConfig(
+        audioSource: AndroidAudioSource.voiceRecognition,
+        audioManagerMode: AudioManagerMode.modeInCommunication,
+        useLegacy: false,
+      ),
+    );
+  }
+
   NativePitchBridge._({
     required Pointer<Void> handle,
     required _MLDestroyDart nativeDestroy,
@@ -471,10 +488,9 @@ class NativePitchBridge implements Finalizable {
 
     try {
       final stream = await _recorder.startStream(
-        RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
+        captureRecordConfig(
           sampleRate: _sampleRate,
-          numChannels: 1,
+          frameSize: _frameSize,
         ),
       );
       _audioSub = stream.listen(_onAudioChunk, onError: _onError);
