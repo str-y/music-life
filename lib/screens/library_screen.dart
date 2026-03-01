@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
@@ -160,16 +161,32 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   ? Row(
                       key: const ValueKey('library-wide-layout'),
                       children: [
-                        Expanded(child: RecordingsTab(recordings: state.recordings)),
+                        Expanded(
+                          child: RecordingsTab(
+                            recordings: state.recordings,
+                            onCreateRecording: _showAddDialog,
+                          ),
+                        ),
                         const VerticalDivider(width: 1),
-                        Expanded(child: LogTab(monthlyLogStatsByMonth: state.monthlyLogStats)),
+                        Expanded(
+                          child: LogTab(
+                            monthlyLogStatsByMonth: state.monthlyLogStats,
+                            onRecordPractice: () => context.push('/practice-log'),
+                          ),
+                        ),
                       ],
                     )
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        RecordingsTab(recordings: state.recordings),
-                        LogTab(monthlyLogStatsByMonth: state.monthlyLogStats),
+                        RecordingsTab(
+                          recordings: state.recordings,
+                          onCreateRecording: _showAddDialog,
+                        ),
+                        LogTab(
+                          monthlyLogStatsByMonth: state.monthlyLogStats,
+                          onRecordPractice: () => context.push('/practice-log'),
+                        ),
                       ],
                     ),
       floatingActionButton: ListenableBuilder(
