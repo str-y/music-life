@@ -18,6 +18,7 @@ namespace {
 MLLogCallback g_log_callback = nullptr;
 std::once_flag g_crash_handlers_once;
 volatile sig_atomic_t g_fatal_signal_in_progress = 0;
+constexpr int kMaxProcessSamplesMultiplier = 2;
 
 void emit_log(int level, const char* fmt, ...) {
     char buffer[512];
@@ -110,7 +111,7 @@ MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_
         return nullptr;
     }
     try {
-        const int max_process_samples = frame_size * 2;
+        const int max_process_samples = frame_size * kMaxProcessSamplesMultiplier;
         auto* handle = new MLPitchDetectorHandle{
             std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz),
             max_process_samples
