@@ -18,9 +18,14 @@ import '../../utils/app_logger.dart';
 // ---------------------------------------------------------------------------
 
 class RecordingsTab extends ConsumerStatefulWidget {
-  const RecordingsTab({super.key, required this.recordings});
+  const RecordingsTab({
+    super.key,
+    required this.recordings,
+    this.onCreateRecording,
+  });
 
   final List<RecordingEntry> recordings;
+  final VoidCallback? onCreateRecording;
 
   @override
   ConsumerState<RecordingsTab> createState() => _RecordingsTabState();
@@ -51,9 +56,30 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
     final playbackNotifier = ref.read(recordingPlaybackProvider.notifier);
     if (_sorted.isEmpty) {
       return Center(
-        child: Text(
-          AppLocalizations.of(context)!.noRecordings,
-          style: const TextStyle(color: Colors.grey),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.library_music_outlined,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppLocalizations.of(context)!.noRecordings,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: widget.onCreateRecording,
+                icon: const Icon(Icons.mic),
+                label: Text(AppLocalizations.of(context)!.newRecording),
+              ),
+            ],
+          ),
         ),
       );
     }

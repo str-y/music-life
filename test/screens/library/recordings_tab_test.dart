@@ -27,6 +27,24 @@ void main() {
       expect(find.text('No recordings'), findsOneWidget);
     });
 
+    testWidgets('empty-state CTA calls onCreateRecording', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        _wrap(
+          RecordingsTab(
+            recordings: const [],
+            onCreateRecording: () => tapped = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('New Recording'));
+      await tester.pump();
+
+      expect(tapped, isTrue);
+    });
+
     testWidgets('shows recording title when list has one entry', (tester) async {
       final recordings = [
         RecordingEntry(
