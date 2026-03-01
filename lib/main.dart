@@ -5,6 +5,8 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
 import 'data/app_database.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/library_screen.dart';
@@ -17,6 +19,8 @@ import 'repositories/settings_repository.dart';
 import 'rhythm_screen.dart';
 import 'screens/chord_analyser_screen.dart';
 import 'screens/composition_helper_screen.dart';
+import 'services/ad_service.dart';
+import 'widgets/banner_ad_widget.dart';
 import 'utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
@@ -25,6 +29,7 @@ const String _privacyPolicyUrl =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await MobileAds.instance.initialize();
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.stry.musiclife.audio',
       androidNotificationChannelName: 'Music Life Playback',
@@ -198,12 +203,24 @@ class _MainScreenState extends ConsumerState<MainScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+
+    // Pre-load interstitial ad
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adServiceProvider).loadInterstitialAd();
+    });
   }
 
   @override
   void dispose() {
     _entranceCtrl.dispose();
     super.dispose();
+  }
+
+  void _showAdAndPush(String route) {
+    // Show interstitial with some probability or frequency logic
+    // For now, let's try to show it, the service handle loading state
+    ref.read(adServiceProvider).showInterstitialAd();
+    context.push(route);
   }
 
   void _openSettings(BuildContext context, AppSettings settings) {
@@ -314,7 +331,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.tunerTitle),
                   subtitle: Text(l10n.tunerSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/tuner'),
+                  onTap: () => _showAdAndPush('/tuner'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -324,7 +341,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.practiceLogTitle),
                   subtitle: Text(l10n.practiceLogSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/practice-log'),
+                  onTap: () => _showAdAndPush('/practice-log'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -334,7 +351,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.libraryTitle),
                   subtitle: Text(l10n.librarySubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/library'),
+                  onTap: () => _showAdAndPush('/library'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -344,7 +361,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.rhythmTitle),
                   subtitle: Text(l10n.rhythmSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/rhythm'),
+                  onTap: () => _showAdAndPush('/rhythm'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -354,7 +371,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.chordAnalyserTitle),
                   subtitle: Text(l10n.chordAnalyserSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/chord-analyser'),
+                  onTap: () => _showAdAndPush('/chord-analyser'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -364,9 +381,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   title: Text(l10n.compositionHelperTitle),
                   subtitle: Text(l10n.compositionHelperSubtitle),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/composition-helper'),
+                  onTap: () => _showAdAndPush('/composition-helper'),
                 ),
               ),
+              const SizedBox(height: 24),
+              const BannerAdWidget(),
             ],
           ),
         ),
