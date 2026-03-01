@@ -322,6 +322,21 @@
     "description": "Empty state message in the chord history list"
   },
 
+  "clearFilter": "Clear filters",
+  "@clearFilter": {
+    "description": "Button label to clear applied history filters"
+  },
+
+  "clearDateFilter": "Clear date",
+  "@clearDateFilter": {
+    "description": "Button label to clear selected history date filter"
+  },
+
+  "filterByChordName": "Filter by chord name",
+  "@filterByChordName": {
+    "description": "Label for the chord-name filter text field in history filter sheet"
+  },
+
   "weekdaySun": "Sun",
   "@weekdaySun": { "description": "Abbreviated Sunday label in the calendar" },
 

@@ -36,9 +36,7 @@ class SqliteChordHistoryRepository implements ChordHistoryRepository {
     String chordNameFilter = '',
   }) async {
     final rangeStart = day == null ? null : DateTime(day.year, day.month, day.day);
-    final rangeEnd = rangeStart == null
-        ? null
-        : DateTime(day.year, day.month, day.day + 1);
+    final rangeEnd = rangeStart?.add(const Duration(days: 1));
     final rows = await AppDatabase.instance.queryChordAnalysisHistory(
       from: rangeStart,
       to: rangeEnd,

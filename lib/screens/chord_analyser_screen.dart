@@ -182,7 +182,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                   TextField(
                     controller: _chordFilterController,
                     decoration: InputDecoration(
-                      labelText: localizations.currentChord,
+                      labelText: localizations.filterByChordName,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -207,7 +207,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                       ),
                       TextButton(
                         onPressed: () => setModalState(() => pendingDate = null),
-                        child: Text(localizations.cancel),
+                        child: Text(localizations.clearDateFilter),
                       ),
                     ],
                   ),
@@ -217,7 +217,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                       TextButton(
                         onPressed: () => Navigator.of(context)
                             .pop(_HistoryFilterAction.clear),
-                        child: Text(localizations.retry),
+                        child: Text(localizations.clearFilter),
                       ),
                       const Spacer(),
                       TextButton(

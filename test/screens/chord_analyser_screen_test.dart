@@ -33,9 +33,7 @@ class _InMemoryChordHistoryRepository implements ChordHistoryRepository {
   }) async {
     final normalized = chordNameFilter.toLowerCase().trim();
     final start = day == null ? null : DateTime(day.year, day.month, day.day);
-    final end = start == null
-        ? null
-        : DateTime(day.year, day.month, day.day + 1);
+    final end = start?.add(const Duration(days: 1));
     final matches = _entries.where((entry) {
       if (start != null &&
           (entry.time.isBefore(start) || !entry.time.isBefore(end!))) {
@@ -189,14 +187,16 @@ void main() {
       ),
     );
     await tester.pump();
+    final localizations =
+        AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
 
     expect(find.text('G'), findsWidgets);
     expect(find.text('C'), findsWidgets);
 
-    await tester.tap(find.text('Note history'));
+    await tester.tap(find.text(localizations.chordHistory));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'C');
-    await tester.tap(find.text('Save'));
+    await tester.tap(find.text(localizations.save));
     await tester.pumpAndSettle();
 
     expect(find.text('C'), findsWidgets);
