@@ -6,6 +6,35 @@ import 'package:music_life/providers/library_provider.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 
 void main() {
+  group('computePracticeSummary', () {
+    test('sums today minutes and counts streak from today', () {
+      final summary = computePracticeSummary(
+        const [
+          PracticeLogEntry(date: DateTime(2026, 2, 28), durationMinutes: 20),
+          PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 30),
+          PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 15),
+        ],
+        now: DateTime(2026, 3, 1, 12),
+      );
+
+      expect(summary.todayMinutes, 45);
+      expect(summary.streakDays, 2);
+    });
+
+    test('counts streak from yesterday when today has no log', () {
+      final summary = computePracticeSummary(
+        const [
+          PracticeLogEntry(date: DateTime(2026, 2, 27), durationMinutes: 20),
+          PracticeLogEntry(date: DateTime(2026, 2, 28), durationMinutes: 30),
+        ],
+        now: DateTime(2026, 3, 1, 12),
+      );
+
+      expect(summary.todayMinutes, 0);
+      expect(summary.streakDays, 2);
+    });
+  });
+
   group('LibraryNotifier monthly log stats', () {
     test('aggregates practice days and total minutes by month', () async {
       final mockRepo = _MockRecordingRepository();

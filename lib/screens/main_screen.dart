@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/library_provider.dart';
 import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ad_service.dart';
@@ -142,6 +143,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
+    final libraryState = ref.watch(libraryProvider);
+    final practiceSummary = computePracticeSummary(libraryState.logs);
     final entranceCurve = CurvedAnimation(
       parent: _entranceCtrl,
       curve: Curves.easeOutCubic,
@@ -195,6 +198,44 @@ class _MainScreenState extends ConsumerState<MainScreen>
                       Text(
                         l10n.welcomeSubtitle,
                         style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 20,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.practiceSummaryTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _SummaryMetric(
+                            icon: Icons.today,
+                            value: l10n.durationMinutes(
+                              practiceSummary.todayMinutes,
+                            ),
+                            label: l10n.todayPracticeTime,
+                          ),
+                          _SummaryMetric(
+                            icon: Icons.local_fire_department,
+                            value: l10n.practiceDayCount(
+                              practiceSummary.streakDays,
+                            ),
+                            label: l10n.streakDays,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -288,6 +329,37 @@ class _FeatureTile extends StatefulWidget {
 
   @override
   State<_FeatureTile> createState() => _FeatureTileState();
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: cs.primary),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
 }
 
 class _FeatureTileState extends State<_FeatureTile> {
