@@ -15,6 +15,7 @@ import '../utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
+const String _onboardingShownKey = 'onboarding_shown_v1';
 const List<String> _themeColorNoteOptions = <String>[
   'C',
   'C#',
@@ -50,9 +51,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
       duration: const Duration(milliseconds: 500),
     )..forward();
 
-    // Pre-load interstitial ad
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Pre-load interstitial ad
       ref.read(adServiceProvider).loadInterstitialAd();
+      _showOnboardingIfNeeded();
     });
   }
 
@@ -67,6 +69,37 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // For now, let's try to show it, the service handles loading state
     ref.read(adServiceProvider).showInterstitialAd();
     context.push(route);
+  }
+
+  Future<void> _showOnboardingIfNeeded() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    if (prefs.getBool(_onboardingShownKey) == true || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    await prefs.setBool(_onboardingShownKey, true);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.welcomeTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.welcomeSubtitle),
+            const SizedBox(height: 12),
+            Text('• ${l10n.tunerTitle}: ${l10n.tunerSubtitle}'),
+            Text('• ${l10n.chordAnalyserTitle}: ${l10n.chordAnalyserSubtitle}'),
+            Text('• ${l10n.practiceLogTitle}: ${l10n.practiceLogSubtitle}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
+          ),
+        ],
+      ),
+    );
   }
 
   void _openSettings(BuildContext context, AppSettings settings) {
