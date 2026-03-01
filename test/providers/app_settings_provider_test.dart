@@ -11,6 +11,8 @@ void main() {
   test('initial state is loaded from SharedPreferences', () async {
     SharedPreferences.setMockInitialValues({
       AppConfig.defaultDarkModeStorageKey: true,
+      AppConfig.defaultUseSystemThemeStorageKey: false,
+      AppConfig.defaultThemeColorNoteStorageKey: 'G',
       AppConfig.defaultReferencePitchStorageKey: 442.0,
     });
     final prefs = await SharedPreferences.getInstance();
@@ -23,7 +25,15 @@ void main() {
 
     final settings = container.read(appSettingsProvider);
 
-    expect(settings, const AppSettings(darkMode: true, referencePitch: 442.0));
+    expect(
+      settings,
+      const AppSettings(
+        darkMode: true,
+        useSystemTheme: false,
+        themeColorNote: 'G',
+        referencePitch: 442.0,
+      ),
+    );
   });
 
   test('update changes state and persists values', () async {
@@ -36,11 +46,18 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    const updated = AppSettings(darkMode: true, referencePitch: 444.0);
+    const updated = AppSettings(
+      darkMode: true,
+      useSystemTheme: false,
+      themeColorNote: 'A#',
+      referencePitch: 444.0,
+    );
     await container.read(appSettingsProvider.notifier).update(updated);
 
     expect(container.read(appSettingsProvider), updated);
     expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
+    expect(prefs.getBool(AppConfig.defaultUseSystemThemeStorageKey), isFalse);
+    expect(prefs.getString(AppConfig.defaultThemeColorNoteStorageKey), 'A#');
     expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
   });
 

@@ -4,6 +4,8 @@ import '../config/app_config.dart';
 
 class AppSettings {
   final bool darkMode;
+  final bool useSystemTheme;
+  final String? themeColorNote;
   final double referencePitch;
   final String tunerTransposition;
   final String? dynamicThemeNote;
@@ -11,6 +13,8 @@ class AppSettings {
 
   const AppSettings({
     this.darkMode = false,
+    this.useSystemTheme = true,
+    this.themeColorNote,
     this.referencePitch = 440.0,
     this.tunerTransposition = 'C',
     this.dynamicThemeNote,
@@ -19,14 +23,20 @@ class AppSettings {
 
   AppSettings copyWith({
     bool? darkMode,
+    bool? useSystemTheme,
+    String? themeColorNote,
     double? referencePitch,
     String? tunerTransposition,
     String? dynamicThemeNote,
     double? dynamicThemeEnergy,
+    bool clearThemeColorNote = false,
     bool clearDynamicThemeNote = false,
   }) {
     return AppSettings(
       darkMode: darkMode ?? this.darkMode,
+      useSystemTheme: useSystemTheme ?? this.useSystemTheme,
+      themeColorNote:
+          clearThemeColorNote ? null : (themeColorNote ?? this.themeColorNote),
       referencePitch: referencePitch ?? this.referencePitch,
       tunerTransposition: tunerTransposition ?? this.tunerTransposition,
       dynamicThemeNote: clearDynamicThemeNote
@@ -41,6 +51,8 @@ class AppSettings {
       identical(this, other) ||
       other is AppSettings &&
           darkMode == other.darkMode &&
+          useSystemTheme == other.useSystemTheme &&
+          themeColorNote == other.themeColorNote &&
           referencePitch == other.referencePitch &&
           tunerTransposition == other.tunerTransposition &&
           dynamicThemeNote == other.dynamicThemeNote &&
@@ -48,7 +60,13 @@ class AppSettings {
 
   @override
   int get hashCode =>
-      Object.hash(darkMode, referencePitch, tunerTransposition, dynamicThemeNote,
+      Object.hash(
+          darkMode,
+          useSystemTheme,
+          themeColorNote,
+          referencePitch,
+          tunerTransposition,
+          dynamicThemeNote,
           dynamicThemeEnergy);
 }
 
@@ -63,6 +81,9 @@ class SettingsRepository {
     return AppSettings(
       darkMode:
           _prefs.getBool(_config.darkModeStorageKey) ?? _config.defaultDarkMode,
+      useSystemTheme: _prefs.getBool(_config.useSystemThemeStorageKey) ??
+          _config.defaultUseSystemTheme,
+      themeColorNote: _prefs.getString(_config.themeColorNoteStorageKey),
       referencePitch: _prefs.getDouble(_config.referencePitchStorageKey) ??
           _config.defaultReferencePitch,
       tunerTransposition:
@@ -73,6 +94,18 @@ class SettingsRepository {
 
   Future<void> save(AppSettings settings) async {
     await _prefs.setBool(_config.darkModeStorageKey, settings.darkMode);
+    await _prefs.setBool(
+      _config.useSystemThemeStorageKey,
+      settings.useSystemTheme,
+    );
+    if (settings.themeColorNote == null || settings.themeColorNote!.isEmpty) {
+      await _prefs.remove(_config.themeColorNoteStorageKey);
+    } else {
+      await _prefs.setString(
+        _config.themeColorNoteStorageKey,
+        settings.themeColorNote!,
+      );
+    }
     await _prefs.setDouble(
       _config.referencePitchStorageKey,
       settings.referencePitch,

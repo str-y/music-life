@@ -60,6 +60,18 @@
   "@darkMode": {
     "description": "Label for the dark mode toggle"
   },
+  "followSystemTheme": "Follow system theme",
+  "@followSystemTheme": {
+    "description": "Label for toggling automatic light/dark theme mode based on OS setting"
+  },
+  "themeColorLabel": "Theme color",
+  "@themeColorLabel": {
+    "description": "Label for selecting a custom theme color"
+  },
+  "themeColorAuto": "Auto (from detected note)",
+  "@themeColorAuto": {
+    "description": "Option label to use automatic dynamic theme color"
+  },
 
   "calibration": "Calibration",
   "@calibration": {
