@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
+
 class AppSettings {
   final bool darkMode;
   final double referencePitch;
@@ -45,22 +47,26 @@ class AppSettings {
 }
 
 class SettingsRepository {
-  const SettingsRepository(this._prefs);
-
-  static const _kDarkMode = 'darkMode';
-  static const _kReferencePitch = 'referencePitch';
+  const SettingsRepository(this._prefs, {AppConfig config = const AppConfig()})
+      : _config = config;
 
   final SharedPreferences _prefs;
+  final AppConfig _config;
 
   AppSettings load() {
     return AppSettings(
-      darkMode: _prefs.getBool(_kDarkMode) ?? false,
-      referencePitch: _prefs.getDouble(_kReferencePitch) ?? 440.0,
+      darkMode:
+          _prefs.getBool(_config.darkModeStorageKey) ?? _config.defaultDarkMode,
+      referencePitch: _prefs.getDouble(_config.referencePitchStorageKey) ??
+          _config.defaultReferencePitch,
     );
   }
 
   Future<void> save(AppSettings settings) async {
-    await _prefs.setBool(_kDarkMode, settings.darkMode);
-    await _prefs.setDouble(_kReferencePitch, settings.referencePitch);
+    await _prefs.setBool(_config.darkModeStorageKey, settings.darkMode);
+    await _prefs.setDouble(
+      _config.referencePitchStorageKey,
+      settings.referencePitch,
+    );
   }
 }

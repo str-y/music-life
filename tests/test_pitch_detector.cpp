@@ -180,6 +180,25 @@ static bool test_yin_non_simd_multiple_frame_size() {
     return true;
 }
 
+static bool test_yin_simd_aligned_frame_repeatability() {
+    // Ensures SIMD CMNDF/FFT paths remain stable on frame sizes divisible by 4.
+    const int   SR          = 44100;
+    const int   FRAME       = 2048;
+    const float EXPECTED_HZ = 440.0f;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, EXPECTED_HZ, SR);
+
+    std::vector<float> workspace(FRAME / 2);
+    const float first = yin.detect(buf.data(), workspace);
+    const float second = yin.detect(buf.data(), workspace);
+    ASSERT_NEAR(first, EXPECTED_HZ, 2.0f);
+    ASSERT_NEAR(second, EXPECTED_HZ, 2.0f);
+    ASSERT_NEAR(first, second, 0.01f);
+    return true;
+}
+
 static bool test_yin_manual_backend_selection() {
     const char* original = std::getenv("ML_FFT_BACKEND");
     std::string original_value = original ? original : "";
@@ -448,6 +467,23 @@ static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
     return true;
 }
 
+static bool test_ffi_create_invalid_threshold_returns_null() {
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, -0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    return true;
+}
+
+static bool test_ffi_process_excessive_num_samples_returns_zero() {
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    std::vector<float> buf(5000, 0.0f);
+    MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), static_cast<int>(buf.size()));
+    ASSERT_TRUE(r.pitched == 0);
+    ASSERT_TRUE(r.frequency == 0.0f);
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 static bool test_ffi_log_callback_receives_error_logs() {
     ml_pitch_detector_set_log_callback(test_log_callback);
     g_last_log_level = -1;
@@ -490,6 +526,7 @@ int main() {
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
     run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
+    run_test("yin: stable on SIMD-aligned frame",   test_yin_simd_aligned_frame_repeatability);
     run_test("yin: supports backend override",       test_yin_manual_backend_selection);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
@@ -508,6 +545,8 @@ int main() {
     run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
     run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
     run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
+    run_test("ffi: create invalid threshold returns null", test_ffi_create_invalid_threshold_returns_null);
+    run_test("ffi: process excessive num_samples safe", test_ffi_process_excessive_num_samples_returns_zero);
     run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
     run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
 

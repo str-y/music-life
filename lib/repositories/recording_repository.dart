@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../data/app_database.dart';
 import '../utils/app_logger.dart';
 
@@ -112,11 +113,8 @@ class PracticeLogEntry {
 
 class RecordingRepository {
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
-  const RecordingRepository(this._prefs);
-
-  static const _recordingsKey = 'recordings_v1';
-  static const _logsKey = 'practice_logs_v1';
-  static const _migratedKey = 'db_migrated_v1';
+  const RecordingRepository(this._prefs, {AppConfig config = const AppConfig()})
+      : _config = config;
 
   /// Guards against concurrent migration calls.  Non-null while a migration is
   /// in progress; subsequent callers await this future instead of starting a
@@ -125,6 +123,7 @@ class RecordingRepository {
   static Completer<void>? _migrationCompleter;
 
   final SharedPreferences _prefs;
+  final AppConfig _config;
 
   Future<void> _migrateIfNeeded() async {
     // Already completed successfully in this session.
@@ -134,7 +133,7 @@ class RecordingRepository {
 
     _migrationCompleter = Completer<void>();
     try {
-      if (_prefs.getBool(_migratedKey) == true) {
+      if (_prefs.getBool(_config.recordingsMigratedStorageKey) == true) {
         _migrationCompleter!.complete();
         return;
       }
@@ -145,7 +144,7 @@ class RecordingRepository {
       final logRows = <Map<String, Object?>>[];
       var migrationSucceeded = true;
 
-      final recStr = _prefs.getString(_recordingsKey);
+      final recStr = _prefs.getString(_config.recordingsStorageKey);
       if (recStr != null) {
         try {
           final list = jsonDecode(recStr) as List<dynamic>;
@@ -171,7 +170,7 @@ class RecordingRepository {
         }
       }
 
-      final logStr = _prefs.getString(_logsKey);
+      final logStr = _prefs.getString(_config.practiceLogsStorageKey);
       if (logStr != null) {
         try {
           final list = jsonDecode(logStr) as List<dynamic>;
@@ -203,7 +202,7 @@ class RecordingRepository {
             recordings: recordingRows,
             practiceLogs: logRows,
           );
-          await _prefs.setBool(_migratedKey, true);
+          await _prefs.setBool(_config.recordingsMigratedStorageKey, true);
         } catch (e, st) {
           AppLogger.reportError(
             'RecordingRepository: migration DB write failed',

@@ -13,13 +13,17 @@ import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
 class TunerScreen extends StatelessWidget {
-  const TunerScreen({super.key});
+  const TunerScreen({super.key, this.useMicPermissionGate = true});
+
+  final bool useMicPermissionGate;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
-      body: const MicPermissionGate(child: _TunerBodyWrapper()),
+      body: useMicPermissionGate
+          ? const MicPermissionGate(child: _TunerBodyWrapper())
+          : const _TunerBodyWrapper(),
     );
   }
 }
@@ -130,6 +134,7 @@ class _TunerBody extends StatelessWidget {
         ? (cents >= 0 ? '+${cents.toStringAsFixed(1)}' : cents.toStringAsFixed(1))
         : '---';
     final inTune = latest != null && cents.abs() <= AppConstants.tunerInTuneThresholdCents;
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -137,20 +142,24 @@ class _TunerBody extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // ── Note name ──────────────────────────────────────────────
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, anim) => ScaleTransition(
-              scale: anim,
-              child: FadeTransition(opacity: anim, child: child),
-            ),
-            child: Text(
-              noteName,
-              key: ValueKey(noteName),
-              style: tt.displayLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: latest != null
-                    ? (inTune ? Colors.green : cs.primary)
-                    : cs.onSurfaceVariant,
+          Semantics(
+            label: l10n.currentNoteSemanticLabel,
+            value: latest != null ? '$noteName, $freqText' : null,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) => ScaleTransition(
+                scale: anim,
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Text(
+                noteName,
+                key: ValueKey(noteName),
+                style: tt.displayLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: latest != null
+                      ? (inTune ? Colors.green : cs.primary)
+                      : cs.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -169,18 +178,21 @@ class _TunerBody extends StatelessWidget {
 
           // ── Cents meter ───────────────────────────────────────────
           Semantics(
-            label: AppLocalizations.of(context)!.centsMeterSemanticLabel,
+            label: l10n.centsMeterSemanticLabel,
             value: '$centsText cents',
             child: _CentsMeter(cents: cents, hasReading: latest != null),
           ),
           const SizedBox(height: 12),
-          AnimatedBuilder(
-            animation: pulseCtrl,
-            builder: (_, __) => _TunerWaveform(
-              hasReading: latest != null,
-              cents: cents,
-              phase: pulseCtrl.value,
-              color: latest != null ? _centColor(context, cents) : cs.primary,
+          Semantics(
+            label: l10n.waveformSemanticLabel,
+            child: AnimatedBuilder(
+              animation: pulseCtrl,
+              builder: (_, __) => _TunerWaveform(
+                hasReading: latest != null,
+                cents: cents,
+                phase: pulseCtrl.value,
+                color: latest != null ? _centColor(context, cents) : cs.primary,
+              ),
             ),
           ),
           const SizedBox(height: 8),

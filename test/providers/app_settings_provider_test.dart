@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -9,8 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   test('initial state is loaded from SharedPreferences', () async {
     SharedPreferences.setMockInitialValues({
-      'darkMode': true,
-      'referencePitch': 442.0,
+      AppConfig.defaultDarkModeStorageKey: true,
+      AppConfig.defaultReferencePitchStorageKey: 442.0,
     });
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -39,8 +40,8 @@ void main() {
     await container.read(appSettingsProvider.notifier).update(updated);
 
     expect(container.read(appSettingsProvider), updated);
-    expect(prefs.getBool('darkMode'), isTrue);
-    expect(prefs.getDouble('referencePitch'), 444.0);
+    expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
+    expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
   });
 
   test('updateDynamicThemeFromPitch updates in-memory theme values only',
