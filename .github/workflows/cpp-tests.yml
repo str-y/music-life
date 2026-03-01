@@ -16,6 +16,9 @@ on:
       - '.github/workflows/cpp-tests.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   ctest:
     strategy:
