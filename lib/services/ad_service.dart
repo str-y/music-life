@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
+import 'service_error_handler.dart';
 
 enum AdLoadStatus { idle, loading, loaded, error }
 
@@ -91,20 +92,36 @@ final adStateProvider = NotifierProvider<AdStateNotifier, AdState>(
   AdStateNotifier.new,
 );
 
-final adServiceProvider = Provider<AdService>((ref) {
-  return AdService(
+final adServiceProvider = Provider<IAdService>((ref) {
+  return GoogleMobileAdsService(
     ref.read(appConfigProvider),
     adStateNotifier: ref.read(adStateProvider.notifier),
   );
 });
 
-class AdService {
-  const AdService(this._config, {AdStateNotifier? adStateNotifier})
-      : _stateNotifier = adStateNotifier;
+abstract class IAdService {
+  String get bannerAdUnitId;
+  String get interstitialAdUnitId;
+  String get rewardedAdUnitId;
+
+  Future<void> loadInterstitialAd();
+  void showInterstitialAd();
+  Future<void> loadRewardedAd();
+  Future<bool> showRewardedAd({
+    required void Function(RewardItem reward) onUserEarnedReward,
+  });
+}
+
+class GoogleMobileAdsService implements IAdService {
+  GoogleMobileAdsService(
+    this._config, {
+    AdStateNotifier? adStateNotifier,
+  }) : _stateNotifier = adStateNotifier;
 
   final AppConfig _config;
   final AdStateNotifier? _stateNotifier;
 
+  @override
   String get bannerAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -117,6 +134,7 @@ class AdService {
         : _config.testBannerIdIos;
   }
 
+  @override
   String get interstitialAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -129,6 +147,7 @@ class AdService {
         : _config.testInterstitialIdIos;
   }
 
+  @override
   String get rewardedAdUnitId {
     if (kDebugMode) {
       return Platform.isAndroid
@@ -148,6 +167,7 @@ class AdService {
   int _rewardedLoadAttempts = 0;
   static const int _maxRewardedLoadAttempts = 3;
 
+  @override
   Future<void> loadInterstitialAd() async {
     _stateNotifier?.setInterstitialLoading();
     InterstitialAd.load(
@@ -164,6 +184,11 @@ class AdService {
               loadInterstitialAd();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
+              ServiceErrorHandler.report(
+                'AdService: failed to show interstitial ad',
+                error: error,
+                stackTrace: StackTrace.current,
+              );
               ad.dispose();
               _stateNotifier?.setInterstitialError(error.message);
               loadInterstitialAd();
@@ -171,6 +196,11 @@ class AdService {
           );
         },
         onAdFailedToLoad: (error) {
+          ServiceErrorHandler.report(
+            'AdService: failed to load interstitial ad',
+            error: error,
+            stackTrace: StackTrace.current,
+          );
           _interstitialLoadAttempts++;
           _interstitialAd = null;
           _stateNotifier?.setInterstitialError(error.message);
@@ -182,6 +212,7 @@ class AdService {
     );
   }
 
+  @override
   void showInterstitialAd() {
     if (_interstitialAd != null) {
       _interstitialAd!.show();
@@ -194,6 +225,7 @@ class AdService {
     }
   }
 
+  @override
   Future<void> loadRewardedAd() async {
     _stateNotifier?.setRewardedLoading();
     RewardedAd.load(
@@ -206,6 +238,11 @@ class AdService {
           _stateNotifier?.setRewardedLoaded();
         },
         onAdFailedToLoad: (error) {
+          ServiceErrorHandler.report(
+            'AdService: failed to load rewarded ad',
+            error: error,
+            stackTrace: StackTrace.current,
+          );
           _rewardedLoadAttempts++;
           _rewardedAd = null;
           _stateNotifier?.setRewardedError(error.message);
@@ -217,6 +254,7 @@ class AdService {
     );
   }
 
+  @override
   Future<bool> showRewardedAd({
     required void Function(RewardItem reward) onUserEarnedReward,
   }) async {
@@ -238,6 +276,11 @@ class AdService {
         completer.complete(rewarded);
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
+        ServiceErrorHandler.report(
+          'AdService: failed to show rewarded ad',
+          error: error,
+          stackTrace: StackTrace.current,
+        );
         ad.dispose();
         _stateNotifier?.setRewardedError(error.message);
         loadRewardedAd();

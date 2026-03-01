@@ -8,6 +8,13 @@ void main() {
   });
 
   group('AppDatabase migration planning', () {
+    test('includes all migrations when upgrading from unversioned database', () {
+      expect(
+        AppDatabase.migrationPlanForTesting(oldVersion: 0, newVersion: 6),
+        [1, 2, 3, 4, 5, 6],
+      );
+    });
+
     test('returns sequential versions between old and new schema', () {
       expect(
         AppDatabase.migrationPlanForTesting(oldVersion: 1, newVersion: 6),

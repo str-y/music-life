@@ -1,4 +1,10 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library_screen.dart';
 
 void main() {
@@ -42,4 +48,51 @@ void main() {
       expect(result, equals(<double>[0.25, 1.0]));
     });
   });
+
+  group('LibraryScreen adaptive layout', () {
+    testWidgets('shows side-by-side layout on large screens', (tester) async {
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+
+      await tester.binding.setSurfaceSize(const Size(1200, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_wrapLibraryScreen(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('library-wide-layout')), findsOneWidget);
+      expect(find.byType(TabBar), findsNothing);
+    });
+
+    testWidgets('keeps tab layout on compact screens', (tester) async {
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_wrapLibraryScreen(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TabBar), findsOneWidget);
+      expect(find.byKey(const ValueKey('library-wide-layout')), findsNothing);
+    });
+  });
 }
+
+Widget _wrapLibraryScreen(RecordingRepository repository) {
+  return ProviderScope(
+    overrides: [
+      recordingRepositoryProvider.overrideWithValue(repository),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const LibraryScreen(),
+    ),
+  );
+}
+
+class _MockRecordingRepository extends Mock implements RecordingRepository {}
