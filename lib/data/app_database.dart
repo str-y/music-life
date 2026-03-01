@@ -120,27 +120,23 @@ class AppDatabase {
     ''');
   }
 
-  Future<List<Map<String, Object?>>> _select(String sql) async {
+  Future<List<Map<String, Object?>>> _select(
+    String sql, {
+    List<Variable> variables = const [],
+  }) async {
     final db = await _database;
-    final rows = await db.customSelect(sql).get();
+    final rows = await db.customSelect(sql, variables: variables).get();
     return rows.map((row) => Map<String, Object?>.from(row.data)).toList();
   }
 
-  Future<void> _statement(String sql) async {
+  Future<void> _statement(String sql, [List<Object?> args = const []]) async {
     final db = await _database;
-    await db.customStatement(sql);
+    await db.customStatement(sql, args);
   }
 
   Future<void> _transaction(Future<void> Function() action) async {
     final db = await _database;
-    await db.customStatement('BEGIN TRANSACTION');
-    try {
-      await action();
-      await db.customStatement('COMMIT');
-    } catch (_) {
-      await db.customStatement('ROLLBACK');
-      rethrow;
-    }
+    await db.transaction(action);
   }
 
   Future<void> _insert(
@@ -148,26 +144,39 @@ class AppDatabase {
     Map<String, Object?> row, {
     bool replace = false,
   }) {
-    return _statement(_buildInsertSql(table, row, replace: replace));
+    final command = replace ? 'INSERT OR REPLACE' : 'INSERT';
+    final columns = row.keys.join(', ');
+    final placeholders = List.filled(row.length, '?').join(', ');
+    return _statement(
+      '$command INTO $table ($columns) VALUES ($placeholders)',
+      row.values.toList(growable: false),
+    );
   }
 
   Future<void> _update(
     String table,
     Map<String, Object?> values, {
     required String where,
+    List<Object?> whereArgs = const [],
   }) {
-    final assignments = values.entries
-        .map((entry) => '${entry.key} = ${_sqlLiteral(entry.value)}')
-        .join(', ');
-    return _statement('UPDATE $table SET $assignments WHERE $where');
+    final entries = values.entries.toList(growable: false);
+    final assignments = entries.map((entry) => '${entry.key} = ?').join(', ');
+    return _statement(
+      'UPDATE $table SET $assignments WHERE $where',
+      [
+        ...entries.map((entry) => entry.value),
+        ...whereArgs,
+      ],
+    );
   }
 
   Future<void> _delete(
     String table, {
     String? where,
+    List<Object?> whereArgs = const [],
   }) {
     final clause = where == null ? '' : ' WHERE $where';
-    return _statement('DELETE FROM $table$clause');
+    return _statement('DELETE FROM $table$clause', whereArgs);
   }
 
   // ---------------------------------------------------------------------------
@@ -307,7 +316,7 @@ class AppDatabase {
   }
 
   Future<void> deleteComposition(String id) {
-    return _delete('compositions', where: "id = '${_escapeSql(id)}'");
+    return _delete('compositions', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> replaceAllCompositions(List<Map<String, Object?>> rows) async {
@@ -333,22 +342,26 @@ class AppDatabase {
     String? chordName,
   }) {
     final clauses = <String>[];
+    final variables = <Variable>[];
 
     if (from != null) {
-      clauses.add("detected_at >= '${_escapeSql(from.toIso8601String())}'");
+      clauses.add('detected_at >= ?');
+      variables.add(Variable.withString(from.toIso8601String()));
     }
     if (to != null) {
-      clauses.add("detected_at < '${_escapeSql(to.toIso8601String())}'");
+      clauses.add('detected_at < ?');
+      variables.add(Variable.withString(to.toIso8601String()));
     }
     final normalizedChord = chordName?.trim();
     if (normalizedChord != null && normalizedChord.isNotEmpty) {
-      final filter = _escapeSql(normalizedChord.toLowerCase());
-      clauses.add("LOWER(chord_name) LIKE '%$filter%'");
+      clauses.add('LOWER(chord_name) LIKE ?');
+      variables.add(Variable.withString('%${normalizedChord.toLowerCase()}%'));
     }
 
     final whereClause = clauses.isEmpty ? '' : ' WHERE ${clauses.join(' AND ')}';
     return _select(
       'SELECT * FROM chord_analysis_history$whereClause ORDER BY detected_at DESC',
+      variables: variables,
     );
   }
 
@@ -461,16 +474,22 @@ class AppDatabase {
         byteData.setFloat64(i * 8, doubles[i], Endian.little);
       }
       await db.customStatement(
-        _buildInsertSql(
-          'recordings_new',
-          {
-            'id': row['id'],
-            'title': row['title'],
-            'recorded_at': row['recorded_at'],
-            'duration_seconds': row['duration_seconds'],
-            'waveform_data': byteData.buffer.asUint8List(),
-          },
-        ),
+        '''
+        INSERT INTO recordings_new (
+          id,
+          title,
+          recorded_at,
+          duration_seconds,
+          waveform_data
+        ) VALUES (?, ?, ?, ?, ?)
+        ''',
+        [
+          row['id'],
+          row['title'],
+          row['recorded_at'],
+          row['duration_seconds'],
+          byteData.buffer.asUint8List(),
+        ],
       );
     }
     await db.customStatement('DROP TABLE recordings');
@@ -537,29 +556,6 @@ class AppDatabase {
     ''');
   }
 
-  static String _buildInsertSql(
-    String table,
-    Map<String, Object?> row, {
-    bool replace = false,
-  }) {
-    final command = replace ? 'INSERT OR REPLACE' : 'INSERT';
-    final columns = row.keys.join(', ');
-    final values = row.values.map(_sqlLiteral).join(', ');
-    return '$command INTO $table ($columns) VALUES ($values)';
-  }
-
-  static String _sqlLiteral(Object? value) {
-    if (value == null) return 'NULL';
-    if (value is bool) return value ? '1' : '0';
-    if (value is num) return '$value';
-    if (value is Uint8List) {
-      final hex = value.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
-      return "X'$hex'";
-    }
-    return "'${_escapeSql(value.toString())}'";
-  }
-
-  static String _escapeSql(String input) => input.replaceAll("'", "''");
 }
 
 class _DriftDatabase extends DatabaseConnectionUser {
