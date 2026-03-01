@@ -146,10 +146,11 @@ class _TunerBody extends StatelessWidget {
 
   /// Maps cents offset (−50 … +50) to a colour between red → green → red.
   Color _centColor(BuildContext context, double cents) {
+    final cs = Theme.of(context).colorScheme;
     final abs = cents.abs();
-    if (abs <= AppConstants.tunerInTuneThresholdCents) return Colors.green;
-    if (abs <= AppConstants.tunerWarningThresholdCents) return Colors.orange;
-    return Theme.of(context).colorScheme.error;
+    if (abs <= AppConstants.tunerInTuneThresholdCents) return cs.tertiary;
+    if (abs <= AppConstants.tunerWarningThresholdCents) return cs.secondary;
+    return cs.error;
   }
 
   @override
@@ -211,7 +212,7 @@ class _TunerBody extends StatelessWidget {
                 style: tt.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: latest != null
-                      ? (inTune ? Colors.green : cs.primary)
+                      ? (inTune ? cs.tertiary : cs.primary)
                       : cs.onSurfaceVariant,
                 ),
               ),
@@ -270,11 +271,11 @@ class _TunerBody extends StatelessWidget {
               style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ] else if (inTune) ...[
-            const Icon(Icons.check_circle, color: Colors.green, size: 32),
+            Icon(Icons.check_circle, color: cs.tertiary, size: 32),
             const SizedBox(height: 4),
             Text(
               AppLocalizations.of(context)!.tuningOk,
-              style: tt.bodyMedium?.copyWith(color: Colors.green),
+              style: tt.bodyMedium?.copyWith(color: cs.tertiary),
             ),
           ],
         ];
@@ -437,9 +438,9 @@ class _CentsMeter extends StatelessWidget {
             trackColor: cs.outlineVariant,
             needleColor: hasReading
                 ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
-                    ? Colors.green
+                    ? cs.tertiary
                     : cents.abs() <= AppConstants.tunerWarningThresholdCents
-                        ? Colors.orange
+                        ? cs.secondary
                         : cs.error)
                 : cs.outlineVariant,
             centerColor: cs.primary,

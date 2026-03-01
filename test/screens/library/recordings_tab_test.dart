@@ -6,11 +6,12 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library/recordings_tab.dart';
 
-Widget _wrap(Widget child, {Locale? locale}) {
+Widget _wrap(Widget child, {Locale? locale, ThemeData? theme}) {
   return MaterialApp(
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    theme: theme,
     home: ProviderScope(child: Scaffold(body: child)),
   );
 }
@@ -25,6 +26,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No recordings'), findsOneWidget);
+    });
+
+    testWidgets('uses colorScheme.onSurfaceVariant for empty-state text',
+        (tester) async {
+      const expectedColor = Color(0xFF123456);
+      final theme = ThemeData(
+        colorScheme: const ColorScheme.light(
+          onSurfaceVariant: expectedColor,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const RecordingsTab(recordings: []),
+          theme: theme,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.text('No recordings'));
+      expect(text.style?.color, expectedColor);
     });
 
     testWidgets('shows recording title when list has one entry', (tester) async {

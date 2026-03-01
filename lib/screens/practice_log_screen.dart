@@ -681,9 +681,9 @@ class _CalendarGrid extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                       color: index == 0
-                          ? Colors.red.shade400
+                          ? cs.error
                           : index == 6
-                              ? Colors.blue.shade400
+                              ? cs.primary
                               : cs.onSurface,
                     ),
                   ),
@@ -741,9 +741,9 @@ class _DayCell extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final textColor = isSunday
-        ? Colors.red.shade400
+        ? cs.error
         : isSaturday
-            ? Colors.blue.shade400
+            ? cs.primary
             : cs.onSurface;
 
     final parts = <String>['$day'];

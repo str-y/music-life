@@ -50,10 +50,11 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
     final playback = ref.watch(recordingPlaybackProvider);
     final playbackNotifier = ref.read(recordingPlaybackProvider.notifier);
     if (_sorted.isEmpty) {
+      final colorScheme = Theme.of(context).colorScheme;
       return Center(
         child: Text(
           AppLocalizations.of(context)!.noRecordings,
-          style: const TextStyle(color: Colors.grey),
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
         ),
       );
     }
