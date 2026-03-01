@@ -1,11 +1,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
 import '../utils/app_logger.dart';
+import '../utils/share_card_image.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,45 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
             DateTime(_displayMonth.year, _displayMonth.month + delta);
       });
 
+  Future<void> _shareMonthlySummaryCard() async {
+    if (_entries.isEmpty || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final practiceDays = _practiceDaysInMonth(
+      _displayMonth.year,
+      _displayMonth.month,
+    );
+    final totalMinutes = _totalMinutesInMonth(
+      _displayMonth.year,
+      _displayMonth.month,
+    );
+    try {
+      final shareCard = await generateShareCardImage(
+        title: l10n.practiceLogTitle,
+        lines: [
+          l10n.yearMonth(_displayMonth.year, _displayMonth.month),
+          '${l10n.practiceDays}: ${l10n.practiceDayCount(practiceDays.length)}',
+          '${l10n.totalTime}: ${l10n.durationMinutes(totalMinutes)}',
+        ],
+        accentColor: Theme.of(context).colorScheme.primary,
+      );
+      await Share.shareXFiles(
+        [shareCard],
+        subject: l10n.practiceLogTitle,
+        text: l10n.yearMonth(_displayMonth.year, _displayMonth.month),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'PracticeLogScreen: failed to share practice summary card',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.recordingShareFailed)),
+      );
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -108,6 +149,13 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.practiceLogTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: AppLocalizations.of(context)!.shareRecording,
+            onPressed: _entries.isEmpty ? null : _shareMonthlySummaryCard,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [

@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/composition_provider.dart';
 import '../repositories/composition_repository.dart';
+import '../utils/app_logger.dart';
+import '../utils/share_card_image.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
 
@@ -101,6 +104,34 @@ class _CompositionHelperScreenState
       _isPlaying = false;
       _playingIndex = -1;
     });
+  }
+
+  Future<void> _shareSequenceCard() async {
+    if (_sequence.isEmpty || !mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final sequenceText = _sequence.map((e) => e.chord).join(' - ');
+    try {
+      final shareCard = await generateShareCardImage(
+        title: l10n.compositionHelperTitle,
+        lines: [l10n.compositionSequence(_sequence.length), sequenceText],
+        accentColor: Theme.of(context).colorScheme.primary,
+      );
+      await Share.shareXFiles(
+        [shareCard],
+        subject: l10n.compositionHelperTitle,
+        text: sequenceText,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'CompositionHelperScreen: failed to share composition card',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      messenger?.showSnackBar(
+        SnackBar(content: Text(l10n.recordingShareFailed)),
+      );
+    }
   }
 
   // ── Save / load ────────────────────────────────────────────────────────
@@ -225,6 +256,12 @@ class _CompositionHelperScreenState
         title: Text(l10n.compositionHelperTitle),
         backgroundColor: colorScheme.inversePrimary,
         actions: [
+          if (_sequence.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: l10n.shareRecording,
+              onPressed: _shareSequenceCard,
+            ),
           if (_sequence.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.save_outlined),
