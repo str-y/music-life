@@ -28,6 +28,9 @@ namespace music_life {
 
 namespace {
 
+static_assert(sizeof(std::complex<float>) == sizeof(float) * 2,
+              "SIMD complex operations require tightly packed std::complex<float>.");
+
 const char* backend_to_name(FftBackend backend) {
     switch (backend) {
         case FftBackend::Radix2: return "radix2";
@@ -211,12 +214,16 @@ void fft_stage_len2(std::vector<std::complex<float>>& x) {
         const __m128 uv = _mm_loadu_ps(reinterpret_cast<const float*>(x.data() + i));
         const __m128 u = _mm_movelh_ps(uv, uv);
         const __m128 v = _mm_movehl_ps(uv, uv);
-        alignas(16) float sum[4];
-        alignas(16) float diff[4];
-        _mm_store_ps(sum, _mm_add_ps(u, v));
-        _mm_store_ps(diff, _mm_sub_ps(u, v));
-        x[static_cast<size_t>(i)] = {sum[0], sum[1]};
-        x[static_cast<size_t>(i + 1)] = {diff[0], diff[1]};
+        const __m128 sum = _mm_add_ps(u, v);
+        const __m128 diff = _mm_sub_ps(u, v);
+        x[static_cast<size_t>(i)] = {
+            _mm_cvtss_f32(sum),
+            _mm_cvtss_f32(_mm_shuffle_ps(sum, sum, _MM_SHUFFLE(1, 1, 1, 1)))
+        };
+        x[static_cast<size_t>(i + 1)] = {
+            _mm_cvtss_f32(diff),
+            _mm_cvtss_f32(_mm_shuffle_ps(diff, diff, _MM_SHUFFLE(1, 1, 1, 1)))
+        };
     }
 #endif
     for (; i + 1 < n; i += 2) {
@@ -597,21 +604,21 @@ void Yin::cmndf(std::vector<float>& df) const {
 #if defined(__SSE3__)
     const __m128 zero = _mm_set1_ps(0.0f);
     const __m128 one = _mm_set1_ps(1.0f);
+    const __m128 four = _mm_set1_ps(4.0f);
+    __m128 tau_vec = _mm_set_ps(4.0f, 3.0f, 2.0f, 1.0f);
     for (; tau + 3 < half_buffer_; tau += 4) {
         const __m128 d = _mm_loadu_ps(df.data() + tau);
         __m128 prefix = d;
+        // Horizontal prefix sum in lanes: [a,b,c,d] -> [a,a+b,a+b+c,a+b+c+d].
         prefix = _mm_add_ps(prefix, _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(prefix), 4)));
         prefix = _mm_add_ps(prefix, _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(prefix), 8)));
         prefix = _mm_add_ps(prefix, _mm_set1_ps(running_sum));
-        const __m128 tau_vec = _mm_set_ps(static_cast<float>(tau + 3),
-                                          static_cast<float>(tau + 2),
-                                          static_cast<float>(tau + 1),
-                                          static_cast<float>(tau));
         const __m128 normalized = _mm_div_ps(_mm_mul_ps(d, tau_vec), prefix);
         const __m128 is_zero = _mm_cmpeq_ps(prefix, zero);
         const __m128 out = _mm_or_ps(_mm_and_ps(is_zero, one), _mm_andnot_ps(is_zero, normalized));
         _mm_storeu_ps(df.data() + tau, out);
         running_sum = _mm_cvtss_f32(_mm_shuffle_ps(prefix, prefix, _MM_SHUFFLE(3, 3, 3, 3)));
+        tau_vec = _mm_add_ps(tau_vec, four);
     }
 #endif
     for (; tau < half_buffer_; ++tau) {
