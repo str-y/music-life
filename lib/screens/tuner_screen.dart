@@ -13,6 +13,9 @@ import '../utils/tuner_transposition.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
+Color _tunerInTuneColor(ColorScheme colorScheme) => colorScheme.tertiary;
+Color _tunerWarningColor(ColorScheme colorScheme) => colorScheme.secondary;
+
 class TunerScreen extends StatelessWidget {
   const TunerScreen({
     super.key,
@@ -148,8 +151,8 @@ class _TunerBody extends StatelessWidget {
   Color _centColor(BuildContext context, double cents) {
     final cs = Theme.of(context).colorScheme;
     final abs = cents.abs();
-    if (abs <= AppConstants.tunerInTuneThresholdCents) return cs.tertiary;
-    if (abs <= AppConstants.tunerWarningThresholdCents) return cs.secondary;
+    if (abs <= AppConstants.tunerInTuneThresholdCents) return _tunerInTuneColor(cs);
+    if (abs <= AppConstants.tunerWarningThresholdCents) return _tunerWarningColor(cs);
     return cs.error;
   }
 
@@ -157,6 +160,7 @@ class _TunerBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final inTuneColor = _tunerInTuneColor(cs);
 
     final noteName = latest != null
         ? transposedNoteNameFromMidi(
@@ -212,7 +216,7 @@ class _TunerBody extends StatelessWidget {
                 style: tt.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: latest != null
-                      ? (inTune ? cs.tertiary : cs.primary)
+                      ? (inTune ? inTuneColor : cs.primary)
                       : cs.onSurfaceVariant,
                 ),
               ),
@@ -271,11 +275,11 @@ class _TunerBody extends StatelessWidget {
               style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ] else if (inTune) ...[
-            Icon(Icons.check_circle, color: cs.tertiary, size: 32),
+            Icon(Icons.check_circle, color: inTuneColor, size: 32),
             const SizedBox(height: 4),
             Text(
               AppLocalizations.of(context)!.tuningOk,
-              style: tt.bodyMedium?.copyWith(color: cs.tertiary),
+              style: tt.bodyMedium?.copyWith(color: inTuneColor),
             ),
           ],
         ];
@@ -428,6 +432,8 @@ class _CentsMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final inTuneColor = _tunerInTuneColor(cs);
+    final warningColor = _tunerWarningColor(cs);
     return SizedBox(
       width: double.infinity,
       height: 48,
@@ -438,9 +444,9 @@ class _CentsMeter extends StatelessWidget {
             trackColor: cs.outlineVariant,
             needleColor: hasReading
                 ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
-                    ? cs.tertiary
+                    ? inTuneColor
                     : cents.abs() <= AppConstants.tunerWarningThresholdCents
-                        ? cs.secondary
+                        ? warningColor
                         : cs.error)
                 : cs.outlineVariant,
             centerColor: cs.primary,

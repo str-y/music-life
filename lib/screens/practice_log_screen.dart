@@ -671,6 +671,8 @@ class _CalendarGrid extends StatelessWidget {
           children: weekLabels.asMap().entries.map((entry) {
             final index = entry.key;
             final label = entry.value;
+            final isSunday = index == 0;
+            final isSaturday = index == 6;
             return Expanded(
               child: Center(
                 child: Padding(
@@ -680,9 +682,9 @@ class _CalendarGrid extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
-                      color: index == 0
-                          ? cs.error
-                          : index == 6
+                      color: isSunday
+                          ? cs.secondary
+                          : isSaturday
                               ? cs.primary
                               : cs.onSurface,
                     ),
@@ -741,7 +743,7 @@ class _DayCell extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final textColor = isSunday
-        ? cs.error
+        ? cs.secondary
         : isSaturday
             ? cs.primary
             : cs.onSurface;
