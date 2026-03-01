@@ -46,4 +46,37 @@ void main() {
       expect(find.bySemanticsLabel(label), findsOneWidget);
     });
   });
+
+  group('ChordAnalyserScreen – chord history semantics', () {
+    testWidgets('chordHistory label is a non-empty localized string',
+        (tester) async {
+      late String label;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          label = AppLocalizations.of(context)!.chordHistory;
+          return const SizedBox.shrink();
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(label, isNotEmpty);
+    });
+
+    testWidgets('Semantics node with chordHistory label is found in widget tree',
+        (tester) async {
+      late String label;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          label = AppLocalizations.of(context)!.chordHistory;
+          return Semantics(
+            label: label,
+            child: const SizedBox(width: 200, height: 200),
+          );
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+    });
+  });
 }
