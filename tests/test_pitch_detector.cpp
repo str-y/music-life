@@ -448,6 +448,23 @@ static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
     return true;
 }
 
+static bool test_ffi_create_invalid_threshold_returns_null() {
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, -0.10f);
+    ASSERT_TRUE(handle == nullptr);
+    return true;
+}
+
+static bool test_ffi_process_excessive_num_samples_returns_zero() {
+    MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
+    ASSERT_TRUE(handle != nullptr);
+    std::vector<float> buf(5000, 0.0f);
+    MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), static_cast<int>(buf.size()));
+    ASSERT_TRUE(r.pitched == 0);
+    ASSERT_TRUE(r.frequency == 0.0f);
+    ml_pitch_detector_destroy(handle);
+    return true;
+}
+
 static bool test_ffi_log_callback_receives_error_logs() {
     ml_pitch_detector_set_log_callback(test_log_callback);
     g_last_log_level = -1;
@@ -508,6 +525,8 @@ int main() {
     run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
     run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
     run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
+    run_test("ffi: create invalid threshold returns null", test_ffi_create_invalid_threshold_returns_null);
+    run_test("ffi: process excessive num_samples safe", test_ffi_process_excessive_num_samples_returns_zero);
     run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
     run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
 
