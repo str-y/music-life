@@ -48,17 +48,29 @@ target_compile_options(pitch_detection PRIVATE
 )
 
 # SIMD/Architecture optimization flags
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+set(ML_TARGET_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+if(ANDROID AND DEFINED ANDROID_ABI)
+    set(ML_TARGET_ARCH "${ANDROID_ABI}")
+elseif(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES ML_OSX_ARCH_COUNT)
+    if(ML_OSX_ARCH_COUNT EQUAL 1)
+        list(GET CMAKE_OSX_ARCHITECTURES 0 ML_TARGET_ARCH)
+    else()
+        set(ML_TARGET_ARCH "universal")
+    endif()
+endif()
+
+if(ML_TARGET_ARCH MATCHES "^(aarch64|arm64|arm64-v8a)")
     # 64-bit ARM (arm64-v8a, Apple Silicon): NEON is mandatory
     target_compile_options(pitch_detection PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-march=armv8-a>
     )
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM)")
+elseif(ML_TARGET_ARCH MATCHES "^(armeabi-v7a|arm|ARM)")
     # 32-bit ARM (armeabi-v7a): enable NEON explicitly
     target_compile_options(pitch_detection PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-mfpu=neon>
     )
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|i[3-6]86|x86)")
+elseif(ML_TARGET_ARCH MATCHES "(x86_64|AMD64|i[3-6]86|x86)")
     # x86/x86_64: enable SSE2 and SSE4.1
     target_compile_options(pitch_detection PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-msse2>
