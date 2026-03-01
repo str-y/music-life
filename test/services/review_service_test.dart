@@ -28,5 +28,18 @@ void main() {
       expect(shown, isTrue);
       verify(() => api.requestReview()).called(1);
     });
+
+    test('rethrows when requesting review fails', () async {
+      final api = _MockInAppReviewApi();
+      when(() => api.isAvailable()).thenAnswer((_) async => true);
+      when(() => api.requestReview())
+          .thenThrow(StateError('review request failed'));
+      final service = ReviewService(api: api);
+
+      await expectLater(
+        service.requestReviewIfAvailable(),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 }
