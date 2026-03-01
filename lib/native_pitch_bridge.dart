@@ -174,6 +174,9 @@ class IsolateShutdownHandle {
 }
 
 class NativePitchIsolateManager {
+  // Cap heartbeat tokens at max signed 32-bit so IDs stay positive and bounded.
+  static const int _maxHeartbeatToken = 0x7fffffff;
+
   NativePitchIsolateManager({
     required this.handle,
     required this.buffer,
@@ -206,7 +209,7 @@ class NativePitchIsolateManager {
   Timer? _handshakeTimer;
   Timer? _heartbeatTimer;
   int? _pendingHeartbeatToken;
-  DateTime? _pendingHeartbeatAt;
+  Stopwatch? _pendingHeartbeatClock;
   int _nextHeartbeatToken = 0;
 
   Future<bool> start() async {
@@ -237,6 +240,8 @@ class NativePitchIsolateManager {
     final completer = Completer<bool>();
 
     void failStart(Object error, StackTrace stackTrace) {
+      _handshakeTimer?.cancel();
+      _handshakeTimer = null;
       onError?.call(error, stackTrace);
       if (!completer.isCompleted) {
         completer.complete(false);
@@ -246,7 +251,10 @@ class NativePitchIsolateManager {
     late StreamSubscription<dynamic> exitSub;
     exitSub = exitPort.listen((_) {
       if (!completer.isCompleted) {
-        completer.complete(false);
+        failStart(
+          StateError('Isolate exited unexpectedly during startup.'),
+          StackTrace.current,
+        );
       }
     });
 
@@ -279,7 +287,6 @@ class NativePitchIsolateManager {
           _handshakeTimer?.cancel();
           _handshakeTimer = null;
           _startHeartbeat();
-          exitSub.cancel();
           completer.complete(true);
         } else if (msg is IsolateManagerError) {
           _reportIsolateError(msg);
@@ -298,7 +305,8 @@ class NativePitchIsolateManager {
       } else if (msg is IsolateHeartbeatPong) {
         if (msg.token == _pendingHeartbeatToken) {
           _pendingHeartbeatToken = null;
-          _pendingHeartbeatAt = null;
+          _pendingHeartbeatClock?.stop();
+          _pendingHeartbeatClock = null;
         }
       } else {
         onMessage(msg);
@@ -306,6 +314,7 @@ class NativePitchIsolateManager {
     });
 
     final ready = await completer.future;
+    await exitSub.cancel();
     if (!ready) {
       _handshakeTimer?.cancel();
       _handshakeTimer = null;
@@ -351,10 +360,9 @@ class NativePitchIsolateManager {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       if (_audioSendPort == null) return;
-      final now = DateTime.now();
-      final sentAt = _pendingHeartbeatAt;
-      if (_pendingHeartbeatToken != null && sentAt != null) {
-        if (now.difference(sentAt) > heartbeatTimeout) {
+      final clock = _pendingHeartbeatClock;
+      if (_pendingHeartbeatToken != null && clock != null) {
+        if (clock.elapsed > heartbeatTimeout) {
           onError?.call(
             TimeoutException(
               'Isolate heartbeat timed out.',
@@ -369,9 +377,11 @@ class NativePitchIsolateManager {
         return;
       }
 
-      final token = _nextHeartbeatToken++;
+      // Keep tokens in a positive bounded range for stable round-trip matching.
+      _nextHeartbeatToken = (_nextHeartbeatToken % _maxHeartbeatToken) + 1;
+      final token = _nextHeartbeatToken;
       _pendingHeartbeatToken = token;
-      _pendingHeartbeatAt = now;
+      _pendingHeartbeatClock = Stopwatch()..start();
       _audioSendPort?.send(IsolateHeartbeatPing(token));
     });
   }
@@ -380,7 +390,8 @@ class NativePitchIsolateManager {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
     _pendingHeartbeatToken = null;
-    _pendingHeartbeatAt = null;
+    _pendingHeartbeatClock?.stop();
+    _pendingHeartbeatClock = null;
   }
 
   void _reportIsolateError(IsolateManagerError msg) {
@@ -678,13 +689,14 @@ class NativePitchBridge implements Finalizable {
       },
       onError: _onError,
     );
+    _isolateManager = manager;
 
     final ready = await manager.start();
     if (!ready) {
       manager.disposeImmediately();
+      _isolateManager = null;
       return false;
     }
-    _isolateManager = manager;
 
     try {
       final stream = await _recorder.startStream(

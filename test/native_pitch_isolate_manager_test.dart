@@ -54,12 +54,18 @@ void main() {
   group('NativePitchIsolateManager', () {
     test('completes handshake and forwards messages', () async {
       final messages = <dynamic>[];
+      final firstMessage = Completer<void>();
       final manager = NativePitchIsolateManager(
         handle: nullptr,
         buffer: Pointer<Float>.fromAddress(0),
         frameSize: 0,
         entryPoint: _successfulIsolate,
-        onMessage: messages.add,
+        onMessage: (message) {
+          messages.add(message);
+          if (!firstMessage.isCompleted) {
+            firstMessage.complete();
+          }
+        },
         onError: (error, _) => fail('unexpected error: $error'),
       );
 
@@ -67,12 +73,11 @@ void main() {
       expect(started, isTrue);
 
       manager.send('emit-data');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await firstMessage.future.timeout(const Duration(seconds: 1));
       expect(messages, hasLength(1));
       expect(messages.single, isA<Map<dynamic, dynamic>>());
 
       final shutdown = manager.prepareForDisposal();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
       shutdown.isolate?.kill(priority: Isolate.immediate);
       shutdown.exitPort?.close();
     });
