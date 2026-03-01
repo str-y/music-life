@@ -18,7 +18,7 @@ import 'library/recordings_tab.dart';
 
 @visibleForTesting
 List<double> downsampleWaveform(List<double> source, int targetPoints) {
-  if (source.isEmpty) return const [];
+  if (source.isEmpty || targetPoints <= 0) return const [];
   if (source.length <= targetPoints) return List<double>.from(source);
   final bucket = source.length / targetPoints;
   return List<double>.generate(targetPoints, (i) {
@@ -29,9 +29,11 @@ List<double> downsampleWaveform(List<double> source, int targetPoints) {
       min: start + 1,
       max: source.length,
     );
-    final segment = source.sublist(start, boundedEnd);
-    final sum = segment.fold<double>(0, (acc, value) => acc + value);
-    return (sum / segment.length).clamp(0.0, 1.0).toDouble();
+    double sum = 0.0;
+    for (var j = start; j < boundedEnd; j++) {
+      sum += source[j];
+    }
+    return (sum / (boundedEnd - start)).clamp(0.0, 1.0).toDouble();
   });
 }
 
@@ -208,6 +210,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   final _titleCtrl = TextEditingController();
   final _recorder = AudioRecorder();
   final List<double> _amplitudeData = [];
+  List<double> _liveWaveformPreview = const [];
   int _samplesSinceUiUpdate = 0;
 
   _RecordingState _state = _RecordingState.idle;
@@ -290,6 +293,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       }
 
       _amplitudeData.clear();
+      _liveWaveformPreview = const [];
       _samplesSinceUiUpdate = 0;
       _amplitudeSub = _recorder
           .onAmplitudeChanged(const Duration(milliseconds: 120))
@@ -302,7 +306,9 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
         _samplesSinceUiUpdate++;
         if (mounted && _samplesSinceUiUpdate >= _amplitudeSamplesPerUiUpdate) {
           _samplesSinceUiUpdate = 0;
-          setState(() {});
+          setState(() {
+            _liveWaveformPreview = buildLiveWaveformPreview(_amplitudeData);
+          });
         }
       });
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -411,7 +417,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
             if (isRecording && _amplitudeData.isNotEmpty) ...[
               const SizedBox(height: 8),
               WaveformView(
-                data: buildLiveWaveformPreview(_amplitudeData),
+                data: _liveWaveformPreview,
                 durationSeconds: _durationSeconds,
                 isPlaying: false,
                 animate: true,

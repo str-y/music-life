@@ -13,6 +13,10 @@ void main() {
       expect(downsampleWaveform(const [], 40), isEmpty);
     });
 
+    test('returns empty list when target points is zero', () {
+      expect(downsampleWaveform(const [0.1, 0.2], 0), isEmpty);
+    });
+
     test('returns copy when source length is <= target points', () {
       final source = <double>[0.1, 0.3, 0.7];
       final result = downsampleWaveform(source, 3);
