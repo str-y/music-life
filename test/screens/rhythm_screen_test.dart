@@ -50,6 +50,15 @@ void main() {
     }
   });
 
+  testWidgets('disposing RhythmScreen does not leak animation tickers',
+      (tester) async {
+    await tester.pumpWidget(_wrap(const RhythmScreen()));
+    await tester.pump();
+
+    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   testWidgets('matches rhythm screen golden baseline', (tester) async {
     await tester.pumpWidget(_wrap(const RhythmScreen()));
     await tester.pump(const Duration(milliseconds: 200));

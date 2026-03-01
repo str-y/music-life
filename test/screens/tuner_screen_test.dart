@@ -129,6 +129,30 @@ void main() {
     expect(find.byKey(const ValueKey('tuner-compact-layout')), findsNothing);
   });
 
+  testWidgets('disposing TunerScreen does not leak animation tickers',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.pitchStream)
+        .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.pumpWidget(
+      _wrap(
+        const TunerScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   group('TunerScreen – pitch and waveform semantics', () {
     testWidgets('pitch and waveform labels are non-empty localized strings',
         (tester) async {
