@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -47,6 +48,32 @@ void main() {
       );
 
       expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('feature tile semantics expose button label and hint',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      final localizations =
+          AppLocalizations.of(tester.element(find.byType(Scaffold).first))!;
+      final semanticsHandle = tester.ensureSemantics();
+      addTearDown(semanticsHandle.dispose);
+
+      final featureTile =
+          find.widgetWithText(InkWell, localizations.practiceLogTitle);
+      expect(featureTile, findsOneWidget);
+      expect(
+        tester.getSemantics(featureTile),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          label: localizations.practiceLogTitle,
+          hint: localizations.practiceLogSubtitle,
+        ),
+      );
     });
   });
 }

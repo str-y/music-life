@@ -355,21 +355,26 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         // ── Chord history timeline ──────────────────────────────────
         Semantics(
           button: true,
+          label: AppLocalizations.of(context)!.chordHistory,
+          hint: AppLocalizations.of(context)!.filterByChordName,
           child: InkWell(
             onTap: _openFilterSheet,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.history, size: 18, color: colorScheme.secondary),
-                  const SizedBox(width: 6),
-                  Text(
-                    AppLocalizations.of(context)!.chordHistory,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: colorScheme.secondary,
-                        ),
-                  ),
-                ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.history, size: 18, color: colorScheme.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppLocalizations.of(context)!.chordHistory,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: colorScheme.secondary,
+                          ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
