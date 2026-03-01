@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 
+/// Immutable application settings persisted in local storage.
 class AppSettings {
   final bool darkMode;
   final bool useSystemTheme;
@@ -82,6 +83,7 @@ class AppSettings {
           rewardedPremiumExpiresAt);
 }
 
+/// Loads and saves [AppSettings] values via shared preferences.
 class SettingsRepository {
   const SettingsRepository(this._prefs, {AppConfig config = const AppConfig()})
       : _config = config;
@@ -89,6 +91,7 @@ class SettingsRepository {
   final SharedPreferences _prefs;
   final AppConfig _config;
 
+  /// Reads settings from storage, falling back to configured defaults.
   AppSettings load() {
     return AppSettings(
       darkMode:
@@ -107,6 +110,7 @@ class SettingsRepository {
     );
   }
 
+  /// Persists all supported settings values to storage.
   Future<void> save(AppSettings settings) async {
     await _prefs.setBool(_config.darkModeStorageKey, settings.darkMode);
     await _prefs.setBool(

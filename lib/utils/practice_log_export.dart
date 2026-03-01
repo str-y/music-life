@@ -3,9 +3,11 @@ import 'dart:typed_data';
 
 import '../repositories/recording_repository.dart';
 
+/// Formats a practice-log date as `yyyy/MM/dd`.
 String formatPracticeLogDate(DateTime dt) =>
     '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
 
+/// Builds a CSV string for the provided practice log [entries].
 String buildPracticeLogCsv(List<PracticeLogEntry> entries) {
   String escape(String value) {
     final escaped = value.replaceAll('"', '""');
@@ -27,6 +29,7 @@ String buildPracticeLogCsv(List<PracticeLogEntry> entries) {
   return buffer.toString();
 }
 
+/// Builds a minimal single-page PDF (as bytes) for practice log [entries].
 Uint8List buildPracticeLogPdf(List<PracticeLogEntry> entries) {
   String toPdfText(String input) {
     final asciiOnly = input.runes

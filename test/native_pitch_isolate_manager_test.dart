@@ -4,6 +4,7 @@ import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/pigeon/native_pitch_messages.dart';
 
 void _successfulIsolate(IsolateSetup setup) {
   final port = ReceivePort();
@@ -18,12 +19,12 @@ void _successfulIsolate(IsolateSetup setup) {
     } else if (msg is IsolateHeartbeatPing) {
       setup.resultPort.send(IsolateHeartbeatPong(msg.token));
     } else if (msg == 'emit-data') {
-      setup.resultPort.send({
-        'noteName': 'A4',
-        'frequency': 440.0,
-        'centsOffset': 0.0,
-        'midiNote': 69,
-      });
+      setup.resultPort.send(NativePitchResultMessage(
+        noteName: 'A4',
+        frequency: 440.0,
+        centsOffset: 0.0,
+        midiNote: 69,
+      ).encode());
     }
   });
 }
@@ -75,7 +76,9 @@ void main() {
       manager.send('emit-data');
       await firstMessage.future.timeout(const Duration(seconds: 1));
       expect(messages, hasLength(1));
-      expect(messages.single, isA<Map<dynamic, dynamic>>());
+      final payload = NativePitchResultMessage.decode(messages.single);
+      expect(payload.noteName, 'A4');
+      expect(payload.frequency, 440.0);
 
       final shutdown = manager.prepareForDisposal();
       shutdown.isolate?.kill(priority: Isolate.immediate);

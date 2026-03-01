@@ -6,11 +6,16 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library_screen.dart';
+import 'golden_test_utils.dart';
 
 void main() {
   group('downsampleWaveform', () {
     test('returns empty list when source is empty', () {
       expect(downsampleWaveform(const [], 40), isEmpty);
+    });
+
+    test('returns empty list when target points is zero', () {
+      expect(downsampleWaveform(const [0.1, 0.2], 0), isEmpty);
     });
 
     test('returns copy when source length is <= target points', () {
@@ -78,6 +83,23 @@ void main() {
 
       expect(find.byType(TabBar), findsOneWidget);
       expect(find.byKey(const ValueKey('library-wide-layout')), findsNothing);
+    });
+
+    testWidgets('matches compact layout golden baseline', (tester) async {
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+
+      await tester.binding.setSurfaceSize(const Size(600, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_wrapLibraryScreen(repo));
+      await tester.pumpAndSettle();
+
+      await expectScreenGolden(
+        find.byType(LibraryScreen),
+        'goldens/library_screen.png',
+      );
     });
   });
 }

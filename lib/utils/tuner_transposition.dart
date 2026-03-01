@@ -1,3 +1,4 @@
+/// Constants and helpers for supported tuner transposition presets.
 class TunerTransposition {
   static const String c = 'C';
   static const String bb = 'Bb';
@@ -21,6 +22,7 @@ class TunerTransposition {
   }
 }
 
+/// Converts a concert-pitch MIDI note to a display note name for a transposition.
 String transposedNoteNameFromMidi({
   required int midiNote,
   required String transposition,

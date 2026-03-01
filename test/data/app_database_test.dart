@@ -49,4 +49,49 @@ void main() {
       expect(password, 'existing-password');
     });
   });
+
+  group('AppDatabase integrity check helpers', () {
+    test('accepts case-insensitive ok integrity check result', () {
+      expect(AppDatabase.integrityCheckResultIsOkForTesting('ok'), isTrue);
+      expect(AppDatabase.integrityCheckResultIsOkForTesting('OK'), isTrue);
+    });
+
+    test('rejects non-ok integrity check result', () {
+      expect(
+        AppDatabase.integrityCheckResultIsOkForTesting('*** in database main ***'),
+        isFalse,
+      );
+    });
+
+    test('detects corruption-shaped database errors', () {
+      expect(
+        AppDatabase.isCorruptionErrorForTesting(
+          StateError('database disk image is malformed'),
+        ),
+        isTrue,
+      );
+      expect(
+        AppDatabase.isCorruptionErrorForTesting(
+          ArgumentError('file is not a database'),
+        ),
+        isTrue,
+      );
+      expect(
+        AppDatabase.isCorruptionErrorForTesting(
+          Exception('database corruption detected'),
+        ),
+        isTrue,
+      );
+      expect(
+        AppDatabase.isCorruptionErrorForTesting(
+          StateError('SQLite integrity check failed: malformed page'),
+        ),
+        isTrue,
+      );
+      expect(
+        AppDatabase.isCorruptionErrorForTesting(Exception('permission denied')),
+        isFalse,
+      );
+    });
+  });
 }

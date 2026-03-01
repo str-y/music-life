@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:record/record.dart';
 
 import 'app_constants.dart';
+import 'pigeon/native_pitch_messages.dart';
 import 'utils/app_logger.dart';
 import 'utils/ring_buffer.dart';
 
@@ -212,6 +213,14 @@ class NativePitchIsolateManager {
   Stopwatch? _pendingHeartbeatClock;
   int _nextHeartbeatToken = 0;
 
+  bool _isFatalErrorEnvelope(dynamic message) {
+    // VM isolate errors arrive via `onError` as `[error, stackTraceString]`.
+    return message is List &&
+        message.length == 2 &&
+        message[0] != null &&
+        message[1] is String;
+  }
+
   Future<bool> start() async {
     final resultPort = ReceivePort();
     _resultPort = resultPort;
@@ -291,7 +300,7 @@ class NativePitchIsolateManager {
         } else if (msg is IsolateManagerError) {
           _reportIsolateError(msg);
           completer.complete(false);
-        } else if (msg is List) {
+        } else if (_isFatalErrorEnvelope(msg)) {
           _forwardFatalError(msg);
           completer.complete(false);
         }
@@ -300,7 +309,7 @@ class NativePitchIsolateManager {
 
       if (msg is IsolateManagerError) {
         _reportIsolateError(msg);
-      } else if (msg is List) {
+      } else if (_isFatalErrorEnvelope(msg)) {
         _forwardFatalError(msg);
       } else if (msg is IsolateHeartbeatPong) {
         if (msg.token == _pendingHeartbeatToken) {
@@ -453,12 +462,14 @@ void _audioProcessingIsolate(IsolateSetup setup) {
           if (b == 0) break;
           bytes.add(b);
         }
-        setup.resultPort.send(<String, Object>{
-          'noteName': String.fromCharCodes(bytes),
-          'frequency': result.frequency,
-          'centsOffset': result.centsOffset,
-          'midiNote': result.midiNote,
-        });
+        setup.resultPort.send(
+          NativePitchResultMessage(
+            noteName: String.fromCharCodes(bytes),
+            frequency: result.frequency,
+            centsOffset: result.centsOffset,
+            midiNote: result.midiNote,
+          ).encode(),
+        );
       }
     } catch (e, stack) {
       setup.resultPort.send(IsolateManagerError(
@@ -680,6 +691,10 @@ class NativePitchBridge implements Finalizable {
     }
   }
 
+  NativePitchResultMessage? _tryDecodePitchResultPayload(dynamic message) {
+    return NativePitchResultMessage.tryDecode(message);
+  }
+
   void processAudioFrame(Float32List samples) {
     if (_disposed) return;
     assert(
@@ -700,8 +715,9 @@ class NativePitchBridge implements Finalizable {
       frameSize: _frameSize,
       entryPoint: _audioProcessingIsolate,
       onMessage: (msg) {
-        if (msg is Map) {
-          _onPitchResult(msg);
+        final pitch = _tryDecodePitchResultPayload(msg);
+        if (pitch != null) {
+          _onPitchResult(pitch);
         }
       },
       onError: _onError,
@@ -741,16 +757,14 @@ class NativePitchBridge implements Finalizable {
     );
   }
 
-  void _onPitchResult(Map<dynamic, dynamic> msg) {
+  void _onPitchResult(NativePitchResultMessage pitch) {
     if (_controller.isClosed) return;
-    final noteName = msg['noteName'];
-    if (noteName is! String) return;
-    _controller.add(noteName);
+    _controller.add(pitch.noteName);
     _pitchController.add(PitchResult(
-      noteName: noteName,
-      frequency: msg['frequency'],
-      centsOffset: msg['centsOffset'],
-      midiNote: msg['midiNote'],
+      noteName: pitch.noteName,
+      frequency: pitch.frequency,
+      centsOffset: pitch.centsOffset,
+      midiNote: pitch.midiNote,
     ));
   }
 
