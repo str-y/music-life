@@ -46,7 +46,7 @@ class RecordingPlaybackState {
   }
 }
 
-class RecordingPlaybackNotifier extends AutoDisposeNotifier<RecordingPlaybackState> {
+class RecordingPlaybackNotifier extends Notifier<RecordingPlaybackState> {
   AudioPlayer? _player;
   final _subs = <StreamSubscription<dynamic>>[];
 

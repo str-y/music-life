@@ -145,6 +145,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
+  drift:
+    dependency: "direct main"
+    description:
+      name: drift
+      sha256: "61f876c0291b194980bafd203f48e85d5fb04e4a7334367d1a89f44004dbcb83"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.32.0"
   fake_async:
     dependency: transitive
     description:
@@ -464,7 +472,7 @@ packages:
     dependency: transitive
     description:
       name: lints
-      sha256: 3315600f3fb3b135be672bf4a178c55f274bebe368325ae18462c89ac1e3b413
+      sha256: "3315600f3fb3b135be672bf4a178c55f274bebe368325ae18462c89ac1e3b413"
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
@@ -953,6 +961,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.4.0"
+  sqlite3:
+    dependency: transitive
+    description:
+      name: sqlite3
+      sha256: b7cf6b37667f6a921281797d2499ffc60fb878b161058d422064f0ddc78f6aa6
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.6"
+  sqlite3_flutter_libs:
+    dependency: "direct main"
+    description:
+      name: sqlite3_flutter_libs
+      sha256: "1e800ebe7f85a80a66adacaa6febe4d5f4d8b75f244e9838a27cb2ffc7aec08d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.41"
   stack_trace:
     dependency: transitive
     description:

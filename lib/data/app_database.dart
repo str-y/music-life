@@ -561,4 +561,7 @@ class AppDatabase {
 class _DriftDatabase extends DatabaseConnectionUser {
   _DriftDatabase(QueryExecutor executor)
       : super(DatabaseConnection.fromExecutor(executor));
+
+  @override
+  GeneratedDatabase get attachedDatabase => throw UnimplementedError();
 }
