@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:record/record.dart';
 
 import 'app_constants.dart';
+import 'services/permission_service.dart';
 import 'pigeon/native_pitch_messages.dart';
 import 'utils/app_logger.dart';
 import 'utils/ring_buffer.dart';
@@ -559,6 +560,7 @@ class NativePitchBridge implements Finalizable {
 
   NativePitchIsolateManager? _isolateManager;
   final FfiErrorHandler? _onError;
+  final PermissionService _permissionService;
   bool _disposed = false;
 
   final StreamController<String> _controller =
@@ -596,6 +598,7 @@ class NativePitchBridge implements Finalizable {
     required int frameSize,
     required int sampleRate,
     required NativeFinalizer handleFinalizer,
+    required PermissionService permissionService,
     FfiErrorHandler? onError,
   })  : _handle = handle,
         _nativeDestroy = nativeDestroy,
@@ -603,6 +606,7 @@ class NativePitchBridge implements Finalizable {
         _frameSize = frameSize,
         _sampleRate = sampleRate,
         _handleFinalizer = handleFinalizer,
+        _permissionService = permissionService,
         _onError = onError {
     _handleFinalizer.attach(this, handle.cast(), detach: this);
     _bufferFinalizer.attach(this, persistentBuffer.cast(), detach: this);
@@ -613,6 +617,7 @@ class NativePitchBridge implements Finalizable {
     int frameSize = defaultFrameSize,
     double threshold = defaultThreshold,
     FfiErrorHandler? onError,
+    PermissionService permissionService = defaultPermissionService,
   }) {
     final lib = _loadNativeLib();
     _configureNativeLogging(lib);
@@ -636,6 +641,7 @@ class NativePitchBridge implements Finalizable {
       frameSize: frameSize,
       sampleRate: sampleRate,
       handleFinalizer: handleFinalizer,
+      permissionService: permissionService,
       onError: onError,
     );
   }
@@ -708,7 +714,7 @@ class NativePitchBridge implements Finalizable {
   }
 
   Future<bool> startCapture() async {
-    if (!await _recorder.hasPermission()) return false;
+    if (!await _permissionService.hasMicrophonePermission()) return false;
     final manager = NativePitchIsolateManager(
       handle: _handle,
       buffer: _persistentBuffer,

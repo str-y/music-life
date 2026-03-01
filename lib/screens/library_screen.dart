@@ -13,6 +13,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
+import '../services/permission_service.dart';
 import '../utils/app_logger.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
@@ -226,6 +227,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   static const int _amplitudeSamplesPerUiUpdate = 3;
   final _titleCtrl = TextEditingController();
   final _recorder = AudioRecorder();
+  final PermissionService _permissionService = defaultPermissionService;
   final List<double> _amplitudeData = [];
   List<double> _liveWaveformPreview = const [];
   int _samplesSinceUiUpdate = 0;
@@ -281,7 +283,8 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
 
   Future<void> _startRecording() async {
     try {
-      final hasPermission = await _recorder.hasPermission();
+      final hasPermission =
+          (await _permissionService.requestMicrophonePermission()).isGranted;
       if (!mounted) return;
       if (!hasPermission) {
         ScaffoldMessenger.of(context).showSnackBar(
