@@ -52,6 +52,7 @@ void main() async {
     );
   }
   final prefs = await SharedPreferences.getInstance();
+  await AppDatabase.instance.ensureHealthy();
   runApp(
     ProviderScope(
       overrides: [
