@@ -14,7 +14,9 @@ import '../widgets/mic_permission_gate.dart';
 
 
 class ChordAnalyserScreen extends StatelessWidget {
-  const ChordAnalyserScreen({super.key});
+  const ChordAnalyserScreen({super.key, this.useMicPermissionGate = true});
+
+  final bool useMicPermissionGate;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,9 @@ class ChordAnalyserScreen extends StatelessWidget {
         title: Text(AppLocalizations.of(context)!.chordAnalyserTitle),
         backgroundColor: colorScheme.inversePrimary,
       ),
-      body: const MicPermissionGate(child: _ChordAnalyserBody()),
+      body: useMicPermissionGate
+          ? const MicPermissionGate(child: _ChordAnalyserBody())
+          : const _ChordAnalyserBody(),
     );
   }
 }

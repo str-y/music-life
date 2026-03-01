@@ -12,13 +12,17 @@ import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_gate.dart';
 
 class TunerScreen extends StatelessWidget {
-  const TunerScreen({super.key});
+  const TunerScreen({super.key, this.useMicPermissionGate = true});
+
+  final bool useMicPermissionGate;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.tunerTitle)),
-      body: const MicPermissionGate(child: _TunerBodyWrapper()),
+      body: useMicPermissionGate
+          ? const MicPermissionGate(child: _TunerBodyWrapper())
+          : const _TunerBodyWrapper(),
     );
   }
 }
