@@ -161,6 +161,18 @@
   "@welcomeSubtitle": {
     "description": "Welcome sub-headline on the main screen"
   },
+  "practiceSummaryTitle": "Practice Summary",
+  "@practiceSummaryTitle": {
+    "description": "Title for the practice summary dashboard on the main screen"
+  },
+  "todayPracticeTime": "Today's practice",
+  "@todayPracticeTime": {
+    "description": "Label for today's total practice time in the main dashboard"
+  },
+  "streakDays": "Streak",
+  "@streakDays": {
+    "description": "Label for consecutive practice days in the main dashboard"
+  },
 
   "tunerTitle": "Tuner",
   "@tunerTitle": {

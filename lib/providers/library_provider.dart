@@ -50,6 +50,52 @@ class MonthlyPracticeStats {
   final int totalMinutes;
 }
 
+class PracticeSummaryStats {
+  const PracticeSummaryStats({
+    this.todayMinutes = 0,
+    this.streakDays = 0,
+  });
+
+  final int todayMinutes;
+  final int streakDays;
+}
+
+PracticeSummaryStats computePracticeSummary(
+  List<PracticeLogEntry> logs, {
+  DateTime? now,
+}) {
+  final today = _toDateOnly(now ?? DateTime.now());
+  final uniquePracticeDates = logs.map((log) => _toDateOnly(log.date)).toSet();
+  final todayMinutes = logs
+      .where((log) => _toDateOnly(log.date) == today)
+      .fold(0, (sum, log) => sum + log.durationMinutes);
+  final yesterday = today.subtract(const Duration(days: 1));
+
+  final streakStartDate = uniquePracticeDates.contains(today)
+      ? today
+      : uniquePracticeDates.contains(yesterday)
+          ? yesterday
+          : null;
+
+  if (streakStartDate == null) {
+    return PracticeSummaryStats(todayMinutes: todayMinutes);
+  }
+
+  var streakDays = 0;
+  var cursor = streakStartDate;
+  while (uniquePracticeDates.contains(cursor)) {
+    streakDays++;
+    cursor = cursor.subtract(const Duration(days: 1));
+  }
+
+  return PracticeSummaryStats(
+    todayMinutes: todayMinutes,
+    streakDays: streakDays,
+  );
+}
+
+DateTime _toDateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
 // ---------------------------------------------------------------------------
 // Notifier
 // ---------------------------------------------------------------------------
