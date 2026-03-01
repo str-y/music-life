@@ -71,6 +71,8 @@ void main() {
       ),
     );
 
+    // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
+    // First pump lets async initialization complete, second pump captures a fixed frame.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
