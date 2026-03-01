@@ -106,8 +106,8 @@ typedef FfiErrorHandler = void Function(Object error, StackTrace stack);
 
 // ── Isolate support ───────────────────────────────────────────────────────────
 
-class _IsolateSetup {
-  const _IsolateSetup({
+class IsolateSetup {
+  const IsolateSetup({
     required this.resultPort,
     required this.handle,
     required this.buffer,
@@ -120,30 +120,320 @@ class _IsolateSetup {
   final int frameSize;
 }
 
-class _IsolateError {
-  const _IsolateError(this.message, this.stack);
+class IsolateManagerError {
+  const IsolateManagerError({
+    required this.phase,
+    required this.message,
+    required this.stack,
+  });
+  final String phase;
   final String message;
   final String stack;
 }
 
-class _TransferablePcmChunk {
-  const _TransferablePcmChunk(this.data);
+class IsolateReady {
+  const IsolateReady(this.sendPort);
+  final SendPort sendPort;
+}
+
+class IsolateHandshakeRequest {
+  const IsolateHandshakeRequest(this.protocolVersion);
+  final int protocolVersion;
+}
+
+class IsolateHandshakeAck {
+  const IsolateHandshakeAck(this.protocolVersion);
+  final int protocolVersion;
+}
+
+class IsolateHeartbeatPing {
+  const IsolateHeartbeatPing(this.token);
+  final int token;
+}
+
+class IsolateHeartbeatPong {
+  const IsolateHeartbeatPong(this.token);
+  final int token;
+}
+
+class TransferablePcmChunk {
+  const TransferablePcmChunk(this.data);
   final TransferableTypedData data;
 }
 
-class _TransferableFloatFrame {
-  const _TransferableFloatFrame(this.data, this.sampleCount);
+class TransferableFloatFrame {
+  const TransferableFloatFrame(this.data, this.sampleCount);
   final TransferableTypedData data;
   final int sampleCount;
 }
 
+class IsolateShutdownHandle {
+  const IsolateShutdownHandle(this.isolate, this.exitPort);
+  final Isolate? isolate;
+  final ReceivePort? exitPort;
+}
+
+class NativePitchIsolateManager {
+  // Cap heartbeat tokens at max signed 32-bit so IDs stay positive and bounded.
+  static const int _maxHeartbeatToken = 0x7fffffff;
+
+  NativePitchIsolateManager({
+    required this.handle,
+    required this.buffer,
+    required this.frameSize,
+    required this.entryPoint,
+    required this.onMessage,
+    required this.onError,
+    this.protocolVersion = 1,
+    this.handshakeTimeout = const Duration(seconds: 3),
+    this.heartbeatInterval = const Duration(seconds: 2),
+    this.heartbeatTimeout = const Duration(seconds: 6),
+  });
+
+  final Pointer<Void> handle;
+  final Pointer<Float> buffer;
+  final int frameSize;
+  final void Function(IsolateSetup setup) entryPoint;
+  final void Function(dynamic message) onMessage;
+  final FfiErrorHandler? onError;
+  final int protocolVersion;
+  final Duration handshakeTimeout;
+  final Duration heartbeatInterval;
+  final Duration heartbeatTimeout;
+
+  SendPort? _audioSendPort;
+  ReceivePort? _resultPort;
+  ReceivePort? _exitPort;
+  StreamSubscription<dynamic>? _resultSub;
+  Isolate? _isolate;
+  Timer? _handshakeTimer;
+  Timer? _heartbeatTimer;
+  int? _pendingHeartbeatToken;
+  Stopwatch? _pendingHeartbeatClock;
+  int _nextHeartbeatToken = 0;
+
+  Future<bool> start() async {
+    final resultPort = ReceivePort();
+    _resultPort = resultPort;
+    final exitPort = ReceivePort();
+    _exitPort = exitPort;
+    final setup = IsolateSetup(
+      resultPort: resultPort.sendPort,
+      handle: handle,
+      buffer: buffer,
+      frameSize: frameSize,
+    );
+
+    try {
+      _isolate = await Isolate.spawn(
+        entryPoint,
+        setup,
+        onError: resultPort.sendPort,
+        onExit: exitPort.sendPort,
+      );
+    } catch (e, stack) {
+      onError?.call(e, stack);
+      _closePorts();
+      return false;
+    }
+
+    final completer = Completer<bool>();
+
+    void failStart(Object error, StackTrace stackTrace) {
+      _handshakeTimer?.cancel();
+      _handshakeTimer = null;
+      onError?.call(error, stackTrace);
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    }
+
+    late StreamSubscription<dynamic> exitSub;
+    exitSub = exitPort.listen((_) {
+      if (!completer.isCompleted) {
+        failStart(
+          StateError('Isolate exited unexpectedly during startup.'),
+          StackTrace.current,
+        );
+      }
+    });
+
+    _handshakeTimer = Timer(handshakeTimeout, () {
+      failStart(
+        TimeoutException(
+          'Timed out waiting for isolate handshake.',
+          handshakeTimeout,
+        ),
+        StackTrace.current,
+      );
+    });
+
+    _resultSub = resultPort.listen((msg) {
+      if (!completer.isCompleted) {
+        if (msg is IsolateReady) {
+          _audioSendPort = msg.sendPort;
+          _audioSendPort?.send(IsolateHandshakeRequest(protocolVersion));
+        } else if (msg is IsolateHandshakeAck) {
+          if (msg.protocolVersion != protocolVersion) {
+            failStart(
+              StateError(
+                'Isolate protocol mismatch. '
+                'Expected $protocolVersion, got ${msg.protocolVersion}.',
+              ),
+              StackTrace.current,
+            );
+            return;
+          }
+          _handshakeTimer?.cancel();
+          _handshakeTimer = null;
+          _startHeartbeat();
+          completer.complete(true);
+        } else if (msg is IsolateManagerError) {
+          _reportIsolateError(msg);
+          completer.complete(false);
+        } else if (msg is List) {
+          _forwardFatalError(msg);
+          completer.complete(false);
+        }
+        return;
+      }
+
+      if (msg is IsolateManagerError) {
+        _reportIsolateError(msg);
+      } else if (msg is List) {
+        _forwardFatalError(msg);
+      } else if (msg is IsolateHeartbeatPong) {
+        if (msg.token == _pendingHeartbeatToken) {
+          _pendingHeartbeatToken = null;
+          _pendingHeartbeatClock?.stop();
+          _pendingHeartbeatClock = null;
+        }
+      } else {
+        onMessage(msg);
+      }
+    });
+
+    final ready = await completer.future;
+    await exitSub.cancel();
+    if (!ready) {
+      _handshakeTimer?.cancel();
+      _handshakeTimer = null;
+      _resultSub?.cancel();
+      _resultSub = null;
+      _closeResultPort();
+    }
+    return ready;
+  }
+
+  void send(dynamic message) {
+    _audioSendPort?.send(message);
+  }
+
+  IsolateShutdownHandle prepareForDisposal() {
+    _stopHeartbeat();
+    _audioSendPort?.send(null);
+    _audioSendPort = null;
+    _resultSub?.cancel();
+    _resultSub = null;
+    _closeResultPort();
+    final isolate = _isolate;
+    _isolate = null;
+    final exitPort = _exitPort;
+    _exitPort = null;
+    return IsolateShutdownHandle(isolate, exitPort);
+  }
+
+  void disposeImmediately() {
+    _stopHeartbeat();
+    _handshakeTimer?.cancel();
+    _handshakeTimer = null;
+    _resultSub?.cancel();
+    _resultSub = null;
+    _closeResultPort();
+    _closeExitPort();
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _audioSendPort = null;
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
+      if (_audioSendPort == null) return;
+      final clock = _pendingHeartbeatClock;
+      if (_pendingHeartbeatToken != null && clock != null) {
+        if (clock.elapsed > heartbeatTimeout) {
+          onError?.call(
+            TimeoutException(
+              'Isolate heartbeat timed out.',
+              heartbeatTimeout,
+            ),
+            StackTrace.current,
+          );
+          _isolate?.kill(priority: Isolate.immediate);
+          _stopHeartbeat();
+          return;
+        }
+        return;
+      }
+
+      // Keep tokens in a positive bounded range for stable round-trip matching.
+      _nextHeartbeatToken = (_nextHeartbeatToken % _maxHeartbeatToken) + 1;
+      final token = _nextHeartbeatToken;
+      _pendingHeartbeatToken = token;
+      _pendingHeartbeatClock = Stopwatch()..start();
+      _audioSendPort?.send(IsolateHeartbeatPing(token));
+    });
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _pendingHeartbeatToken = null;
+    _pendingHeartbeatClock?.stop();
+    _pendingHeartbeatClock = null;
+  }
+
+  void _reportIsolateError(IsolateManagerError msg) {
+    onError?.call(
+      StateError('[${msg.phase}] ${msg.message}'),
+      StackTrace.fromString(msg.stack),
+    );
+  }
+
+  void _forwardFatalError(List<dynamic> msg) {
+    final error = msg.isNotEmpty ? msg[0] : 'Unknown isolate error';
+    final stackStr = msg.length > 1 ? (msg[1] as String?) ?? '' : '';
+    onError?.call(error, StackTrace.fromString(stackStr));
+  }
+
+  void _closePorts() {
+    _closeResultPort();
+    _closeExitPort();
+  }
+
+  void _closeResultPort() {
+    _resultPort?.close();
+    _resultPort = null;
+  }
+
+  void _closeExitPort() {
+    _exitPort?.close();
+    _exitPort = null;
+  }
+}
+
 /// Entry point for the background isolate.
-void _audioProcessingIsolate(_IsolateSetup setup) {
+void _audioProcessingIsolate(IsolateSetup setup) {
   final DynamicLibrary lib;
   try {
     lib = _loadNativeLib();
   } catch (e, stack) {
-    setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
+    setup.resultPort.send(IsolateManagerError(
+      phase: 'load-native-lib',
+      message: e.toString(),
+      stack: stack.toString(),
+    ));
     return;
   }
 
@@ -171,7 +461,11 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
         });
       }
     } catch (e, stack) {
-      setup.resultPort.send(_IsolateError(e.toString(), stack.toString()));
+      setup.resultPort.send(IsolateManagerError(
+        phase: 'process-frame',
+        message: e.toString(),
+        stack: stack.toString(),
+      ));
     }
   }
 
@@ -189,25 +483,30 @@ void _audioProcessingIsolate(_IsolateSetup setup) {
   }
 
   final port = ReceivePort();
-  setup.resultPort.send(port.sendPort);
+  setup.resultPort.send(IsolateReady(port.sendPort));
 
   port.listen((msg) {
     if (msg == null) {
       port.close();
       return;
     }
-    if (msg is _TransferablePcmChunk) {
+    if (msg is IsolateHandshakeRequest) {
+      setup.resultPort.send(IsolateHandshakeAck(msg.protocolVersion));
+    } else if (msg is IsolateHeartbeatPing) {
+      setup.resultPort.send(IsolateHeartbeatPong(msg.token));
+    } else if (msg is TransferablePcmChunk) {
       processPcmChunk(msg.data.materialize().asUint8List());
     } else if (msg is Uint8List) {
       processPcmChunk(msg);
-    } else if (msg is _TransferableFloatFrame) {
+    } else if (msg is TransferableFloatFrame) {
       final buffer = msg.data.materialize();
       final maxSamples = buffer.lengthInBytes ~/ Float32List.bytesPerElement;
       if (msg.sampleCount < 0 || msg.sampleCount > maxSamples) {
-        setup.resultPort.send(_IsolateError(
-          'Invalid transferable frame length: '
-          '${msg.sampleCount} samples requested from $maxSamples available.',
-          StackTrace.current.toString(),
+        setup.resultPort.send(IsolateManagerError(
+          phase: 'validate-frame',
+          message: 'Invalid transferable frame length: '
+              '${msg.sampleCount} samples requested from $maxSamples available.',
+          stack: StackTrace.current.toString(),
         ));
         return;
       }
@@ -247,11 +546,7 @@ class NativePitchBridge implements Finalizable {
   final int _sampleRate;
   final int _frameSize;
 
-  SendPort? _audioSendPort;
-  ReceivePort? _resultPort;
-  ReceivePort? _exitPort;
-  StreamSubscription<dynamic>? _resultSub;
-  Isolate? _isolate;
+  NativePitchIsolateManager? _isolateManager;
   final FfiErrorHandler? _onError;
   bool _disposed = false;
 
@@ -265,6 +560,23 @@ class NativePitchBridge implements Finalizable {
 
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _audioSub;
+
+  static RecordConfig captureRecordConfig({
+    required int sampleRate,
+    required int frameSize,
+  }) {
+    return RecordConfig(
+      encoder: AudioEncoder.pcm16bits,
+      sampleRate: sampleRate,
+      numChannels: 1,
+      streamBufferSize: frameSize * Int16List.bytesPerElement,
+      androidConfig: const AndroidRecordConfig(
+        audioSource: AndroidAudioSource.voiceRecognition,
+        audioManagerMode: AudioManagerMode.modeInCommunication,
+        useLegacy: false,
+      ),
+    );
+  }
 
   NativePitchBridge._({
     required Pointer<Void> handle,
@@ -374,7 +686,7 @@ class NativePitchBridge implements Finalizable {
       samples.length <= _frameSize,
       'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
     );
-    _audioSendPort?.send(_TransferableFloatFrame(
+    _isolateManager?.send(TransferableFloatFrame(
       TransferableTypedData.fromList([samples]),
       samples.length,
     ));
@@ -382,113 +694,48 @@ class NativePitchBridge implements Finalizable {
 
   Future<bool> startCapture() async {
     if (!await _recorder.hasPermission()) return false;
-
-    final resultPort = ReceivePort();
-    _resultPort = resultPort;
-    final exitPort = ReceivePort();
-    _exitPort = exitPort;
-
-    try {
-      _isolate = await Isolate.spawn(
-        _audioProcessingIsolate,
-        _IsolateSetup(
-          resultPort: resultPort.sendPort,
-          handle: _handle,
-          buffer: _persistentBuffer,
-          frameSize: _frameSize,
-        ),
-        onError: resultPort.sendPort,
-        onExit: exitPort.sendPort,
-      );
-    } catch (e, stack) {
-      _onError?.call(e, stack);
-      exitPort.close();
-      _exitPort = null;
-      return false;
-    }
-
-    final completer = Completer<bool>();
-
-    // Helper: parse and forward a fatal error list sent by the Dart runtime
-    // via onError: resultPort.sendPort  →  [errorDescription, stackTraceString].
-    void forwardFatalError(List<dynamic> msg) {
-      final error = msg.isNotEmpty ? msg[0] : 'Unknown isolate error';
-      final stackStr = msg.length > 1 ? (msg[1] as String?) ?? '' : '';
-      _onError?.call(error, StackTrace.fromString(stackStr));
-    }
-
-    // If the isolate exits before it ever sends its SendPort (e.g. fatal
-    // crash before the port.listen line), complete the completer so the
-    // caller is never left hanging.
-    late StreamSubscription<dynamic> exitSub;
-    exitSub = exitPort.listen((_) {
-      exitPort.close();
-      _exitPort = null;
-      if (!completer.isCompleted) {
-        completer.complete(false);
-      }
-    });
-
-    _resultSub = resultPort.listen((msg) {
-      if (!completer.isCompleted) {
-        if (msg is SendPort) {
-          _audioSendPort = msg;
-          // Cancel the exit watcher now that startup succeeded; crashes after
-          // this point are reported via onError: resultPort.sendPort.
-          exitSub.cancel();
-          completer.complete(true);
-        } else if (msg is _IsolateError) {
-          _onError?.call(msg.message, StackTrace.fromString(msg.stack));
-          completer.complete(false);
-        } else if (msg is List) {
-          // Fatal uncaught isolate error forwarded via onError: resultPort.sendPort.
-          // The Dart runtime sends it as [errorDescription, stackTraceString].
-          forwardFatalError(msg);
-          completer.complete(false);
-        } else {
-          completer.complete(false);
+    final manager = NativePitchIsolateManager(
+      handle: _handle,
+      buffer: _persistentBuffer,
+      frameSize: _frameSize,
+      entryPoint: _audioProcessingIsolate,
+      onMessage: (msg) {
+        if (msg is Map) {
+          _onPitchResult(msg);
         }
-        return;
-      }
-      if (msg is Map) {
-        _onPitchResult(msg);
-      } else if (msg is _IsolateError) {
-        _onError?.call(msg.message, StackTrace.fromString(msg.stack));
-      } else if (msg is List) {
-        // Fatal uncaught isolate error after startup.
-        forwardFatalError(msg);
-      }
-    });
+      },
+      onError: _onError,
+    );
+    _isolateManager = manager;
 
-    final ready = await completer.future;
+    final ready = await manager.start();
     if (!ready) {
-      _resultSub?.cancel();
-      _resultSub = null;
-      resultPort.close();
-      _resultPort = null;
+      manager.disposeImmediately();
+      _isolateManager = null;
       return false;
     }
 
     try {
       final stream = await _recorder.startStream(
-        RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
+        captureRecordConfig(
           sampleRate: _sampleRate,
-          numChannels: 1,
+          frameSize: _frameSize,
         ),
       );
       _audioSub = stream.listen(_onAudioChunk, onError: _onError);
       return true;
     } catch (e, stack) {
       _onError?.call(e, stack);
+      _isolateManager?.disposeImmediately();
+      _isolateManager = null;
       return false;
     }
   }
 
   void _onAudioChunk(Uint8List chunk) {
     if (_disposed) return;
-    _audioSendPort?.send(
-      _TransferablePcmChunk(
+    _isolateManager?.send(
+      TransferablePcmChunk(
         TransferableTypedData.fromList([chunk]),
       ),
     );
@@ -524,19 +771,12 @@ class NativePitchBridge implements Finalizable {
     );
     _recorder.dispose();
     // Signal the isolate to stop processing and close its receive port.
-    _audioSendPort?.send(null);
-    _audioSendPort = null;
-    _resultSub?.cancel();
-    _resultSub = null;
-    _resultPort?.close();
-    _resultPort = null;
+    final shutdownHandle = _isolateManager?.prepareForDisposal();
+    _isolateManager = null;
     _controller.close();
     _pitchController.close();
-
-    final isolate = _isolate;
-    _isolate = null;
-    final exitPort = _exitPort;
-    _exitPort = null;
+    final isolate = shutdownHandle?.isolate;
+    final exitPort = shutdownHandle?.exitPort;
 
     if (isolate == null || exitPort == null) {
       // No isolate was started; free native resources immediately.

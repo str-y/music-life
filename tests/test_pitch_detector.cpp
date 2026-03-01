@@ -180,6 +180,25 @@ static bool test_yin_non_simd_multiple_frame_size() {
     return true;
 }
 
+static bool test_yin_simd_aligned_frame_repeatability() {
+    // Ensures SIMD CMNDF/FFT paths remain stable on frame sizes divisible by 4.
+    const int   SR          = 44100;
+    const int   FRAME       = 2048;
+    const float EXPECTED_HZ = 440.0f;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, EXPECTED_HZ, SR);
+
+    std::vector<float> workspace(FRAME / 2);
+    const float first = yin.detect(buf.data(), workspace);
+    const float second = yin.detect(buf.data(), workspace);
+    ASSERT_NEAR(first, EXPECTED_HZ, 2.0f);
+    ASSERT_NEAR(second, EXPECTED_HZ, 2.0f);
+    ASSERT_NEAR(first, second, 0.01f);
+    return true;
+}
+
 static bool test_yin_manual_backend_selection() {
     const char* original = std::getenv("ML_FFT_BACKEND");
     std::string original_value = original ? original : "";
@@ -507,6 +526,7 @@ int main() {
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
     run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
+    run_test("yin: stable on SIMD-aligned frame",   test_yin_simd_aligned_frame_repeatability);
     run_test("yin: supports backend override",       test_yin_manual_backend_selection);
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
