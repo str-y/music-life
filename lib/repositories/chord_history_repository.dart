@@ -1,5 +1,6 @@
 import '../data/app_database.dart';
 
+/// Represents a single detected chord with its timestamp.
 class ChordHistoryEntry {
   const ChordHistoryEntry({
     required this.chord,
@@ -10,6 +11,7 @@ class ChordHistoryEntry {
   final DateTime time;
 }
 
+/// Contract for persisting and querying chord detection history entries.
 abstract interface class ChordHistoryRepository {
   Future<void> addEntry(ChordHistoryEntry entry);
 
@@ -19,6 +21,7 @@ abstract interface class ChordHistoryRepository {
   });
 }
 
+/// SQLite-backed implementation of [ChordHistoryRepository].
 class SqliteChordHistoryRepository implements ChordHistoryRepository {
   const SqliteChordHistoryRepository();
 

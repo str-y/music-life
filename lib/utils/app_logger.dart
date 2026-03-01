@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+/// Severity levels supported by [AppLogger].
 enum AppLogLevel { trace, debug, info, warning, error }
 
 /// Utility for logging errors with exception and stack-trace details.

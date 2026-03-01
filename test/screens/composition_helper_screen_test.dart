@@ -9,6 +9,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/screens/composition_helper_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'golden_test_utils.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -109,6 +110,25 @@ void main() {
   });
 
   group('CompositionHelperScreen – error notifications', () {
+    testWidgets('matches composition helper screen golden baseline',
+        (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value([]));
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+        child: _wrap(const CompositionHelperScreen()),
+      ));
+      await tester.pumpAndSettle();
+
+      await expectScreenGolden(
+        find.byType(CompositionHelperScreen),
+        'goldens/composition_helper_screen.png',
+      );
+    });
+
     testWidgets('shows load-error SnackBar when stored data is corrupt',
         (tester) async {
       final mockRepo = _MockCompositionRepository();
