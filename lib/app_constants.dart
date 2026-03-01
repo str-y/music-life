@@ -1,3 +1,5 @@
+import 'config/app_config.dart';
+
 /// Centralized application configuration and theme constants.
 ///
 /// All magic numbers for idle timeouts, UI thresholds, and other configurable
@@ -6,13 +8,14 @@ abstract final class AppConstants {
   // ── Audio engine ──────────────────────────────────────────────────────────
 
   /// Default audio frame size passed to the native pitch-detection engine.
-  static const int audioFrameSize = 2048;
+  static const int audioFrameSize = AppConfig.defaultAudioFrameSize;
 
   /// Default audio sample rate in Hz.
-  static const int audioSampleRate = 44100;
+  static const int audioSampleRate = AppConfig.defaultAudioSampleRate;
 
   /// Default YIN algorithm threshold for the native pitch-detection engine.
-  static const double pitchDetectionThreshold = 0.10;
+  static const double pitchDetectionThreshold =
+      AppConfig.defaultPitchDetectionThreshold;
 
   // ── Idle timeout ──────────────────────────────────────────────────────────
 

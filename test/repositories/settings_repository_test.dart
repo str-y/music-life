@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,8 +17,8 @@ void main() {
 
     test('load returns persisted settings values', () async {
       SharedPreferences.setMockInitialValues({
-        'darkMode': true,
-        'referencePitch': 442.0,
+        AppConfig.defaultDarkModeStorageKey: true,
+        AppConfig.defaultReferencePitchStorageKey: 442.0,
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -36,8 +37,11 @@ void main() {
 
       await repository.save(updated);
 
-      expect(prefs.getBool('darkMode'), isTrue);
-      expect(prefs.getDouble('referencePitch'), 445.0);
+      expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
+      expect(
+        prefs.getDouble(AppConfig.defaultReferencePitchStorageKey),
+        445.0,
+      );
     });
   });
 }

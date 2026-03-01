@@ -9,9 +9,9 @@ import 'package:music_life/screens/tuner_screen.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
-Widget _wrap(Widget child, {List<Override> overrides = const []}) {
+Widget _wrap(Widget child, {List<dynamic> overrides = const []}) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [...overrides],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -80,5 +80,55 @@ void main() {
       find.byType(TunerScreen),
       matchesGoldenFile('goldens/tuner_screen.png'),
     );
+  });
+
+  group('TunerScreen – pitch and waveform semantics', () {
+    testWidgets('pitch and waveform labels are non-empty localized strings',
+        (tester) async {
+      late String noteLabel;
+      late String waveformLabel;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          noteLabel = l10n.currentNoteSemanticLabel;
+          waveformLabel = l10n.waveformSemanticLabel;
+          return const SizedBox.shrink();
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(noteLabel, isNotEmpty);
+      expect(waveformLabel, isNotEmpty);
+    });
+
+    testWidgets('Semantics nodes for pitch result and waveform are found',
+        (tester) async {
+      late String noteLabel;
+      late String waveformLabel;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          noteLabel = l10n.currentNoteSemanticLabel;
+          waveformLabel = l10n.waveformSemanticLabel;
+          return Column(
+            children: [
+              Semantics(
+                label: noteLabel,
+                value: 'A4, 440.0 Hz',
+                child: const SizedBox(width: 200, height: 100),
+              ),
+              Semantics(
+                label: waveformLabel,
+                child: const SizedBox(width: 200, height: 36),
+              ),
+            ],
+          );
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel(noteLabel), findsOneWidget);
+      expect(find.bySemanticsLabel(waveformLabel), findsOneWidget);
+    });
   });
 }

@@ -234,34 +234,37 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         ),
         Expanded(
           flex: 4,
-          child: RepaintBoundary(
-            child: _history.isEmpty
-                ? Center(
-                    child: Text(
-                      AppLocalizations.of(context)!.noChordHistory,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+          child: Semantics(
+            label: AppLocalizations.of(context)!.chordHistory,
+            child: RepaintBoundary(
+              child: _history.isEmpty
+                  ? Center(
+                      child: Text(
+                        AppLocalizations.of(context)!.noChordHistory,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    )
+                  : AnimatedList(
+                      key: _listKey,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      initialItemCount: _history.length,
+                      itemBuilder: (context, index, animation) {
+                        final entry = _history[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: _ChordHistoryTile(
+                            entry: entry,
+                            isLatest: index == 0,
+                            colorScheme: colorScheme,
+                            animation: animation,
                           ),
+                        );
+                      },
                     ),
-                  )
-                : AnimatedList(
-                    key: _listKey,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    initialItemCount: _history.length,
-                    itemBuilder: (context, index, animation) {
-                      final entry = _history[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: _ChordHistoryTile(
-                          entry: entry,
-                          isLatest: index == 0,
-                          colorScheme: colorScheme,
-                          animation: animation,
-                        ),
-                      );
-                    },
-                  ),
+            ),
           ),
         ),
       ],

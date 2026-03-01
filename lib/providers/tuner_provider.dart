@@ -55,11 +55,15 @@ class TunerNotifier extends Notifier<TunerState> {
       _bridge = null;
       bridge?.dispose();
     });
-    _startCapture();
-    return const TunerState();
+    // Initialize capture after build finishes
+    scheduleMicrotask(_startCapture);
+    return const TunerState(loading: true);
   }
 
   Future<void> _startCapture() async {
+    // No need to read state here as it was just initialized in build()
+    // but if we are retrying, we might want copyWith. 
+    // Since we are now in a microtask, state is initialized.
     state = state.copyWith(loading: true, clearLatest: true, bridgeActive: false);
     final bridge = ref.read(pitchBridgeFactoryProvider)();
     // Assign early so the onDispose callback can dispose the bridge even if

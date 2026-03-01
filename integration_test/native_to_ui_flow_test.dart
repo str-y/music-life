@@ -17,7 +17,7 @@ import 'package:music_life/service_locator.dart';
 import 'package:path/path.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 const _permissionChannel = MethodChannel('flutter.baseflow.com/permissions/methods');
 

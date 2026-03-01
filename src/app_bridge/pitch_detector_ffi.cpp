@@ -2,16 +2,23 @@
 
 #include "pitch_detector.h"
 
+#include <atomic>
 #include <cstdarg>
+#include <cmath>
 #include <exception>
 #include <cstdio>
+#include <cstdlib>
 #include <memory>
+#include <mutex>
 #include <signal.h>
 #include <unistd.h>
 
 namespace {
 
 MLLogCallback g_log_callback = nullptr;
+std::once_flag g_crash_handlers_once;
+volatile sig_atomic_t g_fatal_signal_in_progress = 0;
+constexpr int kMaxProcessSamplesMultiplier = 2;
 
 void emit_log(int level, const char* fmt, ...) {
     char buffer[512];
@@ -31,6 +38,10 @@ void write_signal_message(const char* message, size_t length) {
 }
 
 void fatal_signal_handler(int signal_number) {
+    if (g_fatal_signal_in_progress != 0) {
+        ::_Exit(128 + signal_number);
+    }
+    g_fatal_signal_in_progress = 1;
 #define ML_WRITE_SIGNAL(msg) write_signal_message(msg, sizeof(msg) - 1)
     switch (signal_number) {
         case SIGABRT:
@@ -61,7 +72,8 @@ void fatal_signal_handler(int signal_number) {
     }
 #undef ML_WRITE_SIGNAL
     ::signal(signal_number, SIG_DFL);
-    raise(signal_number);
+    ::raise(signal_number);
+    ::_Exit(128 + signal_number);
 }
 
 void terminate_handler() {
@@ -82,6 +94,7 @@ void terminate_handler() {
 
 struct MLPitchDetectorHandle {
     std::unique_ptr<music_life::PitchDetector> detector;
+    int max_process_samples;
 };
 
 MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold) {
@@ -92,9 +105,16 @@ MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_
                                                                      int frame_size,
                                                                      float threshold,
                                                                      float reference_pitch_hz) {
+    if (sample_rate <= 0 || frame_size <= 1 || frame_size > 32768 || !std::isfinite(threshold) ||
+        threshold < 0.0f || threshold > 1.0f || !std::isfinite(reference_pitch_hz)) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_create: invalid arguments");
+        return nullptr;
+    }
     try {
+        const int max_process_samples = frame_size * kMaxProcessSamplesMultiplier;
         auto* handle = new MLPitchDetectorHandle{
-            std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz)
+            std::make_unique<music_life::PitchDetector>(sample_rate, frame_size, threshold, reference_pitch_hz),
+            max_process_samples
         };
         emit_log(ML_LOG_LEVEL_INFO,
                  "ml_pitch_detector_create: sample_rate=%d frame_size=%d threshold=%0.3f reference_pitch_hz=%0.2f",
@@ -142,6 +162,10 @@ int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float r
 MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples) {
     MLPitchResult out{};
     if (!handle || !samples || num_samples <= 0) return out;
+    if (num_samples > handle->max_process_samples) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_process: invalid num_samples=%d", num_samples);
+        return out;
+    }
 
     try {
         const music_life::PitchDetector::Result result = handle->detector->process(samples, num_samples);
@@ -166,18 +190,17 @@ void ml_pitch_detector_set_log_callback(MLLogCallback callback) {
 }
 
 void ml_pitch_detector_install_crash_handlers(void) {
-    static bool installed = false;
-    if (installed) return;
-    installed = true;
-    std::set_terminate(terminate_handler);
-    ::signal(SIGABRT, fatal_signal_handler);
-    ::signal(SIGILL, fatal_signal_handler);
-    ::signal(SIGFPE, fatal_signal_handler);
-    ::signal(SIGSEGV, fatal_signal_handler);
+    std::call_once(g_crash_handlers_once, []() {
+        std::set_terminate(terminate_handler);
+        ::signal(SIGABRT, fatal_signal_handler);
+        ::signal(SIGILL, fatal_signal_handler);
+        ::signal(SIGFPE, fatal_signal_handler);
+        ::signal(SIGSEGV, fatal_signal_handler);
 #ifdef SIGBUS
-    ::signal(SIGBUS, fatal_signal_handler);
+        ::signal(SIGBUS, fatal_signal_handler);
 #endif
 #ifdef SIGTRAP
-    ::signal(SIGTRAP, fatal_signal_handler);
+        ::signal(SIGTRAP, fatal_signal_handler);
 #endif
+    });
 }

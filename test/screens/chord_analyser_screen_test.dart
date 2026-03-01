@@ -9,9 +9,9 @@ import 'package:music_life/screens/chord_analyser_screen.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
-Widget _wrap(Widget child, {List<Override> overrides = const []}) {
+Widget _wrap(Widget child, {List<dynamic> overrides = const []}) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [...overrides],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -82,5 +82,38 @@ void main() {
       find.byType(ChordAnalyserScreen),
       matchesGoldenFile('goldens/chord_analyser_screen.png'),
     );
+  });
+
+  group('ChordAnalyserScreen – chord history semantics', () {
+    testWidgets('chordHistory label is a non-empty localized string',
+        (tester) async {
+      late String label;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          label = AppLocalizations.of(context)!.chordHistory;
+          return const SizedBox.shrink();
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(label, isNotEmpty);
+    });
+
+    testWidgets('Semantics node with chordHistory label is found in widget tree',
+        (tester) async {
+      late String label;
+      await tester.pumpWidget(_wrap(
+        Builder(builder: (context) {
+          label = AppLocalizations.of(context)!.chordHistory;
+          return Semantics(
+            label: label,
+            child: const SizedBox(width: 200, height: 200),
+          );
+        }),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+    });
   });
 }

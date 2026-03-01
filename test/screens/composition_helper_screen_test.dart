@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/composition_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -60,7 +61,8 @@ void main() {
 
     test('load returns compositions when valid JSON is stored', () async {
       SharedPreferences.setMockInitialValues({
-        'compositions_v1': '[{"id":"1","title":"Test","chords":["C","G"]}]',
+        AppConfig.defaultCompositionsStorageKey:
+            '[{"id":"1","title":"Test","chords":["C","G"]}]',
       });
       final prefs = await SharedPreferences.getInstance();
       final repo = CompositionRepository(prefs);
