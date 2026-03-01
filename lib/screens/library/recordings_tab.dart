@@ -252,11 +252,15 @@ class WaveformView extends StatefulWidget {
     required this.durationSeconds,
     required this.isPlaying,
     required this.color,
+    this.animate = false,
   });
 
   final List<double> data;
   final int durationSeconds;
+  /// True when actual audio playback is active.
   final bool isPlaying;
+  /// True for non-playback active states (e.g. live recording preview).
+  final bool animate;
   final Color color;
 
   @override
@@ -274,14 +278,15 @@ class _WaveformViewState extends State<WaveformView>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    if (widget.isPlaying) _breathCtrl.repeat(reverse: true);
+    if (widget.isPlaying || widget.animate) _breathCtrl.repeat(reverse: true);
   }
 
   @override
   void didUpdateWidget(WaveformView old) {
     super.didUpdateWidget(old);
-    if (widget.isPlaying != old.isPlaying) {
-      if (widget.isPlaying) {
+    if ((widget.isPlaying || widget.animate) !=
+        (old.isPlaying || old.animate)) {
+      if (widget.isPlaying || widget.animate) {
         _breathCtrl.repeat(reverse: true);
       } else {
         _breathCtrl.stop();

@@ -249,6 +249,12 @@ class _TunerWaveform extends StatelessWidget {
 }
 
 class _TunerWavePainter extends CustomPainter {
+  static const double _baseAmplitude = 2.0;
+  static const double _maxCentsForScale = 50.0;
+  static const double _amplitudeScale = 8.0;
+  static const double _idleAmplitude = 2.5;
+  static const double _waveCycles = 2.5;
+
   const _TunerWavePainter({
     required this.hasReading,
     required this.cents,
@@ -272,11 +278,14 @@ class _TunerWavePainter extends CustomPainter {
       ..strokeWidth = 2
       ..color = hasReading ? color : trackColor;
     final path = Path();
-    final amp = hasReading ? (2.0 + (cents.abs().clamp(0, 50) / 50) * 8) : 2.5;
-    const cycles = 2.5;
+    final amp = hasReading
+        ? (_baseAmplitude +
+            (cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
+                _amplitudeScale)
+        : _idleAmplitude;
     for (double x = 0; x <= size.width; x += 2) {
       final t = x / size.width;
-      final y = centerY + math.sin((t * cycles + phase) * 2 * math.pi) * amp;
+      final y = centerY + math.sin((t * _waveCycles + phase) * 2 * math.pi) * amp;
       if (x == 0) {
         path.moveTo(x, y);
       } else {

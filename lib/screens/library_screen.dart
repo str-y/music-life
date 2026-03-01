@@ -192,9 +192,11 @@ class _AddRecordingDialog extends StatefulWidget {
 
 class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   static const double _amplitudeFloorDb = -60.0;
+  static const int _amplitudeSamplesPerUiUpdate = 3;
   final _titleCtrl = TextEditingController();
   final _recorder = AudioRecorder();
   final List<double> _amplitudeData = [];
+  int _samplesSinceUiUpdate = 0;
 
   _RecordingState _state = _RecordingState.idle;
   int _durationSeconds = 0;
@@ -276,6 +278,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       }
 
       _amplitudeData.clear();
+      _samplesSinceUiUpdate = 0;
       _amplitudeSub = _recorder
           .onAmplitudeChanged(const Duration(milliseconds: 120))
           .listen((amp) {
@@ -284,7 +287,9 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
             .clamp(0.0, 1.0)
             .toDouble();
         _amplitudeData.add(normalised);
-        if (mounted && _amplitudeData.length % 3 == 0) {
+        _samplesSinceUiUpdate++;
+        if (mounted && _samplesSinceUiUpdate >= _amplitudeSamplesPerUiUpdate) {
+          _samplesSinceUiUpdate = 0;
           setState(() {});
         }
       });
@@ -395,7 +400,8 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
               WaveformView(
                 data: buildLiveWaveformPreview(_amplitudeData),
                 durationSeconds: _durationSeconds,
-                isPlaying: true,
+                isPlaying: false,
+                animate: true,
                 color: cs.error,
               ),
             ],

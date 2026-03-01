@@ -250,12 +250,13 @@ class _FeatureTile extends StatefulWidget {
 }
 
 class _FeatureTileState extends State<_FeatureTile> {
+  static const double _maxAnimationDelayFraction = 0.9;
   bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final start = widget.delay.clamp(0.0, 0.9);
+    final start = widget.delay.clamp(0.0, _maxAnimationDelayFraction);
     final interval = CurvedAnimation(
       parent: widget.animation,
       curve: Interval(start, 1.0, curve: Curves.easeOutCubic),
