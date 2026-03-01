@@ -131,76 +131,177 @@ class _MainScreenState extends ConsumerState<MainScreen>
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
-              Text(
-                l10n.welcomeTitle,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.welcomeSubtitle,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 24),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.tune),
-                  title: Text(l10n.tunerTitle),
-                  subtitle: Text(l10n.tunerSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/tuner'),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).colorScheme.primaryContainer,
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                    ],
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.welcomeTitle,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.welcomeSubtitle,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.graphic_eq),
-                  title: Text(l10n.practiceLogTitle),
-                  subtitle: Text(l10n.practiceLogSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/practice-log'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.library_music),
-                  title: Text(l10n.libraryTitle),
-                  subtitle: Text(l10n.librarySubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/library'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.av_timer),
-                  title: Text(l10n.rhythmTitle),
-                  subtitle: Text(l10n.rhythmSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/rhythm'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.piano),
-                  title: Text(l10n.chordAnalyserTitle),
-                  subtitle: Text(l10n.chordAnalyserSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/chord-analyser'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.piano_outlined),
-                  title: Text(l10n.compositionHelperTitle),
-                  subtitle: Text(l10n.compositionHelperSubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/composition-helper'),
-                ),
+              const SizedBox(height: 16),
+              GridView.count(
+                crossAxisCount: 2,
+                childAspectRatio: 1.2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _FeatureTile(
+                    icon: Icons.tune,
+                    title: l10n.tunerTitle,
+                    subtitle: l10n.tunerSubtitle,
+                    delay: 0.0,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/tuner'),
+                  ),
+                  _FeatureTile(
+                    icon: Icons.graphic_eq,
+                    title: l10n.practiceLogTitle,
+                    subtitle: l10n.practiceLogSubtitle,
+                    delay: 0.08,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/practice-log'),
+                  ),
+                  _FeatureTile(
+                    icon: Icons.library_music,
+                    title: l10n.libraryTitle,
+                    subtitle: l10n.librarySubtitle,
+                    delay: 0.16,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/library'),
+                  ),
+                  _FeatureTile(
+                    icon: Icons.av_timer,
+                    title: l10n.rhythmTitle,
+                    subtitle: l10n.rhythmSubtitle,
+                    delay: 0.24,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/rhythm'),
+                  ),
+                  _FeatureTile(
+                    icon: Icons.piano,
+                    title: l10n.chordAnalyserTitle,
+                    subtitle: l10n.chordAnalyserSubtitle,
+                    delay: 0.32,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/chord-analyser'),
+                  ),
+                  _FeatureTile(
+                    icon: Icons.piano_outlined,
+                    title: l10n.compositionHelperTitle,
+                    subtitle: l10n.compositionHelperSubtitle,
+                    delay: 0.4,
+                    animation: entranceCurve,
+                    onTap: () => context.push('/composition-helper'),
+                  ),
+                ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureTile extends StatefulWidget {
+  const _FeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    required this.animation,
+    required this.delay,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Animation<double> animation;
+  final double delay;
+
+  @override
+  State<_FeatureTile> createState() => _FeatureTileState();
+}
+
+class _FeatureTileState extends State<_FeatureTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final start = widget.delay.clamp(0.0, 0.9);
+    final interval = CurvedAnimation(
+      parent: widget.animation,
+      curve: Interval(start, 1.0, curve: Curves.easeOutCubic),
+    );
+
+    return FadeTransition(
+      opacity: interval,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(interval),
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: Card(
+            elevation: _hovered ? 3 : 1,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: widget.onTap,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(widget.icon, color: cs.primary),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Text(
+                        widget.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

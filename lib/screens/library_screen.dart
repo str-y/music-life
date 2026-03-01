@@ -51,6 +51,15 @@ List<double> _downsampleWaveformInIsolate(Map<String, Object> args) {
   return downsampleWaveform(source, targetPoints);
 }
 
+@visibleForTesting
+List<double> buildLiveWaveformPreview(
+  List<double> amplitudeData, {
+  int targetPoints = 40,
+}) {
+  if (amplitudeData.isEmpty) return const [];
+  return downsampleWaveform(amplitudeData, targetPoints);
+}
+
 // ---------------------------------------------------------------------------
 // LibraryScreen
 // ---------------------------------------------------------------------------
@@ -275,6 +284,9 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
             .clamp(0.0, 1.0)
             .toDouble();
         _amplitudeData.add(normalised);
+        if (mounted && _amplitudeData.length % 3 == 0) {
+          setState(() {});
+        }
       });
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() => _durationSeconds++);
@@ -378,6 +390,15 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
               ),
             ],
             // Waveform preview after recording stops
+            if (isRecording && _amplitudeData.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              WaveformView(
+                data: buildLiveWaveformPreview(_amplitudeData),
+                durationSeconds: _durationSeconds,
+                isPlaying: true,
+                color: cs.error,
+              ),
+            ],
             if (hasStopped && _waveformData.isNotEmpty) ...[
               const SizedBox(height: 8),
               WaveformView(

@@ -27,4 +27,19 @@ void main() {
       expect(result, equals(<double>[1.0, 1.0]));
     });
   });
+
+  group('buildLiveWaveformPreview', () {
+    test('returns empty list when live amplitude data is empty', () {
+      expect(buildLiveWaveformPreview(const []), isEmpty);
+    });
+
+    test('downsamples live amplitude data to target points', () {
+      final result = buildLiveWaveformPreview(
+        <double>[0.0, 0.5, 1.0, 1.0],
+        targetPoints: 2,
+      );
+
+      expect(result, equals(<double>[0.25, 1.0]));
+    });
+  });
 }

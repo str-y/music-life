@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/main.dart';
@@ -27,6 +28,7 @@ void main() {
       await _pumpApp(tester);
 
       expect(find.byType(MainScreen), findsOneWidget);
+      expect(find.byType(GridView), findsOneWidget);
     });
 
     testWidgets('deep link /recordings opens the recording view',
