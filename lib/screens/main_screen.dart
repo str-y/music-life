@@ -51,11 +51,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
       duration: const Duration(milliseconds: 500),
     )..forward();
 
-    // Pre-load interstitial ad
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Pre-load interstitial ad
       ref.read(adServiceProvider).loadInterstitialAd();
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
       _showOnboardingIfNeeded();
     });
   }
@@ -77,6 +75,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final prefs = ref.read(sharedPreferencesProvider);
     if (prefs.getBool(_onboardingShownKey) == true || !mounted) return;
     final l10n = AppLocalizations.of(context)!;
+    await prefs.setBool(_onboardingShownKey, true);
+    if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -100,7 +100,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ],
       ),
     );
-    await prefs.setBool(_onboardingShownKey, true);
   }
 
   void _openSettings(BuildContext context, AppSettings settings) {
