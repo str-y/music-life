@@ -14,6 +14,9 @@ import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
 
+Color _tunerInTuneColor(ColorScheme colorScheme) => colorScheme.tertiary;
+Color _tunerWarningColor(ColorScheme colorScheme) => colorScheme.secondary;
+
 class TunerScreen extends StatelessWidget {
   const TunerScreen({
     super.key,
@@ -147,16 +150,18 @@ class _TunerBody extends StatelessWidget {
 
   /// Maps cents offset (−50 … +50) to a colour between red → green → red.
   Color _centColor(BuildContext context, double cents) {
+    final cs = Theme.of(context).colorScheme;
     final abs = cents.abs();
-    if (abs <= AppConstants.tunerInTuneThresholdCents) return Colors.green;
-    if (abs <= AppConstants.tunerWarningThresholdCents) return Colors.orange;
-    return Theme.of(context).colorScheme.error;
+    if (abs <= AppConstants.tunerInTuneThresholdCents) return _tunerInTuneColor(cs);
+    if (abs <= AppConstants.tunerWarningThresholdCents) return _tunerWarningColor(cs);
+    return cs.error;
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final inTuneColor = _tunerInTuneColor(cs);
 
     final noteName = latest != null
         ? transposedNoteNameFromMidi(
@@ -212,7 +217,7 @@ class _TunerBody extends StatelessWidget {
                 style: tt.displayLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: latest != null
-                      ? (inTune ? Colors.green : cs.primary)
+                      ? (inTune ? inTuneColor : cs.primary)
                       : cs.onSurfaceVariant,
                 ),
               ),
@@ -271,11 +276,11 @@ class _TunerBody extends StatelessWidget {
               style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ] else if (inTune) ...[
-            const Icon(Icons.check_circle, color: Colors.green, size: 32),
+            Icon(Icons.check_circle, color: inTuneColor, size: 32),
             const SizedBox(height: 4),
             Text(
               AppLocalizations.of(context)!.tuningOk,
-              style: tt.bodyMedium?.copyWith(color: Colors.green),
+              style: tt.bodyMedium?.copyWith(color: inTuneColor),
             ),
           ],
         ];
@@ -428,6 +433,8 @@ class _CentsMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final inTuneColor = _tunerInTuneColor(cs);
+    final warningColor = _tunerWarningColor(cs);
     return SizedBox(
       width: double.infinity,
       height: 48,
@@ -438,9 +445,9 @@ class _CentsMeter extends StatelessWidget {
             trackColor: cs.outlineVariant,
             needleColor: hasReading
                 ? (cents.abs() <= AppConstants.tunerInTuneThresholdCents
-                    ? Colors.green
+                    ? inTuneColor
                     : cents.abs() <= AppConstants.tunerWarningThresholdCents
-                        ? Colors.orange
+                        ? warningColor
                         : cs.error)
                 : cs.outlineVariant,
             centerColor: cs.primary,

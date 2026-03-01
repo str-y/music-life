@@ -203,9 +203,9 @@ class CalendarGrid extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                       color: isSunday
-                          ? Colors.red.shade400
+                          ? colorScheme.secondary
                           : isSaturday
-                              ? Colors.blue.shade400
+                              ? colorScheme.primary
                               : colorScheme.onSurface,
                     ),
                   ),
@@ -266,9 +266,9 @@ class DayCell extends StatelessWidget {
 
     Color textColor;
     if (isSunday) {
-      textColor = Colors.red.shade400;
+      textColor = colorScheme.secondary;
     } else if (isSaturday) {
-      textColor = Colors.blue.shade400;
+      textColor = colorScheme.primary;
     } else {
       textColor = colorScheme.onSurface;
     }

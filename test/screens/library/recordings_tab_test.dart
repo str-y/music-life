@@ -6,11 +6,12 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library/recordings_tab.dart';
 
-Widget _wrap(Widget child, {Locale? locale}) {
+Widget _wrap(Widget child, {Locale? locale, ThemeData? theme}) {
   return MaterialApp(
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    theme: theme,
     home: ProviderScope(child: Scaffold(body: child)),
   );
 }
