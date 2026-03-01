@@ -40,7 +40,8 @@ List<PracticeTrendPoint> buildMonthlyPracticeTrend(
   List<PracticeLogEntry> entries, {
   DateTime? now,
 }) {
-  final currentMonth = DateTime((now ?? DateTime.now()).year, (now ?? DateTime.now()).month);
+  final reference = now ?? DateTime.now();
+  final currentMonth = DateTime(reference.year, reference.month);
   final byMonth = <String, int>{};
   for (final entry in entries) {
     final key = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}';
@@ -71,13 +72,19 @@ Map<String, int> buildPracticeInstrumentMinutes(List<PracticeLogEntry> entries) 
 String extractInstrumentLabelFromMemo(String memo) {
   final normalized = memo.trim();
   if (normalized.isEmpty) return _otherInstrumentKey;
-  final head = normalized.split(RegExp(r'[:：／/\-｜|]')).first.trim();
+  final head = normalized
+      .split(RegExp(_instrumentMemoDelimiterPattern))
+      .first
+      .trim();
   if (head.isEmpty) return _otherInstrumentKey;
   return head.length > 12 ? '${head.substring(0, 12)}…' : head;
 }
 
 DateTime _toDateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
 const _otherInstrumentKey = 'Other';
+const _instrumentMemoDelimiterPattern = r'[:：／/\-｜|]';
+const _chartBarMaxHeight = 70.0;
+const _chartBarMinHeight = 4.0;
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -420,7 +427,9 @@ class _MiniBarChart extends StatelessWidget {
                           alignment: Alignment.bottomCenter,
                           child: Container(
                             width: 12,
-                            height: ratio * 70 + 4,
+                            height: ratio == 0
+                                ? 0
+                                : ratio * _chartBarMaxHeight + _chartBarMinHeight,
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.primary,
                               borderRadius: BorderRadius.circular(4),
