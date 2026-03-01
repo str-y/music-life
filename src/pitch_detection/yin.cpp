@@ -195,6 +195,38 @@ inline void compute_difference_from_corr(const std::vector<float>& sq_prefix,
 }
 
 // In-place Cooley-Tukey radix-2 DIT FFT.  n must be a power of two.
+void fft_stage_len2(std::vector<std::complex<float>>& x) {
+    const int n = static_cast<int>(x.size());
+    int i = 0;
+#if defined(__ARM_NEON)
+    for (; i + 1 < n; i += 2) {
+        const float32x4_t uv = vld1q_f32(reinterpret_cast<const float*>(x.data() + i));
+        const float32x2_t u = vget_low_f32(uv);
+        const float32x2_t v = vget_high_f32(uv);
+        vst1_f32(reinterpret_cast<float*>(x.data() + i), vadd_f32(u, v));
+        vst1_f32(reinterpret_cast<float*>(x.data() + i + 1), vsub_f32(u, v));
+    }
+#elif defined(__SSE3__)
+    for (; i + 1 < n; i += 2) {
+        const __m128 uv = _mm_loadu_ps(reinterpret_cast<const float*>(x.data() + i));
+        const __m128 u = _mm_movelh_ps(uv, uv);
+        const __m128 v = _mm_movehl_ps(uv, uv);
+        alignas(16) float sum[4];
+        alignas(16) float diff[4];
+        _mm_store_ps(sum, _mm_add_ps(u, v));
+        _mm_store_ps(diff, _mm_sub_ps(u, v));
+        x[static_cast<size_t>(i)] = {sum[0], sum[1]};
+        x[static_cast<size_t>(i + 1)] = {diff[0], diff[1]};
+    }
+#endif
+    for (; i + 1 < n; i += 2) {
+        const std::complex<float> u = x[static_cast<size_t>(i)];
+        const std::complex<float> v = x[static_cast<size_t>(i + 1)];
+        x[static_cast<size_t>(i)] = u + v;
+        x[static_cast<size_t>(i + 1)] = u - v;
+    }
+}
+
 void fft_inplace_radix2(std::vector<std::complex<float>>& x,
                         const std::vector<std::complex<float>>& twiddle) {
     const int n = static_cast<int>(x.size());
@@ -210,7 +242,8 @@ void fft_inplace_radix2(std::vector<std::complex<float>>& x,
     // Butterfly passes – twiddle factor for butterfly j in stage len is
     // W_len^j = W_n^(j*n/len) = twiddle[j * (n/len)].
     // No transcendental calls in the hot path.
-    for (int len = 2; len <= n; len <<= 1) {
+    fft_stage_len2(x);
+    for (int len = 4; len <= n; len <<= 1) {
         const int step = n / len;
         for (int i = 0; i < n; i += len) {
             for (int j = 0; j < len / 2; ++j) {
@@ -560,7 +593,28 @@ void Yin::difference(const float* samples, std::vector<float>& df) const {
 void Yin::cmndf(std::vector<float>& df) const {
     df[0] = 1.0f;
     float running_sum = 0.0f;
-    for (int tau = 1; tau < half_buffer_; ++tau) {
+    int tau = 1;
+#if defined(__SSE3__)
+    const __m128 zero = _mm_set1_ps(0.0f);
+    const __m128 one = _mm_set1_ps(1.0f);
+    for (; tau + 3 < half_buffer_; tau += 4) {
+        const __m128 d = _mm_loadu_ps(df.data() + tau);
+        __m128 prefix = d;
+        prefix = _mm_add_ps(prefix, _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(prefix), 4)));
+        prefix = _mm_add_ps(prefix, _mm_castsi128_ps(_mm_slli_si128(_mm_castps_si128(prefix), 8)));
+        prefix = _mm_add_ps(prefix, _mm_set1_ps(running_sum));
+        const __m128 tau_vec = _mm_set_ps(static_cast<float>(tau + 3),
+                                          static_cast<float>(tau + 2),
+                                          static_cast<float>(tau + 1),
+                                          static_cast<float>(tau));
+        const __m128 normalized = _mm_div_ps(_mm_mul_ps(d, tau_vec), prefix);
+        const __m128 is_zero = _mm_cmpeq_ps(prefix, zero);
+        const __m128 out = _mm_or_ps(_mm_and_ps(is_zero, one), _mm_andnot_ps(is_zero, normalized));
+        _mm_storeu_ps(df.data() + tau, out);
+        running_sum = _mm_cvtss_f32(_mm_shuffle_ps(prefix, prefix, _MM_SHUFFLE(3, 3, 3, 3)));
+    }
+#endif
+    for (; tau < half_buffer_; ++tau) {
         running_sum += df[tau];
         if (running_sum == 0.0f) {
             df[tau] = 1.0f;
