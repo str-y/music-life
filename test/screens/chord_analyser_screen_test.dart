@@ -193,7 +193,12 @@ void main() {
       expect(historyTrigger, findsOneWidget);
       expect(
         tester.getSemantics(historyTrigger),
-        matchesSemantics(isButton: true, hasTapAction: true),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          label: localizations.chordHistory,
+          hint: localizations.filterByChordName,
+        ),
       );
     });
   });

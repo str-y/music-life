@@ -481,32 +481,37 @@ class _FeatureTileState extends State<_FeatureTile> {
           onExit: (_) => setState(() => _hovered = false),
           child: Card(
             elevation: _hovered ? 3 : 1,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: widget.onTap,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(widget.icon, color: cs.primary),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: Text(
-                        widget.subtitle,
-                        maxLines: 2,
+            child: Semantics(
+              button: true,
+              label: widget.title,
+              hint: widget.subtitle,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: widget.onTap,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(widget.icon, color: cs.primary),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.title,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Expanded(
+                        child: Text(
+                          widget.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
