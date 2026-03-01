@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
@@ -77,7 +78,11 @@ class TunerNotifier extends Notifier<TunerState> {
       return;
     }
     _sub = bridge.pitchStream.listen((result) {
+      final previousNote = state.latest?.noteName;
       state = state.copyWith(latest: result);
+      if (result.noteName != previousNote) {
+        HapticFeedback.selectionClick();
+      }
     });
     state = const TunerState(loading: false, bridgeActive: true);
   }

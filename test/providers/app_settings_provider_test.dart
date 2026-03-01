@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/settings_repository.dart';
@@ -40,5 +41,32 @@ void main() {
     expect(container.read(appSettingsProvider), updated);
     expect(prefs.getBool('darkMode'), isTrue);
     expect(prefs.getDouble('referencePitch'), 444.0);
+  });
+
+  test('updateDynamicThemeFromPitch updates in-memory theme values only',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+          const PitchResult(
+            noteName: 'A4',
+            frequency: 440.0,
+            centsOffset: 25.0,
+            midiNote: 69,
+          ),
+        );
+
+    final settings = container.read(appSettingsProvider);
+    expect(settings.dynamicThemeNote, 'A4');
+    expect(settings.dynamicThemeEnergy, 0.5);
+    expect(prefs.getString('dynamicThemeNote'), isNull);
+    expect(prefs.getDouble('dynamicThemeEnergy'), isNull);
   });
 }
