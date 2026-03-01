@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/screens/practice_log_screen.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -54,6 +56,55 @@ void main() {
         find.bySemanticsLabel('15, $todayLabel, $practicedLabel'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('PracticeLogScreen analytics helpers', () {
+    final now = DateTime(2026, 2, 14);
+    final logs = [
+      const PracticeLogEntry(
+        date: DateTime(2026, 2, 14),
+        durationMinutes: 30,
+        memo: 'Guitar: scales',
+      ),
+      const PracticeLogEntry(
+        date: DateTime(2026, 2, 10),
+        durationMinutes: 20,
+        memo: 'Piano: arpeggio',
+      ),
+      const PracticeLogEntry(
+        date: DateTime(2026, 1, 20),
+        durationMinutes: 40,
+        memo: '',
+      ),
+    ];
+
+    test('buildWeeklyPracticeTrend returns 7-day series ending at now', () {
+      final series = buildWeeklyPracticeTrend(logs, now: now);
+
+      expect(series.length, 7);
+      expect(series.last.label, '2/14');
+      expect(series.last.minutes, 30);
+      expect(series[2].label, '2/10');
+      expect(series[2].minutes, 20);
+    });
+
+    test('buildMonthlyPracticeTrend returns 6-month aggregated series', () {
+      final series = buildMonthlyPracticeTrend(logs, now: now);
+
+      expect(series.length, 6);
+      expect(series.last.label, '2');
+      expect(series.last.minutes, 50);
+      expect(series[4].label, '1');
+      expect(series[4].minutes, 40);
+    });
+
+    test('buildPracticeInstrumentMinutes aggregates by memo label', () {
+      final ratio = buildPracticeInstrumentMinutes(logs);
+
+      expect(ratio['Guitar'], 30);
+      expect(ratio['Piano'], 20);
+      expect(ratio['Other'], 40);
     });
   });
 }
