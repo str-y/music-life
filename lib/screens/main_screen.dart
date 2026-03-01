@@ -10,8 +10,8 @@ import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ad_service.dart';
 import '../services/review_service.dart';
+import '../services/service_error_handler.dart';
 import '../widgets/banner_ad_widget.dart';
-import '../utils/app_logger.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
@@ -159,14 +159,20 @@ class _MainScreenState extends ConsumerState<MainScreen>
         SnackBar(content: Text(l10n.backupExported(path))),
       );
     } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to export backup',
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to export backup',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to export backup',
+        userMessage: l10n.backupExportFailed,
         error: e,
         stackTrace: stackTrace,
-      );
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.backupExportFailed)),
       );
     }
   }
@@ -180,14 +186,20 @@ class _MainScreenState extends ConsumerState<MainScreen>
         SnackBar(content: Text(l10n.backupImported(path))),
       );
     } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to import backup',
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to import backup',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to import backup',
+        userMessage: l10n.backupImportFailed,
         error: e,
         stackTrace: stackTrace,
-      );
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.backupImportFailed)),
       );
     }
   }
@@ -203,15 +215,21 @@ class _MainScreenState extends ConsumerState<MainScreen>
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.reviewDialogUnavailable)));
     } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to request store review',
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to request store review',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to request store review',
+        userMessage: l10n.reviewDialogUnavailable,
         error: e,
         stackTrace: stackTrace,
       );
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.reviewDialogUnavailable)));
     }
   }
 

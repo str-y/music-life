@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
 import '../repositories/composition_repository.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 
 // ---------------------------------------------------------------------------
 // Notifier
@@ -28,7 +28,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
     try {
       return await _repo.load();
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'CompositionNotifier: failed to load compositions',
         error: e,
         stackTrace: st,
@@ -53,7 +53,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
     try {
       await _repo.saveOne(composition);
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'CompositionNotifier: failed to save composition',
         error: e,
         stackTrace: st,
@@ -76,7 +76,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
     try {
       await _repo.deleteOne(id);
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'CompositionNotifier: failed to delete composition',
         error: e,
         stackTrace: st,

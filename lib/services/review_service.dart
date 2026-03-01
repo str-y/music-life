@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_review/in_app_review.dart';
 
+import 'service_error_handler.dart';
+
 final reviewServiceProvider = Provider<ReviewService>((ref) {
   return ReviewService();
 });
@@ -27,10 +29,19 @@ class ReviewService {
   final InAppReviewApi _api;
 
   Future<bool> requestReviewIfAvailable() async {
-    if (!await _api.isAvailable()) {
-      return false;
+    try {
+      if (!await _api.isAvailable()) {
+        return false;
+      }
+      await _api.requestReview();
+      return true;
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'ReviewService: failed to request review',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
     }
-    await _api.requestReview();
-    return true;
   }
 }

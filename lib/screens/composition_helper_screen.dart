@@ -7,7 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/composition_provider.dart';
 import '../repositories/composition_repository.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 import '../utils/share_card_image.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
@@ -109,7 +109,6 @@ class _CompositionHelperScreenState
   Future<void> _shareSequenceCard() async {
     if (_sequence.isEmpty || !mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.maybeOf(context);
     final sequenceText = _sequence.map((e) => e.chord).join(' - ');
     try {
       final shareCard = await generateShareCardImage(
@@ -123,13 +122,12 @@ class _CompositionHelperScreenState
         text: sequenceText,
       );
     } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'CompositionHelperScreen: failed to share composition card',
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'CompositionHelperScreen: failed to share composition card',
+        userMessage: l10n.recordingShareFailed,
         error: e,
         stackTrace: stackTrace,
-      );
-      messenger?.showSnackBar(
-        SnackBar(content: Text(l10n.recordingShareFailed)),
       );
     }
   }
@@ -182,10 +180,14 @@ class _CompositionHelperScreenState
         SnackBar(content: Text(l10n.compositionLimitReached(e.max))),
       );
       return;
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.compositionSaveError)),
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'CompositionHelperScreen: failed to save composition',
+        userMessage: l10n.compositionSaveError,
+        error: e,
+        stackTrace: stackTrace,
       );
       return;
     }
@@ -211,10 +213,14 @@ class _CompositionHelperScreenState
             await ref
                 .read(compositionProvider.notifier)
                 .deleteComposition(comp.id);
-          } catch (e) {
+          } catch (e, stackTrace) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.compositionDeleteError)),
+            ServiceErrorHandler.reportAndNotify(
+              context: context,
+              message: 'CompositionHelperScreen: failed to delete composition',
+              userMessage: l10n.compositionDeleteError,
+              error: e,
+              stackTrace: stackTrace,
             );
           }
         },

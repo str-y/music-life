@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
 import '../repositories/recording_repository.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 
 // ---------------------------------------------------------------------------
 // State
@@ -123,7 +123,7 @@ class LibraryNotifier extends Notifier<LibraryState> {
         monthlyLogStats: _monthlyLogStats(logs),
       );
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'LibraryNotifier: failed to load library data',
         error: e,
         stackTrace: st,

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../repositories/recording_repository.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 
 class RecordingPlaybackState {
   const RecordingPlaybackState({
@@ -116,7 +116,7 @@ class RecordingPlaybackNotifier extends AutoDisposeNotifier<RecordingPlaybackSta
         await player.play();
       }
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'RecordingPlaybackNotifier: failed to toggle playback',
         error: e,
         stackTrace: st,
@@ -136,7 +136,7 @@ class RecordingPlaybackNotifier extends AutoDisposeNotifier<RecordingPlaybackSta
       await _player!.seek(next);
       state = state.copyWith(position: next);
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'RecordingPlaybackNotifier: failed to seek',
         error: e,
         stackTrace: st,
@@ -151,7 +151,7 @@ class RecordingPlaybackNotifier extends AutoDisposeNotifier<RecordingPlaybackSta
       await _ensurePlayer();
       await _player!.setVolume(clamped);
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'RecordingPlaybackNotifier: failed to set volume',
         error: e,
         stackTrace: st,
