@@ -83,6 +83,12 @@ void main() {
         isTrue,
       );
       expect(
+        AppDatabase.isCorruptionErrorForTesting(
+          StateError('SQLite integrity check failed: malformed page'),
+        ),
+        isTrue,
+      );
+      expect(
         AppDatabase.isCorruptionErrorForTesting(Exception('permission denied')),
         isFalse,
       );

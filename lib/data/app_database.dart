@@ -68,8 +68,14 @@ class AppDatabase {
   }
 
   Future<void> _verifyIntegrity(_DriftDatabase db) async {
-    final checkRow = await db.customSelect('PRAGMA quick_check(1)').getSingle();
-    final values = checkRow.data.values;
+    final checkRows = await db.customSelect('PRAGMA quick_check').get();
+    if (checkRows.length != 1) {
+      throw StateError(
+        'SQLite integrity check failed: found ${checkRows.length} issue reports',
+      );
+    }
+    // PRAGMA quick_check returns a single-column row: 'ok' when healthy.
+    final values = checkRows.first.data.values;
     final result = values.isEmpty ? null : values.first;
     if (!_isIntegrityCheckOk(result)) {
       throw StateError('SQLite integrity check failed: $result');
@@ -82,6 +88,9 @@ class AppDatabase {
 
   static bool _isCorruptionError(Object error) {
     final message = error.toString().toLowerCase();
+    if (error is StateError && message.contains('sqlite integrity check failed')) {
+      return true;
+    }
     return message.contains('database disk image is malformed') ||
         message.contains('file is not a database') ||
         message.contains('database corruption');
