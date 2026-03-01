@@ -5,6 +5,7 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'golden_test_utils.dart';
 
 const String _onboardingShownKey = 'onboarding_shown_v1';
 
@@ -73,6 +74,19 @@ void main() {
           label: localizations.practiceLogTitle,
           hint: localizations.practiceLogSubtitle,
         ),
+      );
+    });
+
+    testWidgets('matches main screen golden baseline', (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+
+      await expectScreenGolden(
+        find.byType(Scaffold).first,
+        'goldens/main_screen.png',
       );
     });
   });
