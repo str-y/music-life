@@ -72,6 +72,32 @@
   "@themeColorAuto": {
     "description": "Option label to use automatic dynamic theme color"
   },
+  "premiumCustomizationTitle": "Premium customization",
+  "@premiumCustomizationTitle": {
+    "description": "Title for premium-gated customization section in settings"
+  },
+  "premiumCustomizationDescription": "Watch a rewarded ad to unlock theme color customization for {hours} hours.",
+  "@premiumCustomizationDescription": {
+    "description": "Description of rewarded-ad premium unlock duration",
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+  "watchAdAndUnlock": "Watch ad and unlock",
+  "@watchAdAndUnlock": {
+    "description": "Button label for rewarded ad premium unlock"
+  },
+  "rewardedAdNotReady": "Rewarded ad is not ready yet. Please try again.",
+  "@rewardedAdNotReady": {
+    "description": "Snackbar message shown when rewarded ad is unavailable"
+  },
+  "premiumUnlockSuccess": "Premium customization unlocked for {hours} hours.",
+  "@premiumUnlockSuccess": {
+    "description": "Snackbar message shown when rewarded ad unlock succeeds",
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
 
   "calibration": "Calibration",
   "@calibration": {

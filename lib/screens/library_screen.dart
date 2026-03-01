@@ -380,6 +380,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
               IconButton.filled(
                 onPressed: isRecording ? _stopRecording : _startRecording,
                 iconSize: 40,
+                tooltip: isRecording ? l10n.tapToStop : l10n.tapToRecord,
                 style: isRecording
                     ? IconButton.styleFrom(backgroundColor: cs.error)
                     : null,

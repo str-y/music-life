@@ -107,4 +107,30 @@ void main() {
     expect(prefs.getString('dynamicThemeNote'), isNull);
     expect(prefs.getDouble('dynamicThemeEnergy'), isNull);
   });
+
+  test('unlockRewardedPremiumFor sets and persists expiration', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final now = DateTime.utc(2026, 1, 1, 0, 0, 0);
+    await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
+          const Duration(hours: 24),
+          now: now,
+        );
+
+    expect(
+      container.read(appSettingsProvider).rewardedPremiumExpiresAt,
+      DateTime.utc(2026, 1, 2, 0, 0, 0),
+    );
+    expect(
+      prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
+      '2026-01-02T00:00:00.000Z',
+    );
+  });
 }
