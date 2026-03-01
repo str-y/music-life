@@ -22,6 +22,8 @@ void main() {
         AppConfig.defaultThemeColorNoteStorageKey: 'F#',
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
+        AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
+            '2026-01-01T00:00:00.000Z',
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -33,18 +35,23 @@ void main() {
       expect(settings.themeColorNote, 'F#');
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
+      expect(
+        settings.rewardedPremiumExpiresAt,
+        DateTime.parse('2026-01-01T00:00:00.000Z'),
+      );
     });
 
     test('save persists settings values', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
-      const updated = AppSettings(
+      final updated = AppSettings(
         darkMode: true,
         useSystemTheme: false,
         themeColorNote: 'A',
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
+        rewardedPremiumExpiresAt: DateTime.utc(2026, 1, 2, 3, 4, 5),
       );
 
       await repository.save(updated);
@@ -59,6 +66,10 @@ void main() {
       expect(
         prefs.getString(AppConfig.defaultTunerTranspositionStorageKey),
         'Eb',
+      );
+      expect(
+        prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
+        '2026-01-02T03:04:05.000Z',
       );
     });
   });

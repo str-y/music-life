@@ -9,6 +9,8 @@ class AppConfig {
     this.testBannerIdIos = defaultTestBannerIdIos,
     this.testInterstitialIdAndroid = defaultTestInterstitialIdAndroid,
     this.testInterstitialIdIos = defaultTestInterstitialIdIos,
+    this.testRewardedIdAndroid = defaultTestRewardedIdAndroid,
+    this.testRewardedIdIos = defaultTestRewardedIdIos,
     this.recordingsStorageKey = defaultRecordingsStorageKey,
     this.practiceLogsStorageKey = defaultPracticeLogsStorageKey,
     this.recordingsMigratedStorageKey = defaultRecordingsMigratedStorageKey,
@@ -19,10 +21,12 @@ class AppConfig {
     this.themeColorNoteStorageKey = defaultThemeColorNoteStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
+    this.rewardedPremiumExpiresAtStorageKey =
+        defaultRewardedPremiumExpiresAtStorageKey,
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
     this.defaultReferencePitch = 440.0,
-    this.defaultTunerTransposition = defaultTunerTransposition,
+    this.defaultTunerTransposition = _defaultTunerTransposition,
   });
 
   static const int defaultAudioFrameSize = 2048;
@@ -37,6 +41,10 @@ class AppConfig {
       'ca-app-pub-3940256099942544/1033173712';
   static const String defaultTestInterstitialIdIos =
       'ca-app-pub-3940256099942544/4411468910';
+  static const String defaultTestRewardedIdAndroid =
+      'ca-app-pub-3940256099942544/5224354917';
+  static const String defaultTestRewardedIdIos =
+      'ca-app-pub-3940256099942544/1712485313';
 
   static const String defaultRecordingsStorageKey = 'recordings_v1';
   static const String defaultPracticeLogsStorageKey = 'practice_logs_v1';
@@ -49,7 +57,9 @@ class AppConfig {
   static const String defaultThemeColorNoteStorageKey = 'themeColorNote';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
-  static const String defaultTunerTransposition = 'C';
+  static const String defaultRewardedPremiumExpiresAtStorageKey =
+      'rewardedPremiumExpiresAt';
+  static const String _defaultTunerTransposition = 'C';
 
   final int audioFrameSize;
   final int audioSampleRate;
@@ -59,6 +69,8 @@ class AppConfig {
   final String testBannerIdIos;
   final String testInterstitialIdAndroid;
   final String testInterstitialIdIos;
+  final String testRewardedIdAndroid;
+  final String testRewardedIdIos;
 
   final String recordingsStorageKey;
   final String practiceLogsStorageKey;
@@ -70,6 +82,7 @@ class AppConfig {
   final String themeColorNoteStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
+  final String rewardedPremiumExpiresAtStorageKey;
 
   final bool defaultDarkMode;
   final bool defaultUseSystemTheme;

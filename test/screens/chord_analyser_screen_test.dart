@@ -164,6 +164,38 @@ void main() {
 
       expect(find.bySemanticsLabel(label), findsOneWidget);
     });
+
+    testWidgets('chord history trigger is announced as button', (tester) async {
+      final bridge = _MockNativePitchBridge();
+      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(() => bridge.chordStream)
+          .thenAnswer((_) => const Stream<String>.empty());
+      when(() => bridge.dispose()).thenReturn(null);
+
+      await tester.pumpWidget(
+        _wrap(
+          const ChordAnalyserScreen(useMicPermissionGate: false),
+          overrides: [
+            pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final localizations =
+          AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
+      final semanticsHandle = tester.ensureSemantics();
+      addTearDown(semanticsHandle.dispose);
+
+      final historyTrigger =
+          find.widgetWithText(InkWell, localizations.chordHistory);
+      expect(historyTrigger, findsOneWidget);
+      expect(
+        tester.getSemantics(historyTrigger),
+        matchesSemantics(isButton: true, hasTapAction: true),
+      );
+    });
   });
 
   testWidgets('loads persisted history and filters by chord name', (tester) async {

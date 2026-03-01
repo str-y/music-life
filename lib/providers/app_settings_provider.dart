@@ -19,6 +19,18 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     await _repo.save(updated);
   }
 
+  Future<void> unlockRewardedPremiumFor(
+    Duration duration, {
+    DateTime? now,
+  }) async {
+    final grantedAt = now ?? DateTime.now();
+    await update(
+      state.copyWith(
+        rewardedPremiumExpiresAt: grantedAt.add(duration),
+      ),
+    );
+  }
+
   void updateDynamicThemeFromPitch(PitchResult pitch) {
     final energy = pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy;
     state = state.copyWith(

@@ -16,6 +16,7 @@ import '../utils/app_logger.dart';
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 const String _onboardingShownKey = 'onboarding_shown_v1';
+const Duration _rewardedPremiumDuration = Duration(hours: 24);
 const List<String> _themeColorNoteOptions = <String>[
   'C',
   'C#',
@@ -54,6 +55,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Pre-load interstitial ad
       ref.read(adServiceProvider).loadInterstitialAd();
+      ref.read(adServiceProvider).loadRewardedAd();
       _showOnboardingIfNeeded();
     });
   }
@@ -111,12 +113,39 @@ class _MainScreenState extends ConsumerState<MainScreen>
       ),
       builder: (_) => _SettingsModal(
         settings: settings,
+        isRewardedPremiumUnlocked: settings.hasRewardedPremiumAccess,
         onChanged: (updated) {
           ref.read(appSettingsProvider.notifier).update(updated);
         },
+        onUnlockPremiumWithRewardedAd: () => _unlockPremiumWithRewardedAd(context),
         onExportBackup: () => _exportBackupData(context),
         onImportBackup: () => _importBackupData(context),
         onRequestReview: () => _requestStoreReview(context),
+      ),
+    );
+  }
+
+  Future<void> _unlockPremiumWithRewardedAd(BuildContext context) async {
+    final rewarded = await ref.read(adServiceProvider).showRewardedAd(
+      onUserEarnedReward: (_) {},
+    );
+    if (!mounted) return;
+    if (!rewarded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.rewardedAdNotReady)),
+      );
+      return;
+    }
+    await ref
+        .read(appSettingsProvider.notifier)
+        .unlockRewardedPremiumFor(_rewardedPremiumDuration);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!
+              .premiumUnlockSuccess(_rewardedPremiumDuration.inHours),
+        ),
       ),
     );
   }
@@ -472,14 +501,18 @@ class _FeatureTileState extends State<_FeatureTile> {
 
 class _SettingsModal extends StatefulWidget {
   final AppSettings settings;
+  final bool isRewardedPremiumUnlocked;
   final ValueChanged<AppSettings> onChanged;
+  final Future<void> Function() onUnlockPremiumWithRewardedAd;
   final Future<void> Function() onExportBackup;
   final Future<void> Function() onImportBackup;
   final Future<void> Function() onRequestReview;
 
   const _SettingsModal({
     required this.settings,
+    required this.isRewardedPremiumUnlocked,
     required this.onChanged,
+    required this.onUnlockPremiumWithRewardedAd,
     required this.onExportBackup,
     required this.onImportBackup,
     required this.onRequestReview,
@@ -545,29 +578,49 @@ class _SettingsModalState extends State<_SettingsModal> {
               value: _local.darkMode,
               onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
             ),
-          DropdownButtonFormField<String>(
-            value: _local.themeColorNote ?? '',
-            decoration: InputDecoration(
-              labelText: l10n.themeColorLabel,
-            ),
-            items: <DropdownMenuItem<String>>[
-              DropdownMenuItem<String>(
-                value: '',
-                child: Text(l10n.themeColorAuto),
+          if (widget.isRewardedPremiumUnlocked)
+            DropdownButtonFormField<String>(
+              value: _local.themeColorNote ?? '',
+              decoration: InputDecoration(
+                labelText: l10n.themeColorLabel,
               ),
-              ..._themeColorNoteOptions.map(
-                (note) => DropdownMenuItem<String>(
-                  value: note,
-                  child: Text(note),
+              items: <DropdownMenuItem<String>>[
+                DropdownMenuItem<String>(
+                  value: '',
+                  child: Text(l10n.themeColorAuto),
                 ),
+                ..._themeColorNoteOptions.map(
+                  (note) => DropdownMenuItem<String>(
+                    value: note,
+                    child: Text(note),
+                  ),
+                ),
+              ],
+              onChanged: (value) => _emit(
+                value == null || value.isEmpty
+                    ? _local.copyWith(clearThemeColorNote: true)
+                    : _local.copyWith(themeColorNote: value),
               ),
-            ],
-            onChanged: (value) => _emit(
-              value == null || value.isEmpty
-                  ? _local.copyWith(clearThemeColorNote: true)
-                  : _local.copyWith(themeColorNote: value),
+            )
+          else ...[
+            Text(
+              l10n.premiumCustomizationTitle,
+              style: textTheme.titleSmall,
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.premiumCustomizationDescription(
+                _rewardedPremiumDuration.inHours,
+              ),
+              style: textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: widget.onUnlockPremiumWithRewardedAd,
+              icon: const Icon(Icons.ondemand_video),
+              label: Text(l10n.watchAdAndUnlock),
+            ),
+          ],
           const Divider(height: 32),
           Text(l10n.calibration, style: textTheme.titleSmall),
           const SizedBox(height: 8),

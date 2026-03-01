@@ -33,6 +33,7 @@ const Map<String, Color> _keyThemeColors = <String, Color>{
 };
 const double _minThemeColorWeight = 0.4;
 const double _themeColorEnergyWeightRange = 0.6;
+const double _themeContrastLevel = 0.5;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,6 +90,24 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
         base;
   }
 
+  ThemeData _buildTheme(Color seedColor, {required Brightness brightness}) {
+    return ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: seedColor,
+        brightness: brightness,
+        contrastLevel: _themeContrastLevel,
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size.square(48),
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ),
+      ),
+      useMaterial3: true,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -114,17 +133,8 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seedColor),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seedColor,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: _buildTheme(seedColor, brightness: Brightness.light),
+      darkTheme: _buildTheme(seedColor, brightness: Brightness.dark),
       themeMode: settings.useSystemTheme
           ? ThemeMode.system
           : (settings.darkMode ? ThemeMode.dark : ThemeMode.light),
