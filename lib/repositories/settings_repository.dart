@@ -10,6 +10,7 @@ class AppSettings {
   final String tunerTransposition;
   final String? dynamicThemeNote;
   final double dynamicThemeEnergy;
+  final DateTime? rewardedPremiumExpiresAt;
 
   const AppSettings({
     this.darkMode = false,
@@ -19,6 +20,7 @@ class AppSettings {
     this.tunerTransposition = 'C',
     this.dynamicThemeNote,
     this.dynamicThemeEnergy = 0.0,
+    this.rewardedPremiumExpiresAt,
   });
 
   AppSettings copyWith({
@@ -29,6 +31,8 @@ class AppSettings {
     String? tunerTransposition,
     String? dynamicThemeNote,
     double? dynamicThemeEnergy,
+    DateTime? rewardedPremiumExpiresAt,
+    bool clearRewardedPremiumExpiresAt = false,
     bool clearThemeColorNote = false,
     bool clearDynamicThemeNote = false,
   }) {
@@ -43,8 +47,14 @@ class AppSettings {
           ? null
           : (dynamicThemeNote ?? this.dynamicThemeNote),
       dynamicThemeEnergy: dynamicThemeEnergy ?? this.dynamicThemeEnergy,
+      rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
+          ? null
+          : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
     );
   }
+
+  bool get hasRewardedPremiumAccess =>
+      rewardedPremiumExpiresAt?.isAfter(DateTime.now()) ?? false;
 
   @override
   bool operator ==(Object other) =>
@@ -56,7 +66,8 @@ class AppSettings {
           referencePitch == other.referencePitch &&
           tunerTransposition == other.tunerTransposition &&
           dynamicThemeNote == other.dynamicThemeNote &&
-          dynamicThemeEnergy == other.dynamicThemeEnergy;
+          dynamicThemeEnergy == other.dynamicThemeEnergy &&
+          rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt;
 
   @override
   int get hashCode =>
@@ -67,7 +78,8 @@ class AppSettings {
           referencePitch,
           tunerTransposition,
           dynamicThemeNote,
-          dynamicThemeEnergy);
+          dynamicThemeEnergy,
+          rewardedPremiumExpiresAt);
 }
 
 class SettingsRepository {
@@ -89,6 +101,9 @@ class SettingsRepository {
       tunerTransposition:
           _prefs.getString(_config.tunerTranspositionStorageKey) ??
               _config.defaultTunerTransposition,
+      rewardedPremiumExpiresAt: _decodeDateTime(
+        _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
+      ),
     );
   }
 
@@ -114,5 +129,18 @@ class SettingsRepository {
       _config.tunerTranspositionStorageKey,
       settings.tunerTransposition,
     );
+    if (settings.rewardedPremiumExpiresAt == null) {
+      await _prefs.remove(_config.rewardedPremiumExpiresAtStorageKey);
+    } else {
+      await _prefs.setString(
+        _config.rewardedPremiumExpiresAtStorageKey,
+        settings.rewardedPremiumExpiresAt!.toIso8601String(),
+      );
+    }
+  }
+
+  DateTime? _decodeDateTime(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value);
   }
 }
