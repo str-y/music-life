@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../native_pitch_bridge.dart';
+import '../repositories/chord_history_repository.dart';
 import '../repositories/composition_repository.dart';
 import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
@@ -36,4 +37,8 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final prefs = ref.read(sharedPreferencesProvider);
   final config = ref.read(appConfigProvider);
   return SettingsRepository(prefs, config: config);
+});
+
+final chordHistoryRepositoryProvider = Provider<ChordHistoryRepository>((ref) {
+  return const SqliteChordHistoryRepository();
 });
