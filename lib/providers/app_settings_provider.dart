@@ -4,6 +4,8 @@ import 'dependency_providers.dart';
 import '../native_pitch_bridge.dart';
 import '../repositories/settings_repository.dart';
 
+const double _maxCentsOffsetForThemeEnergy = 50.0;
+
 class AppSettingsNotifier extends Notifier<AppSettings> {
   @override
   AppSettings build() {
@@ -18,10 +20,10 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 
   void updateDynamicThemeFromPitch(PitchResult pitch) {
+    final energy = pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy;
     state = state.copyWith(
       dynamicThemeNote: pitch.noteName,
-      dynamicThemeEnergy:
-          (pitch.centsOffset.abs() / 50).clamp(0.0, 1.0).toDouble(),
+      dynamicThemeEnergy: energy < 0 ? 0.0 : (energy > 1 ? 1.0 : energy),
     );
   }
 }

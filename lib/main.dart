@@ -31,6 +31,8 @@ const Map<String, Color> _keyThemeColors = <String, Color>{
   'Bb': Colors.pink,
   'B': Colors.cyan,
 };
+const double _minThemeColorWeight = 0.4;
+const double _themeColorEnergyWeightRange = 0.6;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,7 +79,13 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
     final key = match?.group(0);
     final base = _keyThemeColors[key] ?? Colors.deepPurple;
     final clampedEnergy = energy.clamp(0.0, 1.0).toDouble();
-    return Color.lerp(Colors.blueGrey, base, 0.4 + (clampedEnergy * 0.6)) ??
+    // Interpolate from 40%→100% base color intensity as energy moves 0→1.
+    return Color.lerp(
+          Colors.blueGrey,
+          base,
+          _minThemeColorWeight +
+              (clampedEnergy * _themeColorEnergyWeightRange),
+        ) ??
         base;
   }
 
