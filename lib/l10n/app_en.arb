@@ -260,6 +260,30 @@
   "@notesHint": {
     "description": "Hint text for the notes field in the add practice dialog"
   },
+  "analyticsTitle": "Practice analytics",
+  "@analyticsTitle": {
+    "description": "Section title for practice analytics charts on the practice log screen"
+  },
+  "weeklyTrendTitle": "Weekly trend",
+  "@weeklyTrendTitle": {
+    "description": "Title for the weekly practice time chart"
+  },
+  "monthlyTrendTitle": "Monthly trend",
+  "@monthlyTrendTitle": {
+    "description": "Title for the monthly practice time chart"
+  },
+  "instrumentRatioTitle": "Instrument ratio",
+  "@instrumentRatioTitle": {
+    "description": "Title for the instrument ratio chart derived from memo labels"
+  },
+  "instrumentOtherLabel": "Other",
+  "@instrumentOtherLabel": {
+    "description": "Fallback instrument label when no instrument could be parsed from memo"
+  },
+  "instrumentRatioHint": "Tip: start your memo with an instrument name (e.g. Guitar: scales).",
+  "@instrumentRatioHint": {
+    "description": "Hint explaining how the app derives instrument ratio from memo text"
+  },
 
   "libraryTitle": "Library",
   "@libraryTitle": {

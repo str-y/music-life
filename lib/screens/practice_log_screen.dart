@@ -7,6 +7,78 @@ import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
 import '../utils/app_logger.dart';
 
+class PracticeTrendPoint {
+  const PracticeTrendPoint({
+    required this.label,
+    required this.minutes,
+  });
+
+  final String label;
+  final int minutes;
+}
+
+List<PracticeTrendPoint> buildWeeklyPracticeTrend(
+  List<PracticeLogEntry> entries, {
+  DateTime? now,
+}) {
+  final today = _toDateOnly(now ?? DateTime.now());
+  final byDay = <DateTime, int>{};
+  for (final entry in entries) {
+    final day = _toDateOnly(entry.date);
+    byDay[day] = (byDay[day] ?? 0) + entry.durationMinutes;
+  }
+  return List.generate(7, (index) {
+    final day = today.subtract(Duration(days: 6 - index));
+    return PracticeTrendPoint(
+      label: '${day.month}/${day.day}',
+      minutes: byDay[day] ?? 0,
+    );
+  });
+}
+
+List<PracticeTrendPoint> buildMonthlyPracticeTrend(
+  List<PracticeLogEntry> entries, {
+  DateTime? now,
+}) {
+  final currentMonth = DateTime((now ?? DateTime.now()).year, (now ?? DateTime.now()).month);
+  final byMonth = <String, int>{};
+  for (final entry in entries) {
+    final key = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}';
+    byMonth[key] = (byMonth[key] ?? 0) + entry.durationMinutes;
+  }
+  return List.generate(6, (index) {
+    final month = DateTime(currentMonth.year, currentMonth.month - (5 - index));
+    final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    return PracticeTrendPoint(
+      label: '${month.month}',
+      minutes: byMonth[key] ?? 0,
+    );
+  });
+}
+
+Map<String, int> buildPracticeInstrumentMinutes(List<PracticeLogEntry> entries) {
+  final byInstrument = <String, int>{};
+  for (final entry in entries) {
+    final instrument = extractInstrumentLabelFromMemo(entry.memo);
+    byInstrument[instrument] = (byInstrument[instrument] ?? 0) + entry.durationMinutes;
+  }
+
+  final sortedEntries = byInstrument.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  return {for (final entry in sortedEntries.take(5)) entry.key: entry.value};
+}
+
+String extractInstrumentLabelFromMemo(String memo) {
+  final normalized = memo.trim();
+  if (normalized.isEmpty) return _otherInstrumentKey;
+  final head = normalized.split(RegExp(r'[:：／/\-｜|]')).first.trim();
+  if (head.isEmpty) return _otherInstrumentKey;
+  return head.length > 12 ? '${head.substring(0, 12)}…' : head;
+}
+
+DateTime _toDateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+const _otherInstrumentKey = 'Other';
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class PracticeLogScreen extends ConsumerStatefulWidget {
@@ -121,15 +193,16 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _CalendarTab(
-                  displayMonth: _displayMonth,
-                  practiceDays: _practiceDaysInMonth(
-                      _displayMonth.year, _displayMonth.month),
-                  totalMinutes: _totalMinutesInMonth(
-                      _displayMonth.year, _displayMonth.month),
-                  onPrev: () => _changeMonth(-1),
-                  onNext: () => _changeMonth(1),
-                ),
+                 _CalendarTab(
+                   displayMonth: _displayMonth,
+                   practiceDays: _practiceDaysInMonth(
+                       _displayMonth.year, _displayMonth.month),
+                   totalMinutes: _totalMinutesInMonth(
+                       _displayMonth.year, _displayMonth.month),
+                   entries: _entries,
+                   onPrev: () => _changeMonth(-1),
+                   onNext: () => _changeMonth(1),
+                 ),
                 _ListTab(entries: _entries),
               ],
             ),
@@ -149,6 +222,7 @@ class _CalendarTab extends StatelessWidget {
     required this.displayMonth,
     required this.practiceDays,
     required this.totalMinutes,
+    required this.entries,
     required this.onPrev,
     required this.onNext,
   });
@@ -156,6 +230,7 @@ class _CalendarTab extends StatelessWidget {
   final DateTime displayMonth;
   final Set<int> practiceDays;
   final int totalMinutes;
+  final List<PracticeLogEntry> entries;
   final VoidCallback onPrev;
   final VoidCallback onNext;
 
@@ -220,8 +295,154 @@ class _CalendarTab extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          _AnalyticsSection(entries: entries),
         ],
       ),
+    );
+  }
+}
+
+class _AnalyticsSection extends StatelessWidget {
+  const _AnalyticsSection({required this.entries});
+
+  final List<PracticeLogEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final weeklyTrend = buildWeeklyPracticeTrend(entries);
+    final monthlyTrend = buildMonthlyPracticeTrend(entries);
+    final instrumentMinutes = buildPracticeInstrumentMinutes(entries);
+    final instrumentTotal = instrumentMinutes.values.fold<int>(0, (sum, value) => sum + value);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.analyticsTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            _MiniBarChart(title: l10n.weeklyTrendTitle, points: weeklyTrend),
+            const SizedBox(height: 16),
+            _MiniBarChart(title: l10n.monthlyTrendTitle, points: monthlyTrend),
+            const SizedBox(height: 16),
+            Text(
+              l10n.instrumentRatioTitle,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            ...instrumentMinutes.entries.map((entry) {
+              final ratio = instrumentTotal == 0 ? 0.0 : entry.value / instrumentTotal;
+              final label = entry.key == _otherInstrumentKey
+                  ? l10n.instrumentOtherLabel
+                  : entry.key;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(label),
+                        Text(l10n.durationMinutes(entry.value)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(value: ratio),
+                  ],
+                ),
+              );
+            }),
+            if (instrumentMinutes.isEmpty)
+              Text(
+                l10n.noPracticeRecords,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (instrumentMinutes.containsKey(_otherInstrumentKey))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.instrumentRatioHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniBarChart extends StatelessWidget {
+  const _MiniBarChart({
+    required this.title,
+    required this.points,
+  });
+
+  final String title;
+  final List<PracticeTrendPoint> points;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxMinutes = points.fold<int>(0, (max, point) => point.minutes > max ? point.minutes : max);
+    final base = maxMinutes == 0 ? 1 : maxMinutes;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 120,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: points.map((point) {
+              final ratio = point.minutes / base;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            width: 12,
+                            height: ratio * 70 + 4,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        point.label,
+                        style: Theme.of(context).textTheme.labelSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }
