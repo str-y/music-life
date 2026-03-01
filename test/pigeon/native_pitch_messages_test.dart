@@ -17,4 +17,17 @@ void main() {
     expect(decoded.centsOffset, -3.5);
     expect(decoded.midiNote, 61);
   });
+
+  test('tryDecode returns null for malformed payload', () {
+    expect(NativePitchResultMessage.tryDecode(const <Object?>['A4']), isNull);
+    expect(
+      NativePitchResultMessage.tryDecode(const <Object?>['A4', null, 0.0, 69]),
+      isNull,
+    );
+    expect(
+      NativePitchResultMessage.tryDecode(
+          const <Object?>['A4', '440.0', 0.0, 69]),
+      isNull,
+    );
+  });
 }

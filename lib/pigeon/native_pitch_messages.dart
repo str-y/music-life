@@ -32,4 +32,26 @@ class NativePitchResultMessage {
       midiNote: values[3]! as int,
     );
   }
+
+  static NativePitchResultMessage? tryDecode(Object? result) {
+    if (result is! List<Object?> || result.length != 4) {
+      return null;
+    }
+    final noteName = result[0];
+    final frequency = result[1];
+    final centsOffset = result[2];
+    final midiNote = result[3];
+    if (noteName is! String ||
+        frequency is! num ||
+        centsOffset is! num ||
+        midiNote is! int) {
+      return null;
+    }
+    return NativePitchResultMessage(
+      noteName: noteName,
+      frequency: frequency.toDouble(),
+      centsOffset: centsOffset.toDouble(),
+      midiNote: midiNote,
+    );
+  }
 }

@@ -214,7 +214,11 @@ class NativePitchIsolateManager {
   int _nextHeartbeatToken = 0;
 
   bool _isFatalErrorEnvelope(dynamic message) {
-    return message is List && message.length >= 2 && message[1] is String;
+    // VM isolate errors arrive via `onError` as `[error, stackTraceString]`.
+    return message is List &&
+        message.length == 2 &&
+        message[0] != null &&
+        message[1] is String;
   }
 
   Future<bool> start() async {
@@ -687,6 +691,10 @@ class NativePitchBridge implements Finalizable {
     }
   }
 
+  NativePitchResultMessage? _tryDecodePitchResultPayload(dynamic message) {
+    return NativePitchResultMessage.tryDecode(message);
+  }
+
   void processAudioFrame(Float32List samples) {
     if (_disposed) return;
     assert(
@@ -707,8 +715,9 @@ class NativePitchBridge implements Finalizable {
       frameSize: _frameSize,
       entryPoint: _audioProcessingIsolate,
       onMessage: (msg) {
-        if (msg is List<Object?>) {
-          _onPitchResult(msg);
+        final pitch = _tryDecodePitchResultPayload(msg);
+        if (pitch != null) {
+          _onPitchResult(pitch);
         }
       },
       onError: _onError,
@@ -748,14 +757,8 @@ class NativePitchBridge implements Finalizable {
     );
   }
 
-  void _onPitchResult(List<Object?> msg) {
+  void _onPitchResult(NativePitchResultMessage pitch) {
     if (_controller.isClosed) return;
-    final NativePitchResultMessage pitch;
-    try {
-      pitch = NativePitchResultMessage.decode(msg);
-    } catch (_) {
-      return;
-    }
     _controller.add(pitch.noteName);
     _pitchController.add(PitchResult(
       noteName: pitch.noteName,
