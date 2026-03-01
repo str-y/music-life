@@ -1,11 +1,16 @@
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
 import '../utils/app_logger.dart';
+import '../utils/practice_log_export.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +90,85 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     }
   }
 
+  Future<void> _exportCsv() async {
+    final now = DateTime.now();
+    final location = await getSaveLocation(
+      suggestedName:
+          'practice-logs-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.csv',
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'CSV',
+          extensions: ['csv'],
+          mimeTypes: ['text/csv'],
+        ),
+      ],
+    );
+    if (!mounted || location == null) return;
+
+    try {
+      final csv = buildPracticeLogCsv(_entries);
+      final file = XFile.fromData(
+        Uint8List.fromList(utf8.encode(csv)),
+        mimeType: 'text/csv',
+        name: 'practice-logs.csv',
+      );
+      await file.saveTo(location.path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('CSV exported: ${location.path}')),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to export practice logs CSV',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to export CSV')),
+      );
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    final now = DateTime.now();
+    final location = await getSaveLocation(
+      suggestedName:
+          'practice-logs-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf',
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'PDF',
+          extensions: ['pdf'],
+          mimeTypes: ['application/pdf'],
+        ),
+      ],
+    );
+    if (!mounted || location == null) return;
+
+    try {
+      final file = XFile.fromData(
+        buildPracticeLogPdf(_entries),
+        mimeType: 'application/pdf',
+        name: 'practice-logs.pdf',
+      );
+      await file.saveTo(location.path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF exported: ${location.path}')),
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to export practice logs PDF',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to export PDF')),
+      );
+    }
+  }
+
   // ── Calendar helpers ──────────────────────────────────────────────────────
 
   Set<int> _practiceDaysInMonth(int year, int month) => _entries
@@ -108,6 +192,25 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.practiceLogTitle),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Export',
+            onSelected: (value) {
+              if (value == 'csv') {
+                _exportCsv();
+                return;
+              }
+              if (value == 'pdf') {
+                _exportPdf();
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem<String>(value: 'csv', child: Text('Export CSV')),
+              PopupMenuItem<String>(value: 'pdf', child: Text('Export PDF')),
+            ],
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -439,9 +542,6 @@ class _ListTab extends StatelessWidget {
 
   final List<PracticeLogEntry> entries;
 
-  String _formatDate(DateTime dt) =>
-      '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -490,7 +590,7 @@ class _ListTab extends StatelessWidget {
             ),
           ),
           title: Text(
-            _formatDate(e.date),
+            formatPracticeLogDate(e.date),
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: e.memo.isNotEmpty ? Text(e.memo) : null,
