@@ -76,8 +76,8 @@ private:
 
     Result last_result_;
 
-    int   frequency_to_midi(float frequency) const;
-    float midi_to_frequency(int midi_note) const;
+    int   frequency_to_midi(float frequency, float reference_pitch_hz) const;
+    float midi_to_frequency(int midi_note, float reference_pitch_hz) const;
     static float cents_between(float f1, float f2);
     static const char* midi_to_note_name(int midi_note);
 };

@@ -360,6 +360,26 @@ static bool test_pd_reference_pitch_a4_432() {
     return true;
 }
 
+static bool test_pd_reference_pitch_boundaries() {
+    bool accepted_low_boundary = true;
+    bool accepted_high_boundary = true;
+    try {
+        PitchDetector low_boundary(44100, 2048, 0.10f, 430.0f);
+        (void)low_boundary;
+    } catch (const std::invalid_argument&) {
+        accepted_low_boundary = false;
+    }
+    try {
+        PitchDetector high_boundary(44100, 2048, 0.10f, 450.0f);
+        (void)high_boundary;
+    } catch (const std::invalid_argument&) {
+        accepted_high_boundary = false;
+    }
+    ASSERT_TRUE(accepted_low_boundary);
+    ASSERT_TRUE(accepted_high_boundary);
+    return true;
+}
+
 static bool test_ffi_set_reference_pitch() {
     const int SR    = 44100;
     const int FRAME = 2048;
@@ -536,6 +556,7 @@ int main() {
     run_test("pd:  throws on bad sample_rate",      test_pd_invalid_sample_rate_throws);
     run_test("pd:  throws on bad frame_size",       test_pd_invalid_frame_size_throws);
     run_test("pd:  supports A4=432 reference",      test_pd_reference_pitch_a4_432);
+    run_test("pd:  accepts reference pitch boundaries", test_pd_reference_pitch_boundaries);
     run_test("ffi: A4 process bridge",              test_ffi_process_a4);
     run_test("ffi: set reference pitch",            test_ffi_set_reference_pitch);
     run_test("ffi: process null handle is safe",    test_ffi_process_null_handle);
