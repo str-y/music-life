@@ -361,22 +361,22 @@ static bool test_pd_reference_pitch_a4_432() {
 }
 
 static bool test_pd_reference_pitch_boundaries() {
-    bool threw_low_boundary = false;
-    bool threw_high_boundary = false;
+    bool accepted_low_boundary = true;
+    bool accepted_high_boundary = true;
     try {
         PitchDetector low_boundary(44100, 2048, 0.10f, 430.0f);
         (void)low_boundary;
     } catch (const std::invalid_argument&) {
-        threw_low_boundary = true;
+        accepted_low_boundary = false;
     }
     try {
         PitchDetector high_boundary(44100, 2048, 0.10f, 450.0f);
         (void)high_boundary;
     } catch (const std::invalid_argument&) {
-        threw_high_boundary = true;
+        accepted_high_boundary = false;
     }
-    ASSERT_TRUE(!threw_low_boundary);
-    ASSERT_TRUE(!threw_high_boundary);
+    ASSERT_TRUE(accepted_low_boundary);
+    ASSERT_TRUE(accepted_high_boundary);
     return true;
 }
 
