@@ -14,6 +14,8 @@ namespace music_life {
 
 static constexpr float kA4_Hz        = 440.0f;
 static constexpr int   kA4_Midi      = 69;
+static constexpr float kSemitonesPerOctave = 12.0f;
+static constexpr float kOctaveRatio = 2.0f;
 static constexpr float kMinFrequency = 20.0f;   // Hz
 static constexpr float kMaxFrequency = 4200.0f; // Hz
 static constexpr float kMinReferencePitch = 430.0f;
@@ -103,7 +105,7 @@ void PitchDetector::set_reference_pitch(float reference_pitch_hz) {
 
 PitchDetector::Result PitchDetector::process(const float* samples, int num_samples) {
     if (reset_pending_.exchange(false, std::memory_order_acq_rel)) {
-        std::memset(ring_buffer_.data(), 0, ring_buffer_.size() * sizeof(float));
+        std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
         write_pos_     = 0;
         samples_ready_ = 0;
         last_result_   = {};
@@ -143,14 +145,15 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
     // Run YIN detection
     float freq = yin_->detect(frame_buffer_.data(), yin_workspace_);
     float prob = yin_->probability();
+    const float reference_pitch_hz = reference_pitch_hz_.load(std::memory_order_relaxed);
 
     Result result{};
-    if (freq > kMinFrequency && freq < kMaxFrequency) {
+    if (std::isfinite(freq) && freq > kMinFrequency && freq < kMaxFrequency) {
         result.pitched     = true;
         result.frequency   = freq;
         result.probability = prob;
-        result.midi_note   = frequency_to_midi(freq);
-        float nearest_freq = midi_to_frequency(result.midi_note);
+        result.midi_note   = frequency_to_midi(freq, reference_pitch_hz);
+        float nearest_freq = midi_to_frequency(result.midi_note, reference_pitch_hz);
         result.cents_offset = cents_between(nearest_freq, freq);
         result.note_name   = midi_to_note_name(result.midi_note);
     } else {
@@ -167,16 +170,14 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
 // Private helpers
 // ---------------------------------------------------------------------------
 
-int PitchDetector::frequency_to_midi(float frequency) const {
+int PitchDetector::frequency_to_midi(float frequency, float reference_pitch_hz) const {
     if (frequency <= 0.0f) return 0;
-    float ref = reference_pitch_hz_.load(std::memory_order_relaxed);
-    float midi = 12.0f * std::log2(frequency / ref) + static_cast<float>(kA4_Midi);
+    float midi = kSemitonesPerOctave * std::log2(frequency / reference_pitch_hz) + static_cast<float>(kA4_Midi);
     return std::clamp(static_cast<int>(std::round(midi)), 0, 127);
 }
 
-float PitchDetector::midi_to_frequency(int midi_note) const {
-    float ref = reference_pitch_hz_.load(std::memory_order_relaxed);
-    return ref * std::pow(2.0f, (static_cast<float>(midi_note - kA4_Midi)) / 12.0f);
+float PitchDetector::midi_to_frequency(int midi_note, float reference_pitch_hz) const {
+    return reference_pitch_hz * std::pow(kOctaveRatio, (static_cast<float>(midi_note - kA4_Midi)) / kSemitonesPerOctave);
 }
 
 float PitchDetector::cents_between(float reference_hz, float actual_hz) {
