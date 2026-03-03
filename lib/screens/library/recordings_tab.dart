@@ -37,17 +37,37 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
   @override
   void initState() {
     super.initState();
-    _sorted = [...widget.recordings]
-      ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    _sorted = _prepareSorted(widget.recordings);
   }
 
   @override
   void didUpdateWidget(RecordingsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.recordings != oldWidget.recordings) {
-      _sorted = [...widget.recordings]
-        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+      _sorted = _prepareSorted(widget.recordings);
     }
+  }
+
+  @override
+  void dispose() {
+    WaveformPainter.clearCaches();
+    super.dispose();
+  }
+
+  List<RecordingEntry> _prepareSorted(List<RecordingEntry> recordings) {
+    if (_isSortedDescending(recordings)) {
+      return [...recordings];
+    }
+    return [...recordings]..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+  }
+
+  bool _isSortedDescending(List<RecordingEntry> recordings) {
+    for (var i = 1; i < recordings.length; i++) {
+      if (recordings[i - 1].recordedAt.isBefore(recordings[i].recordedAt)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
@@ -374,6 +394,17 @@ class WaveformPainter extends CustomPainter {
       LinkedHashMap<String, Path>();
   static final LinkedHashMap<String, ui.Picture> _pictureCache =
       LinkedHashMap<String, ui.Picture>();
+
+  static int get pathCacheSize => _pathCache.length;
+  static int get pictureCacheSize => _pictureCache.length;
+
+  static void clearCaches() {
+    for (final picture in _pictureCache.values) {
+      picture.dispose();
+    }
+    _pictureCache.clear();
+    _pathCache.clear();
+  }
 
   @override
   void paint(Canvas canvas, Size size) {

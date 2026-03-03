@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -16,7 +17,7 @@ class AppLogger {
   AppLogger._();
 
   static const int _maxBufferedLogs = 1000;
-  static final List<String> _bufferedLogs = <String>[];
+  static final ListQueue<String> _bufferedLogs = ListQueue<String>();
 
   static AppLogLevel minimumLevel =
       kReleaseMode ? AppLogLevel.info : AppLogLevel.debug;
@@ -57,7 +58,7 @@ class AppLogger {
     debugPrint(line);
     _bufferedLogs.add(line);
     if (_bufferedLogs.length > _maxBufferedLogs) {
-      _bufferedLogs.removeAt(0);
+      _bufferedLogs.removeFirst();
     }
   }
 
@@ -95,7 +96,7 @@ class AppLogger {
   }
 
   @visibleForTesting
-  static List<String> get bufferedLogs => List.unmodifiable(_bufferedLogs);
+  static List<String> get bufferedLogs => List.unmodifiable(_bufferedLogs.toList());
 
   @visibleForTesting
   static void clearBufferedLogs() => _bufferedLogs.clear();
