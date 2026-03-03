@@ -132,6 +132,41 @@ void main() {
       expect(find.text('Take B'), findsOneWidget);
     });
 
+    testWidgets('renders recordings in newest-first order', (tester) async {
+      final recordings = [
+        RecordingEntry(
+          id: 'older',
+          title: 'Older',
+          recordedAt: DateTime(2024, 5, 1),
+          durationSeconds: 30,
+          waveformData: const [0.1],
+        ),
+        RecordingEntry(
+          id: 'newer',
+          title: 'Newer',
+          recordedAt: DateTime(2024, 5, 2),
+          durationSeconds: 30,
+          waveformData: const [0.1],
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
+      await tester.pumpAndSettle();
+
+      final titleTexts = tester
+          .widgetList<Text>(
+            find.byWidgetPredicate(
+              (widget) => widget is Text &&
+                  (widget.data == 'Older' || widget.data == 'Newer'),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .toList();
+
+      expect(titleTexts, containsAllInOrder(['Newer', 'Older']));
+    });
+
     testWidgets('play button is disabled when entry has no audio file',
         (tester) async {
       final recordings = [
@@ -196,6 +231,32 @@ void main() {
         ),
         isTrue,
       );
+    });
+
+    testWidgets('clears static waveform caches when tab is disposed',
+        (tester) async {
+      WaveformPainter.clearCaches();
+      final recordings = [
+        RecordingEntry(
+          id: '1',
+          title: 'Cache Target',
+          recordedAt: DateTime(2024, 5, 1),
+          durationSeconds: 30,
+          waveformData: const [0.2, 0.8, 0.4],
+        ),
+      ];
+
+      await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
+      await tester.pumpAndSettle();
+
+      expect(WaveformPainter.pathCacheSize, greaterThan(0));
+      expect(WaveformPainter.pictureCacheSize, greaterThan(0));
+
+      await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+      await tester.pumpAndSettle();
+
+      expect(WaveformPainter.pathCacheSize, 0);
+      expect(WaveformPainter.pictureCacheSize, 0);
     });
   });
 
