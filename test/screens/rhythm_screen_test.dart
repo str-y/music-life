@@ -59,6 +59,8 @@ void main() {
     await tester.pump();
 
     expect(tester.takeException(), isNull);
+  });
+
   testWidgets('matches rhythm screen golden baseline', (tester) async {
     await tester.pumpWidget(_wrap(const RhythmScreen()));
     await tester.pump(const Duration(milliseconds: 200));
