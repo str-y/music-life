@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <cstdio>
 #include <stdexcept>
 
 namespace music_life {
@@ -21,12 +20,6 @@ static constexpr float kMaxFrequency = 4200.0f; // Hz
 static constexpr float kMinReferencePitch = 430.0f;
 static constexpr float kMaxReferencePitch = 450.0f;
 
-/** Buffer size (bytes, including null terminator) for each entry in the
- *  pre-built note-name lookup table.  Sized to hold the longest possible
- *  name ("C#-1" = 4 chars) plus a null terminator, with comfortable
- *  headroom. */
-static constexpr int   kNoteNameBufSize   = 6;
-
 static const char* const kNoteTable[128] = {
     "C-1","C#-1","D-1","D#-1","E-1","F-1","F#-1","G-1","G#-1","A-1","A#-1","B-1",
     "C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0",
@@ -40,28 +33,6 @@ static const char* const kNoteTable[128] = {
     "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8",
     "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9"
 };
-
-// Pre-built lookup table for all 128 MIDI note names.
-// Populated once at static-initialization time so the audio thread never
-// allocates.  Longest entry is "C#-1" (4 chars) + null = 5 bytes; 6 chars
-// gives comfortable headroom.
-static char s_note_name_buf[128][kNoteNameBufSize];
-
-static const char* const kNoteNames[12] = {
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-};
-
-static bool init_note_name_table() {
-    for (int i = 0; i < 128; ++i) {
-        int octave = (i / 12) - 1;
-        int note   = i % 12;
-        std::snprintf(s_note_name_buf[i], sizeof(s_note_name_buf[i]),
-                      "%s%d", kNoteNames[note], octave);
-    }
-    return true;
-}
-
-[[maybe_unused]] static const bool s_note_name_table_initialized = init_note_name_table();
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -186,7 +157,7 @@ float PitchDetector::cents_between(float reference_hz, float actual_hz) {
 }
 
 const char* PitchDetector::midi_to_note_name(int midi_note) {
-    return s_note_name_buf[midi_note];
+    return kNoteTable[midi_note];
 }
 
 } // namespace music_life
