@@ -27,13 +27,24 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
   static const int _schemaVersion = 6;
   static const String _databasePasswordKey = 'database_password';
+  static Future<SharedPreferences> Function() _sharedPreferencesLoader =
+      SharedPreferences.getInstance;
 
   Completer<_DriftDatabase>? _completer;
 
   Future<_DriftDatabase> get _database {
     if (_completer == null) {
-      _completer = Completer<_DriftDatabase>();
-      _open().then(_completer!.complete, onError: _completer!.completeError);
+      final completer = Completer<_DriftDatabase>();
+      _completer = completer;
+      _open().then(
+        completer.complete,
+        onError: (Object error, StackTrace stackTrace) {
+          if (identical(_completer, completer)) {
+            _completer = null;
+          }
+          completer.completeError(error, stackTrace);
+        },
+      );
     }
     return _completer!.future;
   }
@@ -462,6 +473,17 @@ class AppDatabase {
     return _resolveDatabasePassword();
   }
 
+  static void configureSharedPreferencesLoader(
+    Future<SharedPreferences> Function() loader,
+  ) {
+    _sharedPreferencesLoader = loader;
+  }
+
+  @visibleForTesting
+  static void resetSharedPreferencesLoaderForTesting() {
+    _sharedPreferencesLoader = SharedPreferences.getInstance;
+  }
+
   @visibleForTesting
   static bool integrityCheckResultIsOkForTesting(Object? result) {
     return _isIntegrityCheckOk(result);
@@ -473,7 +495,7 @@ class AppDatabase {
   }
 
   static Future<String> _resolveDatabasePassword() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _sharedPreferencesLoader();
     final existingPassword = prefs.getString(_databasePasswordKey);
     if (existingPassword != null && existingPassword.isNotEmpty) {
       return existingPassword;
@@ -524,35 +546,45 @@ class AppDatabase {
         waveform_data BLOB NOT NULL
       )
     ''');
-    final rows = await db.customSelect('SELECT * FROM recordings').get();
-    for (final resultRow in rows) {
-      final row = resultRow.data;
-      final jsonStr = row['waveform_data'] as String;
-      final doubles =
-          (jsonDecode(jsonStr) as List).map((e) => (e as num).toDouble()).toList();
-      // Encoding matches _waveformToBlob in recording_repository.dart.
-      final byteData = ByteData(doubles.length * 8);
-      for (var i = 0; i < doubles.length; i++) {
-        byteData.setFloat64(i * 8, doubles[i], Endian.little);
+    const batchSize = 100;
+    var offset = 0;
+    while (true) {
+      final rows = await db.customSelect(
+        'SELECT * FROM recordings LIMIT ? OFFSET ?',
+        variables: [Variable.withInt(batchSize), Variable.withInt(offset)],
+      ).get();
+      if (rows.isEmpty) break;
+      for (final resultRow in rows) {
+        final row = resultRow.data;
+        final jsonStr = row['waveform_data'] as String;
+        final doubles = (jsonDecode(jsonStr) as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
+        // Encoding matches _waveformToBlob in recording_repository.dart.
+        final byteData = ByteData(doubles.length * 8);
+        for (var i = 0; i < doubles.length; i++) {
+          byteData.setFloat64(i * 8, doubles[i], Endian.little);
+        }
+        await db.customStatement(
+          '''
+          INSERT INTO recordings_new (
+            id,
+            title,
+            recorded_at,
+            duration_seconds,
+            waveform_data
+          ) VALUES (?, ?, ?, ?, ?)
+          ''',
+          [
+            row['id'],
+            row['title'],
+            row['recorded_at'],
+            row['duration_seconds'],
+            byteData.buffer.asUint8List(),
+          ],
+        );
       }
-      await db.customStatement(
-        '''
-        INSERT INTO recordings_new (
-          id,
-          title,
-          recorded_at,
-          duration_seconds,
-          waveform_data
-        ) VALUES (?, ?, ?, ?, ?)
-        ''',
-        [
-          row['id'],
-          row['title'],
-          row['recorded_at'],
-          row['duration_seconds'],
-          byteData.buffer.asUint8List(),
-        ],
-      );
+      offset += rows.length;
     }
     await db.customStatement('DROP TABLE recordings');
     await db.customStatement('ALTER TABLE recordings_new RENAME TO recordings');

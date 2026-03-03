@@ -5,6 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    AppDatabase.resetSharedPreferencesLoaderForTesting();
+  });
+
+  tearDown(() {
+    AppDatabase.resetSharedPreferencesLoaderForTesting();
   });
 
   group('AppDatabase migration planning', () {
@@ -47,6 +52,20 @@ void main() {
       final password = await AppDatabase.databasePasswordForTesting();
 
       expect(password, 'existing-password');
+    });
+
+    test('uses configured shared preferences loader', () async {
+      SharedPreferences.setMockInitialValues({
+        'database_password': 'configured-password',
+      });
+      AppDatabase.configureSharedPreferencesLoader(() async {
+        final prefs = await SharedPreferences.getInstance();
+        return prefs;
+      });
+
+      final password = await AppDatabase.databasePasswordForTesting();
+
+      expect(password, 'configured-password');
     });
   });
 

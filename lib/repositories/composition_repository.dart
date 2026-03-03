@@ -106,16 +106,12 @@ class CompositionRepository {
         }
       }
 
-      _migrationCompleter!.complete();
       if (!migrationSucceeded) {
-        // Migration was attempted but failed.  Completing the Completer
-        // normally (rather than with an error) lets concurrent callers
-        // proceed to the underlying database query — migration failure is
-        // non-fatal and the DB may still contain valid data from a previous
-        // successful migration.  Resetting to null allows a retry on the
-        // next access attempt.
-        _migrationCompleter = null;
+        throw StateError(
+          'CompositionRepository: migration did not complete successfully',
+        );
       }
+      _migrationCompleter!.complete();
     } catch (e, st) {
       AppLogger.reportError(
         'CompositionRepository: migration failed',
