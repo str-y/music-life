@@ -58,6 +58,7 @@ class CompositionRepository {
     if (_migrationCompleter != null) return _migrationCompleter!.future;
 
     _migrationCompleter = Completer<void>();
+    _migrationCompleter!.future.catchError((_, __) {});
     try {
       if (_prefs.getBool(_config.compositionsMigratedStorageKey) == true) {
         _migrationCompleter!.complete();

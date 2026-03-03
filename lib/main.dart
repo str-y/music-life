@@ -5,43 +5,25 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import 'config/app_config.dart';
 import 'data/app_database.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/app_settings_provider.dart';
 import 'providers/dependency_providers.dart';
 import 'router/app_router.dart';
+import 'theme/app_theme_seed.dart';
 import 'utils/app_logger.dart';
 
-const Map<String, Color> _keyThemeColors = <String, Color>{
-  'C': Colors.red,
-  'C#': Colors.deepOrange,
-  'Db': Colors.deepOrange,
-  'D': Colors.orange,
-  'D#': Colors.amber,
-  'Eb': Colors.amber,
-  'E': Colors.yellow,
-  'F': Colors.green,
-  'F#': Colors.teal,
-  'Gb': Colors.teal,
-  'G': Colors.blue,
-  'G#': Colors.indigo,
-  'Ab': Colors.indigo,
-  'A': Colors.purple,
-  'A#': Colors.pink,
-  'Bb': Colors.pink,
-  'B': Colors.cyan,
-};
-const double _minThemeColorWeight = 0.4;
-const double _themeColorEnergyWeightRange = 0.6;
 const double _themeContrastLevel = 0.5;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  const config = AppConfig();
   try {
     await MobileAds.instance.initialize();
     await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.stry.musiclife.audio',
-      androidNotificationChannelName: 'Music Life Playback',
+      androidNotificationChannelId: config.audioNotificationChannelId,
+      androidNotificationChannelName: config.audioNotificationChannelName,
       androidNotificationOngoing: true,
     );
   } catch (e, stackTrace) {
@@ -75,22 +57,6 @@ class MusicLifeApp extends ConsumerStatefulWidget {
 
 class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   late final GoRouter _router;
-
-  Color _themeSeedColor(String? noteName, double energy) {
-    if (noteName == null || noteName.isEmpty) return Colors.deepPurple;
-    final match = RegExp(r'^[A-G](?:#|b)?').firstMatch(noteName);
-    final key = match?.group(0);
-    final base = _keyThemeColors[key] ?? Colors.deepPurple;
-    final clampedEnergy = energy.clamp(0.0, 1.0).toDouble();
-    // Interpolate from 40%→100% base color intensity as energy moves 0→1.
-    return Color.lerp(
-          Colors.blueGrey,
-          base,
-          _minThemeColorWeight +
-              (clampedEnergy * _themeColorEnergyWeightRange),
-        ) ??
-        base;
-  }
 
   ThemeData _buildTheme(Color seedColor, {required Brightness brightness}) {
     return ThemeData(
@@ -127,7 +93,7 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   Widget build(BuildContext context) {
     final settings = ref.watch(appSettingsProvider);
     final selectedThemeNote = settings.themeColorNote ?? settings.dynamicThemeNote;
-    final seedColor = _themeSeedColor(
+    final seedColor = themeSeedColor(
       selectedThemeNote,
       settings.themeColorNote == null ? settings.dynamicThemeEnergy : 1.0,
     );
