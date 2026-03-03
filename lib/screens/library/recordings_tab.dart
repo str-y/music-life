@@ -56,7 +56,7 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
 
   List<RecordingEntry> _prepareSorted(List<RecordingEntry> recordings) {
     if (_isSortedDescending(recordings)) {
-      return recordings;
+      return [...recordings];
     }
     return [...recordings]..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
   }
