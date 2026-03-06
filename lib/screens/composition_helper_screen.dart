@@ -49,7 +49,6 @@ class _CompositionHelperScreenState
   Timer? _playTimer;
 
   @override
-  @override
   void dispose() {
     _playTimer?.cancel();
     super.dispose();
