@@ -15,8 +15,10 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 using music_life::PitchDetector;
@@ -260,6 +262,19 @@ static bool test_pd_silence_not_pitched() {
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
     ASSERT_TRUE(!r.pitched);
+    return true;
+}
+
+static bool test_pd_nan_input_not_pitched() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    PitchDetector pd(SR, FRAME);
+    std::vector<float> buf(FRAME, std::numeric_limits<float>::quiet_NaN());
+
+    PitchDetector::Result r = pd.process(buf.data(), FRAME);
+    ASSERT_TRUE(!r.pitched);
+    ASSERT_TRUE(r.frequency == 0.0f);
     return true;
 }
 
@@ -534,6 +549,18 @@ static bool test_ffi_log_callback_supports_trace_level() {
     return true;
 }
 
+static bool test_ffi_api_is_noexcept() {
+    static_assert(noexcept(ml_pitch_detector_create(44100, 2048, 0.10f)));
+    static_assert(noexcept(ml_pitch_detector_create_with_reference_pitch(44100, 2048, 0.10f, 440.0f)));
+    static_assert(noexcept(ml_pitch_detector_destroy(nullptr)));
+    static_assert(noexcept(ml_pitch_detector_reset(nullptr)));
+    static_assert(noexcept(ml_pitch_detector_set_reference_pitch(nullptr, 440.0f)));
+    static_assert(noexcept(ml_pitch_detector_process(nullptr, nullptr, 0)));
+    static_assert(noexcept(ml_pitch_detector_set_log_callback(nullptr)));
+    static_assert(noexcept(ml_pitch_detector_install_crash_handlers()));
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -551,6 +578,7 @@ int main() {
     run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
     run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
     run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
+    run_test("pd:  NaN input is not pitched",       test_pd_nan_input_not_pitched);
     run_test("pd:  incremental block feeding",      test_pd_incremental_blocks);
     run_test("pd:  reset clears state",             test_pd_reset_clears_state);
     run_test("pd:  throws on bad sample_rate",      test_pd_invalid_sample_rate_throws);
@@ -570,6 +598,7 @@ int main() {
     run_test("ffi: process excessive num_samples safe", test_ffi_process_excessive_num_samples_returns_zero);
     run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
     run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
+    run_test("ffi: C API functions are noexcept", test_ffi_api_is_noexcept);
 
 
     std::printf("\n%d passed, %d failed\n", g_passed, g_failed);

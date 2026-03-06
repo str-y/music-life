@@ -97,14 +97,14 @@ struct MLPitchDetectorHandle {
     int max_process_samples;
 };
 
-MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold) {
+MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold) noexcept {
     return ml_pitch_detector_create_with_reference_pitch(sample_rate, frame_size, threshold, 440.0f);
 }
 
 MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_rate,
                                                                      int frame_size,
                                                                      float threshold,
-                                                                     float reference_pitch_hz) {
+                                                                     float reference_pitch_hz) noexcept {
     if (sample_rate <= 0 || frame_size <= 1 || frame_size > 32768 || !std::isfinite(threshold) ||
         threshold < 0.0f || threshold > 1.0f || !std::isfinite(reference_pitch_hz)) {
         emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_create: invalid arguments");
@@ -132,19 +132,31 @@ MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_
     }
 }
 
-void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) {
+void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) noexcept {
     if (!handle) return;
-    emit_log(ML_LOG_LEVEL_DEBUG, "ml_pitch_detector_destroy");
-    delete handle;
+    try {
+        emit_log(ML_LOG_LEVEL_DEBUG, "ml_pitch_detector_destroy");
+        delete handle;
+    } catch (const std::exception& e) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_destroy: exception: %s", e.what());
+    } catch (...) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_destroy: unknown exception");
+    }
 }
 
-void ml_pitch_detector_reset(MLPitchDetectorHandle* handle) {
+void ml_pitch_detector_reset(MLPitchDetectorHandle* handle) noexcept {
     if (!handle) return;
-    emit_log(ML_LOG_LEVEL_TRACE, "ml_pitch_detector_reset");
-    handle->detector->reset();
+    try {
+        emit_log(ML_LOG_LEVEL_TRACE, "ml_pitch_detector_reset");
+        handle->detector->reset();
+    } catch (const std::exception& e) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_reset: exception: %s", e.what());
+    } catch (...) {
+        emit_log(ML_LOG_LEVEL_ERROR, "ml_pitch_detector_reset: unknown exception");
+    }
 }
 
-int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz) {
+int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz) noexcept {
     if (!handle) return 0;
     try {
         handle->detector->set_reference_pitch(reference_pitch_hz);
@@ -159,7 +171,7 @@ int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float r
     }
 }
 
-MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples) {
+MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples) noexcept {
     MLPitchResult out{};
     if (!handle || !samples || num_samples <= 0) return out;
     if (num_samples > handle->max_process_samples) {
@@ -185,11 +197,11 @@ MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const flo
     return out;
 }
 
-void ml_pitch_detector_set_log_callback(MLLogCallback callback) {
+void ml_pitch_detector_set_log_callback(MLLogCallback callback) noexcept {
     g_log_callback = callback;
 }
 
-void ml_pitch_detector_install_crash_handlers(void) {
+void ml_pitch_detector_install_crash_handlers(void) noexcept {
     std::call_once(g_crash_handlers_once, []() {
         std::set_terminate(terminate_handler);
         ::signal(SIGABRT, fatal_signal_handler);

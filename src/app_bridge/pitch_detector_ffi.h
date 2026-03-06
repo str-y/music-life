@@ -29,14 +29,14 @@ typedef struct {
     char  note_name[ML_PITCH_NOTE_NAME_SIZE];
 } MLPitchResult;
 
-MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold);
-MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_rate, int frame_size, float threshold, float reference_pitch_hz);
-void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle);
-void ml_pitch_detector_reset(MLPitchDetectorHandle* handle);
-int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz);
-MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples);
-void ml_pitch_detector_set_log_callback(MLLogCallback callback);
-void ml_pitch_detector_install_crash_handlers(void);
+MLPitchDetectorHandle* ml_pitch_detector_create(int sample_rate, int frame_size, float threshold) noexcept;
+MLPitchDetectorHandle* ml_pitch_detector_create_with_reference_pitch(int sample_rate, int frame_size, float threshold, float reference_pitch_hz) noexcept;
+void ml_pitch_detector_destroy(MLPitchDetectorHandle* handle) noexcept;
+void ml_pitch_detector_reset(MLPitchDetectorHandle* handle) noexcept;
+int ml_pitch_detector_set_reference_pitch(MLPitchDetectorHandle* handle, float reference_pitch_hz) noexcept;
+MLPitchResult ml_pitch_detector_process(MLPitchDetectorHandle* handle, const float* samples, int num_samples) noexcept;
+void ml_pitch_detector_set_log_callback(MLLogCallback callback) noexcept;
+void ml_pitch_detector_install_crash_handlers(void) noexcept;
 
 #ifdef __cplusplus
 }
