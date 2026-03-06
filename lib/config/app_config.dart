@@ -11,6 +11,8 @@ class AppConfig {
     this.testInterstitialIdIos = defaultTestInterstitialIdIos,
     this.testRewardedIdAndroid = defaultTestRewardedIdAndroid,
     this.testRewardedIdIos = defaultTestRewardedIdIos,
+    this.audioNotificationChannelId = defaultAudioNotificationChannelId,
+    this.audioNotificationChannelName = defaultAudioNotificationChannelName,
     this.recordingsStorageKey = defaultRecordingsStorageKey,
     this.practiceLogsStorageKey = defaultPracticeLogsStorageKey,
     this.recordingsMigratedStorageKey = defaultRecordingsMigratedStorageKey,
@@ -45,6 +47,10 @@ class AppConfig {
       'ca-app-pub-3940256099942544/5224354917';
   static const String defaultTestRewardedIdIos =
       'ca-app-pub-3940256099942544/1712485313';
+  static const String defaultAudioNotificationChannelId =
+      'com.stry.musiclife.audio';
+  static const String defaultAudioNotificationChannelName =
+      'Music Life Playback';
 
   static const String defaultRecordingsStorageKey = 'recordings_v1';
   static const String defaultPracticeLogsStorageKey = 'practice_logs_v1';
@@ -71,6 +77,8 @@ class AppConfig {
   final String testInterstitialIdIos;
   final String testRewardedIdAndroid;
   final String testRewardedIdIos;
+  final String audioNotificationChannelId;
+  final String audioNotificationChannelName;
 
   final String recordingsStorageKey;
   final String practiceLogsStorageKey;

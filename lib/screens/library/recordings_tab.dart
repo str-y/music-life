@@ -153,6 +153,7 @@ class RecordingTile extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final path = entry.audioFilePath;
     if (path == null || path.isEmpty || !await File(path).exists()) {
+      if (!context.mounted) return;
       messenger?.showSnackBar(
         SnackBar(content: Text(l10n.recordingUnavailableForShare)),
       );
@@ -176,6 +177,7 @@ class RecordingTile extends StatelessWidget {
         error: e,
         stackTrace: st,
       );
+      if (!context.mounted) return;
       messenger?.showSnackBar(
         SnackBar(content: Text(l10n.recordingShareFailed)),
       );
