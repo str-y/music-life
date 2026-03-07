@@ -61,6 +61,7 @@ class _CompositionHelperScreenState
   }
 
   void _removeChord(int index) {
+    if (index < 0 || index >= _sequence.length) return;
     _stopPlayback();
     setState(() => _sequence.removeAt(index));
   }
@@ -71,7 +72,11 @@ class _CompositionHelperScreenState
   }
 
   void _reorderSequence(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _sequence.length) return;
     if (newIndex > oldIndex) newIndex--;
+    if (newIndex < 0 || newIndex >= _sequence.length) return;
+    if (newIndex == oldIndex) return;
+    _stopPlayback();
     setState(() {
       final entry = _sequence.removeAt(oldIndex);
       _sequence.insert(newIndex, entry);
@@ -140,60 +145,64 @@ class _CompositionHelperScreenState
     final controller = TextEditingController(
       text: l10n.compositionDefaultName(savedCount + 1),
     );
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.compositionSave),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(labelText: l10n.compositionTitle),
-          autofocus: true,
-          onSubmitted: (_) => Navigator.of(ctx).pop(true),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    final title = controller.text.trim().isEmpty
-        ? l10n.compositionUntitled
-        : controller.text.trim();
-    final composition = Composition(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      chords: _sequence.map((e) => e.chord).toList(),
-    );
     try {
-      await ref.read(compositionProvider.notifier).saveComposition(composition);
-    } on CompositionLimitReachedException catch (e) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.compositionSave),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(labelText: l10n.compositionTitle),
+            autofocus: true,
+            onSubmitted: (_) => Navigator.of(ctx).pop(true),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      final title = controller.text.trim().isEmpty
+          ? l10n.compositionUntitled
+          : controller.text.trim();
+      final composition = Composition(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        title: title,
+        chords: _sequence.map((e) => e.chord).toList(),
+      );
+      try {
+        await ref.read(compositionProvider.notifier).saveComposition(composition);
+      } on CompositionLimitReachedException catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.compositionLimitReached(e.max))),
+        );
+        return;
+      } catch (e, stackTrace) {
+        if (!mounted) return;
+        ServiceErrorHandler.reportAndNotify(
+          context: context,
+          message: 'CompositionHelperScreen: failed to save composition',
+          userMessage: l10n.compositionSaveError,
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.compositionLimitReached(e.max))),
+        SnackBar(content: Text(l10n.compositionSavedSuccess)),
       );
-      return;
-    } catch (e, stackTrace) {
-      if (!mounted) return;
-      ServiceErrorHandler.reportAndNotify(
-        context: context,
-        message: 'CompositionHelperScreen: failed to save composition',
-        userMessage: l10n.compositionSaveError,
-        error: e,
-        stackTrace: stackTrace,
-      );
-      return;
+    } finally {
+      controller.dispose();
     }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.compositionSavedSuccess)),
-    );
   }
 
   Future<void> _showLoadDialog() async {
@@ -221,6 +230,7 @@ class _CompositionHelperScreenState
               error: e,
               stackTrace: stackTrace,
             );
+            rethrow;
           }
         },
       ),
