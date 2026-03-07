@@ -16,5 +16,5 @@ To empower users with easy-to-use tools for creating music, we aim to develop a 
 - Implement real-time audio preview for chord sequences.  
 - Ensure extensibility for future features like lyrics integration.
 
-**Immediate Next Task:**  
+**Next Task:**  
 Implement real-time audio preview for chord sequences.
