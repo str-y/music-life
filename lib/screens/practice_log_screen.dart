@@ -11,84 +11,9 @@ import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/practice_log_export.dart';
+import '../utils/practice_log_utils.dart';
 import '../utils/share_card_image.dart';
 
-class PracticeTrendPoint {
-  const PracticeTrendPoint({
-    required this.label,
-    required this.minutes,
-  });
-
-  final String label;
-  final int minutes;
-}
-
-List<PracticeTrendPoint> buildWeeklyPracticeTrend(
-  List<PracticeLogEntry> entries, {
-  DateTime? now,
-}) {
-  final today = _toDateOnly(now ?? DateTime.now());
-  final byDay = <DateTime, int>{};
-  for (final entry in entries) {
-    final day = _toDateOnly(entry.date);
-    byDay[day] = (byDay[day] ?? 0) + entry.durationMinutes;
-  }
-  return List.generate(7, (index) {
-    final day = today.subtract(Duration(days: 6 - index));
-    return PracticeTrendPoint(
-      label: '${day.month}/${day.day}',
-      minutes: byDay[day] ?? 0,
-    );
-  });
-}
-
-List<PracticeTrendPoint> buildMonthlyPracticeTrend(
-  List<PracticeLogEntry> entries, {
-  DateTime? now,
-}) {
-  final reference = now ?? DateTime.now();
-  final currentMonth = DateTime(reference.year, reference.month);
-  final byMonth = <String, int>{};
-  for (final entry in entries) {
-    final key = '${entry.date.year}-${entry.date.month.toString().padLeft(2, '0')}';
-    byMonth[key] = (byMonth[key] ?? 0) + entry.durationMinutes;
-  }
-  return List.generate(6, (index) {
-    final month = DateTime(currentMonth.year, currentMonth.month - (5 - index));
-    final key = '${month.year}-${month.month.toString().padLeft(2, '0')}';
-    return PracticeTrendPoint(
-      label: '${month.month}',
-      minutes: byMonth[key] ?? 0,
-    );
-  });
-}
-
-Map<String, int> buildPracticeInstrumentMinutes(List<PracticeLogEntry> entries) {
-  final byInstrument = <String, int>{};
-  for (final entry in entries) {
-    final instrument = extractInstrumentLabelFromMemo(entry.memo);
-    byInstrument[instrument] = (byInstrument[instrument] ?? 0) + entry.durationMinutes;
-  }
-
-  final sortedEntries = byInstrument.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
-  return {for (final entry in sortedEntries.take(5)) entry.key: entry.value};
-}
-
-String extractInstrumentLabelFromMemo(String memo) {
-  final normalized = memo.trim();
-  if (normalized.isEmpty) return _otherInstrumentKey;
-  final head = normalized
-      .split(RegExp(_instrumentMemoDelimiterPattern))
-      .first
-      .trim();
-  if (head.isEmpty) return _otherInstrumentKey;
-  return head.length > 12 ? '${head.substring(0, 12)}…' : head;
-}
-
-DateTime _toDateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
-const _otherInstrumentKey = 'Other';
-const _instrumentMemoDelimiterPattern = r'[:：／/\-｜|]';
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
 
@@ -525,7 +450,7 @@ class _AnalyticsSection extends StatelessWidget {
             const SizedBox(height: 8),
             ...instrumentMinutes.entries.map((entry) {
               final ratio = instrumentTotal == 0 ? 0.0 : entry.value / instrumentTotal;
-              final label = entry.key == _otherInstrumentKey
+              final label = entry.key == otherInstrumentLabel
                   ? l10n.instrumentOtherLabel
                   : entry.key;
               return Padding(
@@ -551,7 +476,7 @@ class _AnalyticsSection extends StatelessWidget {
                 l10n.noPracticeRecords,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-            if (instrumentMinutes.containsKey(_otherInstrumentKey))
+            if (instrumentMinutes.containsKey(otherInstrumentLabel))
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
