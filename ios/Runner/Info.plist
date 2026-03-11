@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Microphone access is required for pitch detection, tuning, and chord analysis.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to record video performances with pitch overlay.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

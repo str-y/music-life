@@ -12,6 +12,7 @@ List<RouteBase> get $appRoutes => [
       $rhythmRoute,
       $chordAnalyserRoute,
       $compositionHelperRoute,
+      $videoPracticeRoute,
     ];
 
 RouteBase get $homeRoute => GoRouteData.$route(
@@ -180,6 +181,26 @@ extension $CompositionHelperRouteExtension on CompositionHelperRoute {
       const CompositionHelperRoute();
 
   String get location => GoRouteData.$location('/composition-helper');
+
+  void go(BuildContext context) => context.go(location);
+
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $videoPracticeRoute => GoRouteData.$route(
+      path: '/video-practice',
+      factory: $VideoPracticeRouteExtension._fromState,
+    );
+
+extension $VideoPracticeRouteExtension on VideoPracticeRoute {
+  static VideoPracticeRoute _fromState(GoRouterState state) =>
+      const VideoPracticeRoute();
+
+  String get location => GoRouteData.$location('/video-practice');
 
   void go(BuildContext context) => context.go(location);
 

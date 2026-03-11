@@ -760,5 +760,47 @@
   "exportAndShare": "Export & Share",
   "@exportAndShare": {
     "description": "Tooltip for the combined export and share menu"
+  },
+
+  "videoPracticeTitle": "Video Practice",
+  "@videoPracticeTitle": {
+    "description": "Title for the video practice screen"
+  },
+  "videoPracticeSubtitle": "Record your performance with pitch overlay",
+  "@videoPracticeSubtitle": {
+    "description": "Subtitle for the video practice feature tile"
+  },
+  "videoPracticeStartRecording": "Start Recording",
+  "@videoPracticeStartRecording": {
+    "description": "Button label to start video recording"
+  },
+  "videoPracticeStopRecording": "Stop Recording",
+  "@videoPracticeStopRecording": {
+    "description": "Button label to stop video recording"
+  },
+  "videoPracticeRecordingSaved": "Video saved",
+  "@videoPracticeRecordingSaved": {
+    "description": "Snackbar message shown after a video is saved"
+  },
+  "videoPracticeRecordingFailed": "Recording failed. Please try again.",
+  "@videoPracticeRecordingFailed": {
+    "description": "Error message shown when starting or stopping a recording fails"
+  },
+  "videoPracticePremiumTitle": "Premium Feature",
+  "@videoPracticePremiumTitle": {
+    "description": "Title shown in the premium paywall for video practice"
+  },
+  "videoPracticePremiumDescription": "Watch an ad to unlock video recording with real-time pitch overlay for {hours} hours.",
+  "@videoPracticePremiumDescription": {
+    "description": "Description shown in the premium paywall for video practice",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "videoPracticeCameraPermissionDenied": "Camera access is denied. Please allow it in Settings.",
+  "@videoPracticeCameraPermissionDenied": {
+    "description": "Message shown when camera permission is denied"
   }
 }
