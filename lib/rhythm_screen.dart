@@ -1,11 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'l10n/app_localizations.dart';
-import 'app_constants.dart';
-import 'utils/metronome_utils.dart';
+import 'providers/rhythm_provider.dart';
 
 /// Rhythm & Metronome screen.
 ///
@@ -15,41 +14,15 @@ import 'utils/metronome_utils.dart';
 ///  - Groove analysis: the lower half of the screen shows an animated
 ///    "target" (concentric rings).  When the user taps on the beat the ring
 ///    animates to show how far from the perfect grid the tap was.
-class RhythmScreen extends StatefulWidget {
+class RhythmScreen extends ConsumerStatefulWidget {
   const RhythmScreen({super.key});
 
   @override
-  State<RhythmScreen> createState() => _RhythmScreenState();
+  ConsumerState<RhythmScreen> createState() => _RhythmScreenState();
 }
 
-class _RhythmScreenState extends State<RhythmScreen>
+class _RhythmScreenState extends ConsumerState<RhythmScreen>
     with TickerProviderStateMixin {
-  // ── Metronome state ──────────────────────────────────────────────────────
-  int _bpm = 120;
-  bool _isPlaying = false;
-  Ticker? _metTicker;
-
-
-
-  /// Index of the last beat that has been triggered (to avoid double-firing).
-  int _lastBeatIndex = -1;
-
-  /// Wall-clock time when the metronome was started, used to compute the
-  /// scheduled beat time for the groove-analysis tap comparison.
-  DateTime? _metStartWallTime;
-
-  // ── Groove analysis state ────────────────────────────────────────────────
-  /// Offset of the last user tap relative to the ideal beat, in milliseconds.
-  /// Negative = early, positive = late.
-  double _lastOffsetMs = 0;
-
-  /// Cumulative timing score [0–100].
-  double _timingScore = 100;
-
-
-  /// Timestamp of the last scheduled beat (for tap comparison).
-  DateTime? _lastBeatTime;
-
   /// Animation controller for the target ring pulse on each beat.
   late final AnimationController _beatPulseCtrl;
   late final Animation<double> _beatPulseAnim;
@@ -57,86 +30,6 @@ class _RhythmScreenState extends State<RhythmScreen>
   /// Animation controller for the user-tap impact ring.
   late final AnimationController _tapRingCtrl;
   late final Animation<double> _tapRingAnim;
-
-  // ── Timing helpers ───────────────────────────────────────────────────────
-  Duration get _beatDuration => beatDurationFor(_bpm);
-
-  void _startMetronome() {
-    _metTicker?.dispose();
-    _lastBeatIndex = -1;
-    _metStartWallTime = DateTime.now();
-    _lastBeatTime = _metStartWallTime;
-    _timingScore = 100;
-    _lastOffsetMs = 0;
-
-    _beatPulseCtrl.forward(from: 0);
-    _metTicker = createTicker(_onMetronomeTick)..start();
-    setState(() => _isPlaying = true);
-  }
-
-  /// Called every frame by the [Ticker].  Computes the beat index from the
-  /// monotonic [elapsed] duration so that timing errors never accumulate.
-  void _onMetronomeTick(Duration elapsed) {
-    final beatIndex =
-        elapsed.inMicroseconds ~/ _beatDuration.inMicroseconds;
-    if (beatIndex > _lastBeatIndex) {
-      _lastBeatIndex = beatIndex;
-      // Derive the *scheduled* beat time so groove-tap comparison is accurate.
-      _lastBeatTime = _metStartWallTime!.add(
-        Duration(microseconds: beatIndex * _beatDuration.inMicroseconds),
-      );
-      if (mounted) {
-        _beatPulseCtrl.forward(from: 0);
-        setState(() {});
-      }
-    }
-  }
-
-  void _stopMetronome() {
-    _metTicker?.dispose();
-    _metTicker = null;
-    setState(() {
-      _isPlaying = false;
-    });
-  }
-
-  void _toggleMetronome() {
-    if (_isPlaying) {
-      _stopMetronome();
-    } else {
-      _startMetronome();
-    }
-  }
-
-  void _changeBpm(int delta) {
-    setState(() {
-      _bpm = (_bpm + delta).clamp(AppConstants.metronomeMinBpm, AppConstants.metronomeMaxBpm);
-    });
-    if (_isPlaying) {
-      _startMetronome(); // restart at new tempo
-    }
-  }
-
-  // ── Groove tap ───────────────────────────────────────────────────────────
-  void _onGrooveTap() {
-    if (!_isPlaying || _lastBeatTime == null) return;
-
-    final now = DateTime.now();
-    final beatMs = _beatDuration.inMilliseconds.toDouble();
-    final elapsedMs =
-        now.difference(_lastBeatTime!).inMilliseconds.toDouble();
-
-    final offset = computeGrooveTapOffset(elapsedMs: elapsedMs, beatMs: beatMs);
-
-    setState(() {
-      _lastOffsetMs = offset;
-      // Score penalty: proportional to |offset| / (beatMs/2), capped at 20 pts.
-      final penalty = computeScorePenalty(offsetMs: offset, beatMs: beatMs);
-      _timingScore = (_timingScore - penalty).clamp(0, 100);
-    });
-
-    _tapRingCtrl.forward(from: 0);
-  }
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
@@ -162,7 +55,6 @@ class _RhythmScreenState extends State<RhythmScreen>
 
   @override
   void dispose() {
-    _metTicker?.dispose();
     _beatPulseCtrl.dispose();
     _tapRingCtrl.dispose();
     super.dispose();
@@ -171,6 +63,16 @@ class _RhythmScreenState extends State<RhythmScreen>
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    ref.listen<RhythmState>(rhythmProvider, (previous, next) {
+      if (previous?.beatIndex != next.beatIndex && next.isPlaying) {
+        _beatPulseCtrl.forward(from: 0);
+      }
+      if (previous != null && previous.lastOffsetMs != next.lastOffsetMs) {
+        _tapRingCtrl.forward(from: 0);
+      }
+    });
+
+    final rhythmState = ref.watch(rhythmProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -181,19 +83,19 @@ class _RhythmScreenState extends State<RhythmScreen>
         children: [
           // ── Top half: metronome controls ────────────────────────────────
           Expanded(
-            child: _buildMetronomeSection(colorScheme),
+            child: _buildMetronomeSection(colorScheme, rhythmState),
           ),
           const Divider(height: 1),
           // ── Bottom half: groove analysis target ─────────────────────────
           Expanded(
-            child: _buildGrooveSection(colorScheme),
+            child: _buildGrooveSection(colorScheme, rhythmState),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetronomeSection(ColorScheme cs) {
+  Widget _buildMetronomeSection(ColorScheme cs, RhythmState rhythmState) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       color: cs.surface,
@@ -217,8 +119,8 @@ class _RhythmScreenState extends State<RhythmScreen>
               ),
             ),
             child: Text(
-              '$_bpm',
-              key: ValueKey(_bpm),
+              '${rhythmState.bpm}',
+              key: ValueKey(rhythmState.bpm),
               style: TextStyle(
                 fontSize: 96,
                 fontWeight: FontWeight.bold,
@@ -239,20 +141,22 @@ class _RhythmScreenState extends State<RhythmScreen>
               _BpmButton(
                 label: '−10',
                 semanticLabel: l10n.bpmDecrease10SemanticLabel,
-                onPressed: () => _changeBpm(-10),
+                onPressed: () =>
+                    ref.read(rhythmProvider.notifier).changeBpm(-10),
               ),
               const SizedBox(width: 8),
               _BpmButton(
                 label: '−1',
                 semanticLabel: l10n.bpmDecrease1SemanticLabel,
-                onPressed: () => _changeBpm(-1),
+                onPressed: () =>
+                    ref.read(rhythmProvider.notifier).changeBpm(-1),
               ),
               const SizedBox(width: 24),
               // Play / Stop button
               AnimatedBuilder(
                 animation: _beatPulseAnim,
                 builder: (context, child) {
-                  final scale = _isPlaying
+                  final scale = rhythmState.isPlaying
                       ? 1.0 + _beatPulseAnim.value * 0.08
                       : 1.0;
                   return Transform.scale(
@@ -262,15 +166,15 @@ class _RhythmScreenState extends State<RhythmScreen>
                 },
                 child: FloatingActionButton(
                   heroTag: 'playStop',
-                  onPressed: _toggleMetronome,
-                  tooltip: _isPlaying
+                  onPressed: ref.read(rhythmProvider.notifier).toggleMetronome,
+                  tooltip: rhythmState.isPlaying
                       ? l10n.metronomeStopTooltip
                       : l10n.metronomePlayTooltip,
-                  backgroundColor: _isPlaying
+                  backgroundColor: rhythmState.isPlaying
                       ? Theme.of(context).colorScheme.error
                       : Theme.of(context).colorScheme.primary,
                   child: Icon(
-                    _isPlaying ? Icons.stop : Icons.play_arrow,
+                    rhythmState.isPlaying ? Icons.stop : Icons.play_arrow,
                     size: 36,
                   ),
                 ),
@@ -279,13 +183,15 @@ class _RhythmScreenState extends State<RhythmScreen>
               _BpmButton(
                 label: '+1',
                 semanticLabel: l10n.bpmIncrease1SemanticLabel,
-                onPressed: () => _changeBpm(1),
+                onPressed: () =>
+                    ref.read(rhythmProvider.notifier).changeBpm(1),
               ),
               const SizedBox(width: 8),
               _BpmButton(
                 label: '+10',
                 semanticLabel: l10n.bpmIncrease10SemanticLabel,
-                onPressed: () => _changeBpm(10),
+                onPressed: () =>
+                    ref.read(rhythmProvider.notifier).changeBpm(10),
               ),
             ],
           ),
@@ -294,13 +200,13 @@ class _RhythmScreenState extends State<RhythmScreen>
     );
   }
 
-  Widget _buildGrooveSection(ColorScheme cs) {
+  Widget _buildGrooveSection(ColorScheme cs, RhythmState rhythmState) {
     final l10n = AppLocalizations.of(context)!;
-    final scoreRatio = _timingScore / 100.0;
-    final offsetLabel = _isPlaying
-        ? (_lastOffsetMs >= 0
-            ? '+${_lastOffsetMs.toStringAsFixed(0)} ms'
-            : '${_lastOffsetMs.toStringAsFixed(0)} ms')
+    final scoreRatio = rhythmState.timingScore / 100.0;
+    final offsetLabel = rhythmState.isPlaying
+        ? (rhythmState.lastOffsetMs >= 0
+            ? '+${rhythmState.lastOffsetMs.toStringAsFixed(0)} ms'
+            : '${rhythmState.lastOffsetMs.toStringAsFixed(0)} ms')
         : '---';
     final scoreColor = Color.lerp(cs.error, cs.primary, scoreRatio)!;
 
@@ -308,104 +214,105 @@ class _RhythmScreenState extends State<RhythmScreen>
       label: l10n.grooveTargetSemanticLabel,
       onTapHint: l10n.grooveTargetTapHint,
       child: GestureDetector(
-        onTap: _onGrooveTap,
+        onTap: ref.read(rhythmProvider.notifier).onGrooveTap,
         child: Container(
-        color: cs.surfaceContainerHighest,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              l10n.grooveAnalysis,
-              style: TextStyle(
-                fontSize: 14,
-                letterSpacing: 2,
-                color: cs.onSurfaceVariant,
+          color: cs.surfaceContainerHighest,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                l10n.grooveAnalysis,
+                style: TextStyle(
+                  fontSize: 14,
+                  letterSpacing: 2,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            // Animated target
-            Expanded(
-              child: ExcludeSemantics(
-                child: AnimatedBuilder(
-                animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
-                builder: (context, _) {
-                  return CustomPaint(
-                    painter: _GrooveTargetPainter(
-                      beatPhase: _beatPulseAnim.value,
-                      tapPhase: _tapRingAnim.value,
-                      offsetMs: _lastOffsetMs,
-                      beatDurationMs: _beatDuration.inMilliseconds.toDouble(),
-                      isPlaying: _isPlaying,
-                      primaryColor: cs.primary,
-                      errorColor: cs.error,
+              const SizedBox(height: 8),
+              // Animated target
+              Expanded(
+                child: ExcludeSemantics(
+                  child: AnimatedBuilder(
+                    animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
+                    builder: (context, _) {
+                      return CustomPaint(
+                        painter: _GrooveTargetPainter(
+                          beatPhase: _beatPulseAnim.value,
+                          tapPhase: _tapRingAnim.value,
+                          offsetMs: rhythmState.lastOffsetMs,
+                          beatDurationMs:
+                              rhythmState.beatDuration.inMilliseconds.toDouble(),
+                          isPlaying: rhythmState.isPlaying,
+                          primaryColor: cs.primary,
+                          errorColor: cs.error,
+                        ),
+                        child: const SizedBox.expand(),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              // Score readout
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Column(
+                      children: [
+                        Text(
+                          l10n.timing,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          offsetLabel,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: scoreColor,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const SizedBox.expand(),
-                  );
-                },
+                    Column(
+                      children: [
+                        Text(
+                          l10n.score,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          rhythmState.timingScore.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: scoreColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (rhythmState.isPlaying)
+                      Text(
+                        l10n.tapRhythmHint,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-            // Score readout
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Column(
-                    children: [
-                      Text(
-                        l10n.timing,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                      Text(
-                        offsetLabel,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: scoreColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      Text(
-                        l10n.score,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                      Text(
-                        _timingScore.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: scoreColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_isPlaying)
-                    Text(
-                      l10n.tapRhythmHint,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: cs.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
-    ),
-  );
+    );
   }
 }
 
