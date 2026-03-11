@@ -161,7 +161,7 @@
   "videoPracticeStartRecording": "録画開始",
   "videoPracticeStopRecording": "録画停止",
   "videoPracticeRecordingSaved": "動画を保存しました",
-  "videoPracticeError": "カメラエラー: {message}",
+  "videoPracticeRecordingFailed": "録画に失敗しました。もう一度お試しください。",
   "videoPracticePremiumTitle": "プレミアム機能",
   "videoPracticePremiumDescription": "広告を視聴すると、{hours}時間ビデオ演奏と音程表示を利用できます。",
   "videoPracticeCameraPermissionDenied": "カメラのアクセスが拒否されています。設定から許可してください。"

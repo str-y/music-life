@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../services/ad_service.dart';
+import '../utils/app_logger.dart';
 import '../utils/tuner_transposition.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
@@ -162,12 +161,17 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         _controller = controller;
         _isInitializing = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.reportError(
+        'VideoPracticeScreen: failed to initialize camera',
+        error: e,
+        stackTrace: st,
+      );
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
       setState(() {
         _isInitializing = false;
-        _errorMessage = l10n.videoPracticeError(e.toString());
+        _errorMessage =
+            AppLocalizations.of(context)!.videoPracticeCameraPermissionDenied;
       });
     }
   }
@@ -192,12 +196,17 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         if (!mounted) return;
         setState(() => _isRecording = true);
       }
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.reportError(
+        'VideoPracticeScreen: video recording toggle failed',
+        error: e,
+        stackTrace: st,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)!.videoPracticeError(e.toString()),
+            AppLocalizations.of(context)!.videoPracticeRecordingFailed,
           ),
         ),
       );
@@ -421,7 +430,7 @@ class _RecordButton extends StatelessWidget {
               width: isRecording ? 28 : 56,
               height: isRecording ? 28 : 56,
               decoration: BoxDecoration(
-                color: isRecording ? Colors.red : Colors.red,
+                color: Colors.red,
                 borderRadius: isRecording
                     ? BorderRadius.circular(6)
                     : BorderRadius.circular(28),

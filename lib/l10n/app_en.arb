@@ -782,14 +782,9 @@
   "@videoPracticeRecordingSaved": {
     "description": "Snackbar message shown after a video is saved"
   },
-  "videoPracticeError": "Camera error: {message}",
-  "@videoPracticeError": {
-    "description": "Error message shown when camera initialization fails",
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
+  "videoPracticeRecordingFailed": "Recording failed. Please try again.",
+  "@videoPracticeRecordingFailed": {
+    "description": "Error message shown when starting or stopping a recording fails"
   },
   "videoPracticePremiumTitle": "Premium Feature",
   "@videoPracticePremiumTitle": {

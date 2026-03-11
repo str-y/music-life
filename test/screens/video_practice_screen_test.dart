@@ -175,6 +175,7 @@ void main() {
               expect(l10n.videoPracticeStartRecording, isNotEmpty);
               expect(l10n.videoPracticeStopRecording, isNotEmpty);
               expect(l10n.videoPracticeRecordingSaved, isNotEmpty);
+              expect(l10n.videoPracticeRecordingFailed, isNotEmpty);
               expect(l10n.videoPracticePremiumTitle, isNotEmpty);
               expect(l10n.videoPracticePremiumDescription(24), isNotEmpty);
               expect(l10n.videoPracticeCameraPermissionDenied, isNotEmpty);
