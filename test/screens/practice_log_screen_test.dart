@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
+import 'package:music_life/utils/practice_log_utils.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
