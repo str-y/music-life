@@ -8,6 +8,7 @@ import '../screens/library_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/practice_log_screen.dart';
 import '../screens/tuner_screen.dart';
+import '../screens/video_practice_screen.dart';
 
 part 'routes.g.dart';
 
@@ -89,6 +90,15 @@ class CompositionHelperRoute extends GoRouteData {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       slideUpPage(state: state, child: const CompositionHelperScreen());
+}
+
+@TypedGoRoute<VideoPracticeRoute>(path: '/video-practice')
+class VideoPracticeRoute extends GoRouteData {
+  const VideoPracticeRoute();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      slideUpPage(state: state, child: const VideoPracticeScreen());
 }
 
 /// A page with a subtle slide-up + fade entrance animation.

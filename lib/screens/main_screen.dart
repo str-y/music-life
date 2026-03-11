@@ -396,6 +396,16 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     onTap: () =>
                         _showAdAndPush(const CompositionHelperRoute().location),
                   ),
+                  _FeatureTile(
+                    icon: Icons.videocam_outlined,
+                    title: l10n.videoPracticeTitle,
+                    subtitle: l10n.videoPracticeSubtitle,
+                    isPremium: !settings.hasRewardedPremiumAccess,
+                    delay: 0.48,
+                    animation: entranceCurve,
+                    onTap: () =>
+                        _showAdAndPush(const VideoPracticeRoute().location),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -416,6 +426,7 @@ class _FeatureTile extends StatefulWidget {
     required this.onTap,
     required this.animation,
     required this.delay,
+    this.isPremium = false,
   });
 
   final IconData icon;
@@ -424,6 +435,7 @@ class _FeatureTile extends StatefulWidget {
   final VoidCallback onTap;
   final Animation<double> animation;
   final double delay;
+  final bool isPremium;
 
   @override
   State<_FeatureTile> createState() => _FeatureTileState();
@@ -497,7 +509,19 @@ class _FeatureTileState extends State<_FeatureTile> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(widget.icon, color: cs.primary),
+                      Row(
+                        children: [
+                          Icon(widget.icon, color: cs.primary),
+                          if (widget.isPremium) ...[
+                            const Spacer(),
+                            Icon(
+                              Icons.lock_outline,
+                              size: 14,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ],
+                        ],
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         widget.title,

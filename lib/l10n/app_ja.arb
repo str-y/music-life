@@ -154,5 +154,15 @@
   "exportCsv": "CSVをエクスポート",
   "exportPdf": "PDFをエクスポート",
   "shareSummary": "サマリーカードを共有",
-  "exportAndShare": "エクスポートと共有"
+  "exportAndShare": "エクスポートと共有",
+
+  "videoPracticeTitle": "ビデオ演奏",
+  "videoPracticeSubtitle": "音程表示付きで演奏を録画",
+  "videoPracticeStartRecording": "録画開始",
+  "videoPracticeStopRecording": "録画停止",
+  "videoPracticeRecordingSaved": "動画を保存しました",
+  "videoPracticeError": "カメラエラー: {message}",
+  "videoPracticePremiumTitle": "プレミアム機能",
+  "videoPracticePremiumDescription": "広告を視聴すると、{hours}時間ビデオ演奏と音程表示を利用できます。",
+  "videoPracticeCameraPermissionDenied": "カメラのアクセスが拒否されています。設定から許可してください。"
 }
