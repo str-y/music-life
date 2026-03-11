@@ -126,7 +126,7 @@ class RhythmNotifier extends Notifier<RhythmState> {
     final nextBpm = (state.bpm + delta).clamp(
       AppConstants.metronomeMinBpm,
       AppConstants.metronomeMaxBpm,
-    ) as int;
+    );
     state = state.copyWith(bpm: nextBpm);
     if (state.isPlaying) {
       startMetronome();
@@ -146,7 +146,7 @@ class RhythmNotifier extends Notifier<RhythmState> {
 
     state = state.copyWith(
       lastOffsetMs: offset,
-      timingScore: ((state.timingScore - penalty).clamp(0.0, 100.0)) as double,
+      timingScore: (state.timingScore - penalty).clamp(0.0, 100.0),
     );
   }
 
