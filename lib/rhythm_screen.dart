@@ -329,7 +329,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         id: 'builtin-ballad',
         label: l10n.metronomePresetBallad,
         preset: const MetronomePreset(
-          name: 'ballad',
+          name: 'builtin-ballad',
           bpm: 72,
           timeSignatureNumerator: 4,
           timeSignatureDenominator: 4,
@@ -339,7 +339,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         id: 'builtin-up-tempo',
         label: l10n.metronomePresetUpTempo,
         preset: const MetronomePreset(
-          name: 'up-tempo',
+          name: 'builtin-up-tempo',
           bpm: 160,
           timeSignatureNumerator: 4,
           timeSignatureDenominator: 4,
@@ -349,7 +349,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         id: 'builtin-waltz',
         label: l10n.metronomePresetWaltz,
         preset: const MetronomePreset(
-          name: 'waltz',
+          name: 'builtin-waltz',
           bpm: 96,
           timeSignatureNumerator: 3,
           timeSignatureDenominator: 4,
@@ -359,7 +359,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         id: 'builtin-shuffle',
         label: l10n.metronomePresetShuffle,
         preset: const MetronomePreset(
-          name: 'shuffle',
+          name: 'builtin-shuffle',
           bpm: 132,
           timeSignatureNumerator: 6,
           timeSignatureDenominator: 8,
