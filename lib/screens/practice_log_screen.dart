@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/recording_repository.dart';
+import 'ai_practice_insights_screen.dart';
 import '../utils/app_logger.dart';
 import '../utils/practice_log_export.dart';
 import '../utils/practice_log_utils.dart';
@@ -248,6 +249,17 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.practiceLogTitle),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            tooltip: AppLocalizations.of(context)!.aiPracticeInsightsTitle,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AiPracticeInsightsScreen(),
+                ),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.share_outlined),
             tooltip: AppLocalizations.of(context)!.exportAndShare,

@@ -7,6 +7,7 @@ import '../repositories/chord_history_repository.dart';
 import '../repositories/composition_repository.dart';
 import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
+import '../services/ai_practice_insights_service.dart';
 import '../services/permission_service.dart';
 
 typedef PitchBridgeFactory = NativePitchBridge Function(
@@ -42,6 +43,11 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 
 final permissionServiceProvider = Provider<PermissionService>((ref) {
   return defaultPermissionService;
+});
+
+final aiPracticeInsightsServiceProvider =
+    Provider<AiPracticeInsightsService>((ref) {
+  return HybridAiPracticeInsightsService();
 });
 
 final chordHistoryRepositoryProvider = Provider<ChordHistoryRepository>((ref) {

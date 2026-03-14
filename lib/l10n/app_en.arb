@@ -885,6 +885,47 @@
   "@exportAndShare": {
     "description": "Tooltip for the combined export and share menu"
   },
+  "aiPracticeInsightsTitle": "AI Practice Insights",
+  "@aiPracticeInsightsTitle": {
+    "description": "Title for the premium AI practice analysis screen"
+  },
+  "aiPracticeInsightsGenerating": "Generating personalized practice advice…",
+  "@aiPracticeInsightsGenerating": {
+    "description": "Loading label shown while the AI practice analysis is generated"
+  },
+  "aiPracticeInsightsEmpty": "Add a practice log or a recording to unlock personalized analysis.",
+  "@aiPracticeInsightsEmpty": {
+    "description": "Empty state shown when there is no practice data for AI insights"
+  },
+  "aiPracticeInsightsPremiumTitle": "Premium AI coaching",
+  "@aiPracticeInsightsPremiumTitle": {
+    "description": "Paywall title for AI practice insights"
+  },
+  "aiPracticeInsightsPremiumDescription": "Watch an ad to unlock AI analysis, next-week practice planning, and coaching reminders for {hours} hours.",
+  "@aiPracticeInsightsPremiumDescription": {
+    "description": "Paywall description for AI practice insights",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "aiPracticeInsightsPitchStability": "Pitch stability timeline",
+  "@aiPracticeInsightsPitchStability": {
+    "description": "Section title for AI pitch stability time-series analysis"
+  },
+  "aiPracticeInsightsRhythmAccuracy": "Rhythm accuracy timeline",
+  "@aiPracticeInsightsRhythmAccuracy": {
+    "description": "Section title for AI rhythm accuracy time-series analysis"
+  },
+  "aiPracticeInsightsWeeklyMenu": "Next 7-day focus menu",
+  "@aiPracticeInsightsWeeklyMenu": {
+    "description": "Section title for the next week's generated practice menu"
+  },
+  "aiPracticeInsightsNotification": "AI coaching notification",
+  "@aiPracticeInsightsNotification": {
+    "description": "Section title for the generated coaching reminder text"
+  },
 
   "videoPracticeTitle": "Video Practice",
   "@videoPracticeTitle": {
