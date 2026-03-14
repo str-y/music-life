@@ -27,5 +27,23 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Test
-        run: flutter test --no-pub
+      - name: Test with coverage
+        run: flutter test --coverage --no-pub
+
+      - name: Summarize coverage
+        run: |
+          total_lines=$(awk -F: '/^LF:/{sum+=$2} END {print sum+0}' coverage/lcov.info)
+          covered_lines=$(awk -F: '/^LH:/{sum+=$2} END {print sum+0}' coverage/lcov.info)
+          coverage_pct=$(awk -v covered="$covered_lines" -v total="$total_lines" 'BEGIN { if (total == 0) { print "0.00" } else { printf "%.2f", (covered / total) * 100 } }')
+          {
+            echo "## Flutter coverage"
+            echo
+            echo "- Covered lines: ${covered_lines} / ${total_lines}"
+            echo "- Line coverage: ${coverage_pct}%"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: coverage/lcov.info

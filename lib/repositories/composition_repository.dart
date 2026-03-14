@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -37,10 +38,48 @@ class Composition {
 
 // ── Repository ────────────────────────────────────────────────────────────────
 
+abstract interface class CompositionStore {
+  Future<void> replaceAllCompositions(List<Map<String, Object?>> rows);
+
+  Future<List<Map<String, Object?>>> queryAllCompositions();
+
+  Future<void> insertComposition(Map<String, Object?> row);
+
+  Future<void> deleteComposition(String id);
+}
+
+class _AppDatabaseCompositionStore implements CompositionStore {
+  const _AppDatabaseCompositionStore();
+
+  @override
+  Future<void> replaceAllCompositions(List<Map<String, Object?>> rows) {
+    return AppDatabase.instance.replaceAllCompositions(rows);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> queryAllCompositions() {
+    return AppDatabase.instance.queryAllCompositions();
+  }
+
+  @override
+  Future<void> insertComposition(Map<String, Object?> row) {
+    return AppDatabase.instance.insertComposition(row);
+  }
+
+  @override
+  Future<void> deleteComposition(String id) {
+    return AppDatabase.instance.deleteComposition(id);
+  }
+}
+
 /// Persists compositions and migrates legacy stored data into SQLite.
 class CompositionRepository {
-  const CompositionRepository(this._prefs, {AppConfig config = const AppConfig()})
-      : _config = config;
+  const CompositionRepository(
+    this._prefs, {
+    AppConfig config = const AppConfig(),
+    CompositionStore store = const _AppDatabaseCompositionStore(),
+  })  : _config = config,
+        _store = store;
 
   /// Guards against concurrent migration calls.  Non-null while a migration is
   /// in progress; subsequent callers await this future instead of starting a
@@ -50,6 +89,7 @@ class CompositionRepository {
 
   final SharedPreferences _prefs;
   final AppConfig _config;
+  final CompositionStore _store;
 
   Future<void> _migrateIfNeeded() async {
     // Already completed successfully in this session.
@@ -95,7 +135,7 @@ class CompositionRepository {
 
       if (migrationSucceeded) {
         try {
-          await AppDatabase.instance.replaceAllCompositions(compositionRows);
+          await _store.replaceAllCompositions(compositionRows);
           await _prefs.setBool(_config.compositionsMigratedStorageKey, true);
         } catch (e, st) {
           ServiceErrorHandler.report(
@@ -130,7 +170,7 @@ class CompositionRepository {
   Future<List<Composition>> load() async {
     await _migrateIfNeeded();
     try {
-      final rows = await AppDatabase.instance.queryAllCompositions();
+      final rows = await _store.queryAllCompositions();
       return rows
           .map((row) => Composition(
                 id: row['id'] as String,
@@ -152,7 +192,7 @@ class CompositionRepository {
 
   /// Replaces all saved compositions in the database.
   Future<void> save(List<Composition> compositions) async {
-    await AppDatabase.instance.replaceAllCompositions(
+    await _store.replaceAllCompositions(
       compositions
           .map((c) => <String, Object?>{
                 'id': c.id,
@@ -166,7 +206,7 @@ class CompositionRepository {
   /// Inserts or replaces a single composition in the database.
   /// More efficient than save() when updating one composition.
   Future<void> saveOne(Composition composition) async {
-    await AppDatabase.instance.insertComposition({
+    await _store.insertComposition({
       'id': composition.id,
       'title': composition.title,
       'chords': jsonEncode(composition.chords),
@@ -176,6 +216,11 @@ class CompositionRepository {
   /// Deletes a single composition from the database.
   /// More efficient than save() when removing one composition.
   Future<void> deleteOne(String id) async {
-    await AppDatabase.instance.deleteComposition(id);
+    await _store.deleteComposition(id);
+  }
+
+  @visibleForTesting
+  static void resetMigrationStateForTesting() {
+    _migrationCompleter = null;
   }
 }

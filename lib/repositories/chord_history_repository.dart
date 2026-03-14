@@ -1,5 +1,37 @@
 import '../data/app_database.dart';
 
+abstract interface class ChordHistoryStore {
+  Future<void> addEntry(Map<String, Object?> row);
+
+  Future<List<Map<String, Object?>>> loadEntries({
+    DateTime? from,
+    DateTime? to,
+    String chordName = '',
+  });
+}
+
+class _AppDatabaseChordHistoryStore implements ChordHistoryStore {
+  const _AppDatabaseChordHistoryStore();
+
+  @override
+  Future<void> addEntry(Map<String, Object?> row) {
+    return AppDatabase.instance.insertChordAnalysisHistory(row);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> loadEntries({
+    DateTime? from,
+    DateTime? to,
+    String chordName = '',
+  }) {
+    return AppDatabase.instance.queryChordAnalysisHistory(
+      from: from,
+      to: to,
+      chordName: chordName,
+    );
+  }
+}
+
 /// Represents a single detected chord with its timestamp.
 class ChordHistoryEntry {
   const ChordHistoryEntry({
@@ -23,11 +55,15 @@ abstract interface class ChordHistoryRepository {
 
 /// SQLite-backed implementation of [ChordHistoryRepository].
 class SqliteChordHistoryRepository implements ChordHistoryRepository {
-  const SqliteChordHistoryRepository();
+  const SqliteChordHistoryRepository({
+    ChordHistoryStore store = const _AppDatabaseChordHistoryStore(),
+  }) : _store = store;
+
+  final ChordHistoryStore _store;
 
   @override
   Future<void> addEntry(ChordHistoryEntry entry) async {
-    await AppDatabase.instance.insertChordAnalysisHistory({
+    await _store.addEntry({
       'chord_name': entry.chord,
       'detected_at': entry.time.toIso8601String(),
     });
@@ -40,7 +76,7 @@ class SqliteChordHistoryRepository implements ChordHistoryRepository {
   }) async {
     final rangeStart = day == null ? null : DateTime(day.year, day.month, day.day);
     final rangeEnd = rangeStart?.add(const Duration(days: 1));
-    final rows = await AppDatabase.instance.queryChordAnalysisHistory(
+    final rows = await _store.loadEntries(
       from: rangeStart,
       to: rangeEnd,
       chordName: chordNameFilter,
