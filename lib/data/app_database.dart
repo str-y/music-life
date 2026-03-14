@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
@@ -27,8 +28,20 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
   static const int _schemaVersion = 6;
   static const String _databasePasswordKey = 'database_password';
+  static const String _encryptedDatabaseAlias = 'encrypted';
+  static const String _legacyPlaintextDatabaseSuffix = '.unencrypted';
+  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: const IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
   static Future<SharedPreferences> Function() _sharedPreferencesLoader =
       SharedPreferences.getInstance;
+  static Future<String?> Function(String key) _secureValueReader =
+      _defaultSecureValueReader;
+  static Future<void> Function(String key, String value) _secureValueWriter =
+      _defaultSecureValueWriter;
 
   Completer<_DriftDatabase>? _completer;
 
@@ -52,25 +65,64 @@ class AppDatabase {
   Future<_DriftDatabase> _open() async {
     final dbPath = await getDatabasesPath();
     final file = File(join(dbPath, 'music_life.db'));
-    final db = _DriftDatabase(NativeDatabase.createInBackground(file));
+    final password = await _resolveDatabasePassword();
     try {
-      await _verifyIntegrity(db);
-      await _migrateIfNeeded(db);
-      return db;
+      return await _openEncryptedDatabase(file, password);
     } catch (error, stackTrace) {
+      if (await _isPlaintextDatabase(file)) {
+        AppLogger.info('Migrating existing unencrypted SQLite database to SQLCipher.');
+        await _migratePlaintextDatabase(file, password);
+        return _openEncryptedDatabase(file, password);
+      }
       if (!_isCorruptionError(error)) rethrow;
       AppLogger.reportError(
         'Detected SQLite corruption. Recreating database.',
         error: error,
         stackTrace: stackTrace,
       );
-      await db.close();
       if (await file.exists()) {
         await file.delete();
       }
-      final recoveredDb = _DriftDatabase(NativeDatabase.createInBackground(file));
-      await _migrateIfNeeded(recoveredDb);
-      return recoveredDb;
+      return _openEncryptedDatabase(file, password);
+    }
+  }
+
+  Future<_DriftDatabase> _openEncryptedDatabase(File file, String password) async {
+    final db = _DriftDatabase(_createEncryptedExecutor(file, password));
+    try {
+      await _verifyIntegrity(db);
+      await _migrateIfNeeded(db);
+      await _verifyEncryption(file);
+      return db;
+    } catch (_) {
+      await db.close();
+      rethrow;
+    }
+  }
+
+  QueryExecutor _createEncryptedExecutor(File file, String password) {
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (rawDb) {
+        rawDb.execute('PRAGMA key = ${_sqlStringLiteral(password)}');
+      },
+    );
+  }
+
+  Future<void> _verifyEncryption(File file) async {
+    final unencryptedProbe = _DriftDatabase(NativeDatabase.createInBackground(file));
+    try {
+      await unencryptedProbe.customSelect('PRAGMA user_version').get();
+      throw StateError(
+        'Database encryption verification failed: database can be opened without a key.',
+      );
+    } catch (error) {
+      if (_isMissingKeyError(error)) {
+        return;
+      }
+      rethrow;
+    } finally {
+      await unencryptedProbe.close();
     }
   }
 
@@ -105,6 +157,73 @@ class AppDatabase {
     return message.contains('database disk image is malformed') ||
         message.contains('file is not a database') ||
         message.contains('database corruption');
+  }
+
+  static bool _isMissingKeyError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('file is not a database') ||
+        message.contains('file is encrypted') ||
+        message.contains('not a database');
+  }
+
+  Future<bool> _isPlaintextDatabase(File file) async {
+    if (!await file.exists()) {
+      return false;
+    }
+
+    final plaintextProbe = _DriftDatabase(NativeDatabase.createInBackground(file));
+    try {
+      await plaintextProbe.customSelect('PRAGMA user_version').get();
+      return true;
+    } catch (error) {
+      if (_isMissingKeyError(error) || _isCorruptionError(error)) {
+        return false;
+      }
+      rethrow;
+    } finally {
+      await plaintextProbe.close();
+    }
+  }
+
+  Future<void> _migratePlaintextDatabase(File file, String password) async {
+    final encryptedFile = File('${file.path}.encrypted');
+    final backupFile = File('${file.path}$_legacyPlaintextDatabaseSuffix');
+
+    if (await encryptedFile.exists()) {
+      await encryptedFile.delete();
+    }
+    if (await backupFile.exists()) {
+      await backupFile.delete();
+    }
+
+    final plaintextDb = _DriftDatabase(NativeDatabase.createInBackground(file));
+    var attachedEncryptedDatabase = false;
+    try {
+      await plaintextDb.customStatement(
+        'ATTACH DATABASE ${_sqlStringLiteral(encryptedFile.path)} '
+        'AS $_encryptedDatabaseAlias KEY ${_sqlStringLiteral(password)}',
+      );
+      attachedEncryptedDatabase = true;
+      await plaintextDb.customSelect(
+        'SELECT sqlcipher_export(${_sqlStringLiteral(_encryptedDatabaseAlias)})',
+      ).get();
+    } finally {
+      if (attachedEncryptedDatabase) {
+        await plaintextDb.customStatement('DETACH DATABASE $_encryptedDatabaseAlias');
+      }
+      await plaintextDb.close();
+    }
+
+    await file.rename(backupFile.path);
+    try {
+      await encryptedFile.rename(file.path);
+      await backupFile.delete();
+    } catch (_) {
+      if (!await file.exists() && await backupFile.exists()) {
+        await backupFile.rename(file.path);
+      }
+      rethrow;
+    }
   }
 
   Future<void> _migrateIfNeeded(_DriftDatabase db) async {
@@ -480,8 +599,28 @@ class AppDatabase {
   }
 
   @visibleForTesting
+  static void configureSecureValueReader(
+    Future<String?> Function(String key) reader,
+  ) {
+    _secureValueReader = reader;
+  }
+
+  @visibleForTesting
+  static void configureSecureValueWriter(
+    Future<void> Function(String key, String value) writer,
+  ) {
+    _secureValueWriter = writer;
+  }
+
+  @visibleForTesting
   static void resetSharedPreferencesLoaderForTesting() {
     _sharedPreferencesLoader = SharedPreferences.getInstance;
+  }
+
+  @visibleForTesting
+  static void resetSecureValueStoreForTesting() {
+    _secureValueReader = _defaultSecureValueReader;
+    _secureValueWriter = _defaultSecureValueWriter;
   }
 
   @visibleForTesting
@@ -494,19 +633,44 @@ class AppDatabase {
     return _isCorruptionError(error);
   }
 
+  @visibleForTesting
+  static String sqlStringLiteralForTesting(String value) {
+    return _sqlStringLiteral(value);
+  }
+
   static Future<String> _resolveDatabasePassword() async {
-    final prefs = await _sharedPreferencesLoader();
-    final existingPassword = prefs.getString(_databasePasswordKey);
+    final existingPassword = await _secureValueReader(_databasePasswordKey);
     if (existingPassword != null && existingPassword.isNotEmpty) {
       return existingPassword;
+    }
+
+    final prefs = await _sharedPreferencesLoader();
+    final legacyPassword = prefs.getString(_databasePasswordKey);
+    if (legacyPassword != null && legacyPassword.isNotEmpty) {
+      await _secureValueWriter(_databasePasswordKey, legacyPassword);
+      await prefs.remove(_databasePasswordKey);
+      return legacyPassword;
     }
 
     final random = Random.secure();
     final generatedPassword = base64UrlEncode(
       List<int>.generate(32, (_) => random.nextInt(256)),
     );
-    await prefs.setString(_databasePasswordKey, generatedPassword);
+    await _secureValueWriter(_databasePasswordKey, generatedPassword);
     return generatedPassword;
+  }
+
+  static Future<String?> _defaultSecureValueReader(String key) {
+    return _secureStorage.read(key: key);
+  }
+
+  static Future<void> _defaultSecureValueWriter(String key, String value) {
+    return _secureStorage.write(key: key, value: value);
+  }
+
+  static String _sqlStringLiteral(String value) {
+    final escapedValue = value.replaceAll("'", "''");
+    return "'$escapedValue'";
   }
 
   /// Migrates waveform_data from JSON TEXT (v1) to binary BLOB (v2).
