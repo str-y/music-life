@@ -3,13 +3,21 @@ import 'package:music_life/data/app_database.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  late Map<String, String> secureValues;
+
   setUp(() {
+    secureValues = <String, String>{};
     SharedPreferences.setMockInitialValues({});
+    AppDatabase.configureSecureValueReader((key) async => secureValues[key]);
+    AppDatabase.configureSecureValueWriter((key, value) async {
+      secureValues[key] = value;
+    });
     AppDatabase.resetSharedPreferencesLoaderForTesting();
   });
 
   tearDown(() {
     AppDatabase.resetSharedPreferencesLoaderForTesting();
+    AppDatabase.resetSecureValueStoreForTesting();
   });
 
   group('AppDatabase migration planning', () {
@@ -36,36 +44,48 @@ void main() {
   });
 
   group('AppDatabase database password', () {
-    test('generates and persists a password when missing', () async {
+    test('generates and persists a password in secure storage when missing', () async {
       final password = await AppDatabase.databasePasswordForTesting();
       final prefs = await SharedPreferences.getInstance();
 
       expect(password, isNotEmpty);
-      expect(prefs.getString('database_password'), password);
+      expect(secureValues['database_password'], password);
+      expect(prefs.getString('database_password'), isNull);
     });
 
-    test('reuses an existing persisted password', () async {
-      SharedPreferences.setMockInitialValues({
-        'database_password': 'existing-password',
-      });
+    test('reuses an existing secure-storage password', () async {
+      secureValues['database_password'] = 'existing-password';
 
       final password = await AppDatabase.databasePasswordForTesting();
 
       expect(password, 'existing-password');
     });
 
-    test('uses configured shared preferences loader', () async {
+    test('migrates a legacy shared-preferences password into secure storage', () async {
       SharedPreferences.setMockInitialValues({
-        'database_password': 'configured-password',
+        'database_password': 'legacy-password',
       });
+
+      final password = await AppDatabase.databasePasswordForTesting();
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(password, 'legacy-password');
+      expect(secureValues['database_password'], 'legacy-password');
+      expect(prefs.getString('database_password'), isNull);
+    });
+
+    test('uses configured shared preferences loader for legacy passwords', () async {
       AppDatabase.configureSharedPreferencesLoader(() async {
-        final prefs = await SharedPreferences.getInstance();
-        return prefs;
+        SharedPreferences.setMockInitialValues({
+          'database_password': 'configured-password',
+        });
+        return SharedPreferences.getInstance();
       });
 
       final password = await AppDatabase.databasePasswordForTesting();
 
       expect(password, 'configured-password');
+      expect(secureValues['database_password'], 'configured-password');
     });
   });
 
@@ -110,6 +130,15 @@ void main() {
       expect(
         AppDatabase.isCorruptionErrorForTesting(Exception('permission denied')),
         isFalse,
+      );
+    });
+  });
+
+  group('AppDatabase SQL escaping', () {
+    test('escapes single quotes for SQL string literals', () {
+      expect(
+        AppDatabase.sqlStringLiteralForTesting("path/that's/encrypted.db"),
+        "'path/that''s/encrypted.db'",
       );
     });
   });
