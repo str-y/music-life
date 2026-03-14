@@ -27,7 +27,7 @@ class AiPracticeScorePoint {
   factory AiPracticeScorePoint.fromJson(Map<String, dynamic> json) {
     return AiPracticeScorePoint(
       label: json['label'] as String? ?? '',
-      score: (((json['score'] as num?) ?? 0).round().clamp(0, 100)) as int,
+      score: _clampScore((json['score'] as num?) ?? 0),
     );
   }
 
@@ -304,18 +304,15 @@ AiPracticeInsight _buildHeuristicInsight({
                 .fold<double>(0.0, (sum, value) => sum + value) /
             dayRecordings.length;
 
-    final pitchScore = ((40 +
-                waveformStability * 45 +
-                (minutes.clamp(0, 45) / 45) * 15)
-            .round()
-            .clamp(0, 100)) as int;
+    final pitchScore = _clampScore(
+      40 + waveformStability * 45 + (minutes.clamp(0, 45) / 45) * 15,
+    );
     final rhythmConsistency = previousMinutes == 0 && minutes == 0
         ? 0.55
         : 1 - ((minutes - previousMinutes).abs() / 45).clamp(0, 1).toDouble();
-    final rhythmScore =
-        ((38 + (minutes.clamp(0, 40) / 40) * 28 + rhythmConsistency * 34)
-                .round()
-                .clamp(0, 100)) as int;
+    final rhythmScore = _clampScore(
+      38 + (minutes.clamp(0, 40) / 40) * 28 + rhythmConsistency * 34,
+    );
 
     pitchSeries.add(
       AiPracticeScorePoint(label: '${day.month}/${day.day}', score: pitchScore),
@@ -433,6 +430,8 @@ double _averageScore(List<AiPracticeScorePoint> series) {
   final total = series.fold<int>(0, (sum, point) => sum + point.score);
   return total / series.length;
 }
+
+int _clampScore(num value) => value.round().clamp(0, 100).toInt();
 
 List<String> _buildEnglishMenu({
   required double averagePitch,
