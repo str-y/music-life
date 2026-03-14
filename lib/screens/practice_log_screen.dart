@@ -367,24 +367,43 @@ class _CalendarTab extends StatelessWidget {
       child: Column(
         children: [
           // Month navigation header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: onPrev,
-                tooltip: l10n.previousMonth,
-              ),
-              Text(
-                l10n.yearMonth(year, month),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: onNext,
-                tooltip: l10n.nextMonth,
-              ),
-            ],
+          FocusTraversalGroup(
+            policy: OrderedTraversalPolicy(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(1),
+                  child: Semantics(
+                    sortKey: const OrdinalSortKey(1),
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: onPrev,
+                      tooltip: l10n.previousMonth,
+                    ),
+                  ),
+                ),
+                Semantics(
+                  sortKey: const OrdinalSortKey(2),
+                  header: true,
+                  child: Text(
+                    l10n.yearMonth(year, month),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(3),
+                  child: Semantics(
+                    sortKey: const OrdinalSortKey(3),
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: onNext,
+                      tooltip: l10n.nextMonth,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           _CalendarGrid(
@@ -514,6 +533,7 @@ class _MiniBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final maxMinutes = points.fold<int>(0, (max, point) => point.minutes > max ? point.minutes : max);
     final base = maxMinutes == 0 ? 1 : maxMinutes;
 
@@ -532,34 +552,40 @@ class _MiniBarChart extends StatelessWidget {
             children: points.map((point) {
               final ratio = point.minutes / base;
               return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Container(
-                            width: 12,
-                            height: ratio == 0
-                                ? 0
-                                : ratio * _chartBarMaxHeight + _chartBarMinHeight,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              borderRadius: BorderRadius.circular(4),
+                child: Semantics(
+                  container: true,
+                  label: '${point.label}, ${l10n.durationMinutes(point.minutes)}',
+                  child: ExcludeSemantics(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Container(
+                                width: 12,
+                                height: ratio == 0
+                                    ? 0
+                                    : ratio * _chartBarMaxHeight + _chartBarMinHeight,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 4),
+                          Text(
+                            point.label,
+                            style: Theme.of(context).textTheme.labelSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        point.label,
-                        style: Theme.of(context).textTheme.labelSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               );
