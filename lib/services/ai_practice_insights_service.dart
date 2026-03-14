@@ -157,8 +157,9 @@ class HybridAiPracticeInsightsService implements AiPracticeInsightsService {
             'messages': [
               {
                 'role': 'system',
-                'content':
-                    'You are a music practice coach. Respond with JSON only.',
+                'content': localeCode == 'ja'
+                    ? 'あなたは音楽練習コーチです。必ずJSONのみで回答してください。'
+                    : 'You are a music practice coach. Respond with JSON only.',
               },
               {
                 'role': 'user',

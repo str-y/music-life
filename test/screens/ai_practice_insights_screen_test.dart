@@ -101,11 +101,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('AI Practice Insights'));
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(PracticeLogScreen)),
+      )!;
+
+      await tester.tap(find.byTooltip(l10n.aiPracticeInsightsTitle));
       await tester.pumpAndSettle();
 
       expect(find.byType(AiPracticeInsightsScreen), findsOneWidget);
-      expect(find.text('Premium AI coaching'), findsOneWidget);
+      expect(find.text(l10n.aiPracticeInsightsPremiumTitle), findsOneWidget);
     });
 
     testWidgets('shows generated insight cards when premium is active', (
@@ -149,10 +153,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(AiPracticeInsightsScreen)),
+      )!;
+
       expect(find.text('Test AI'), findsOneWidget);
-      expect(find.text('Pitch stability timeline'), findsOneWidget);
-      expect(find.text('Rhythm accuracy timeline'), findsOneWidget);
-      expect(find.text('Next 7-day focus menu'), findsOneWidget);
+      expect(find.text(l10n.aiPracticeInsightsPitchStability), findsOneWidget);
+      expect(find.text(l10n.aiPracticeInsightsRhythmAccuracy), findsOneWidget);
+      expect(find.text(l10n.aiPracticeInsightsWeeklyMenu), findsOneWidget);
       expect(
         find.text('AI coach: Keep the streak alive with a 20-minute rhythm block tonight.'),
         findsOneWidget,
