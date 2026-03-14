@@ -8,6 +8,7 @@ void main() {
     final file = await generateShareCardImage(
       title: 'Practice Log',
       lines: ['2026/03', 'Practice days: 10', 'Total time: 300 min'],
+      accentColor: const Color(0xFF6750A4),
     );
 
     final imageFile = File(file.path);
