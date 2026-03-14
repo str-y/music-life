@@ -9,7 +9,7 @@ void main() {
   group('computePracticeSummary', () {
     test('sums today minutes and counts streak from today', () {
       final summary = computePracticeSummary(
-        const [
+        [
           PracticeLogEntry(date: DateTime(2026, 2, 28), durationMinutes: 20),
           PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 30),
           PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 15),
@@ -23,7 +23,7 @@ void main() {
 
     test('counts streak from yesterday when today has no log', () {
       final summary = computePracticeSummary(
-        const [
+        [
           PracticeLogEntry(date: DateTime(2026, 2, 27), durationMinutes: 20),
           PracticeLogEntry(date: DateTime(2026, 2, 28), durationMinutes: 30),
         ],
@@ -40,7 +40,7 @@ void main() {
       final mockRepo = _MockRecordingRepository();
       when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
       when(() => mockRepo.loadPracticeLogs()).thenAnswer(
-        (_) async => const [
+        (_) async => [
           PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 30),
           PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 20),
           PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 40),
@@ -52,9 +52,15 @@ void main() {
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
       );
       addTearDown(container.dispose);
+      var state = container.read(libraryProvider);
+      final subscription = container.listen<LibraryState>(
+        libraryProvider,
+        (_, next) => state = next,
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
 
-      await _waitUntilLoaded(container);
-      final state = container.read(libraryProvider);
+      await _waitUntilLoaded(() => state);
       final feb = state.monthlyLogStats['2026-02'];
       final mar = state.monthlyLogStats['2026-03'];
 
@@ -71,7 +77,7 @@ void main() {
       final mockRepo = _MockRecordingRepository();
       when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
       when(() => mockRepo.loadPracticeLogs()).thenAnswer(
-        (_) async => const [
+        (_) async => [
           PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 30),
           PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 40),
         ],
@@ -81,25 +87,37 @@ void main() {
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
       );
       addTearDown(container.dispose);
+      var state = container.read(libraryProvider);
+      final subscription = container.listen<LibraryState>(
+        libraryProvider,
+        (_, next) => state = next,
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
 
-      await _waitUntilLoaded(container);
-      final initialStats = container.read(libraryProvider).monthlyLogStats;
+      await _waitUntilLoaded(() => state);
+      final initialStats = state.monthlyLogStats;
 
       await container.read(libraryProvider.notifier).reload();
-      await _waitUntilLoaded(container);
-      final reloadedStats = container.read(libraryProvider).monthlyLogStats;
+      await _waitUntilLoaded(() => state);
+      final reloadedStats = state.monthlyLogStats;
 
       expect(identical(initialStats, reloadedStats), isTrue);
     });
   });
 }
 
-Future<void> _waitUntilLoaded(ProviderContainer container) async {
-  for (var i = 0; i < 50; i++) {
-    if (!container.read(libraryProvider).loading) return;
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+Future<void> _waitUntilLoaded(LibraryState Function() readState) async {
+  final timeoutAt = DateTime.now().add(const Duration(seconds: 3));
+  while (DateTime.now().isBefore(timeoutAt)) {
+    if (!readState().loading) return;
+    await Future<void>.delayed(const Duration(milliseconds: 20));
   }
-  fail('libraryProvider did not finish loading');
+  final state = readState();
+  fail(
+    'libraryProvider did not finish loading '
+    '(loading=${state.loading}, hasError=${state.hasError})',
+  );
 }
 
 class _MockRecordingRepository extends Mock implements RecordingRepository {}
