@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../data/app_database.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -84,7 +84,7 @@ class CompositionRepository {
                     }),
           );
         } catch (e, st) {
-          AppLogger.reportError(
+          ServiceErrorHandler.report(
             'CompositionRepository: migration failed',
             error: e,
             stackTrace: st,
@@ -98,7 +98,7 @@ class CompositionRepository {
           await AppDatabase.instance.replaceAllCompositions(compositionRows);
           await _prefs.setBool(_config.compositionsMigratedStorageKey, true);
         } catch (e, st) {
-          AppLogger.reportError(
+          ServiceErrorHandler.report(
             'CompositionRepository: migration DB write failed',
             error: e,
             stackTrace: st,
@@ -114,7 +114,7 @@ class CompositionRepository {
       }
       _migrationCompleter!.complete();
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'CompositionRepository: migration failed',
         error: e,
         stackTrace: st,
@@ -141,7 +141,7 @@ class CompositionRepository {
               ))
           .toList();
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'Failed to load compositions',
         error: e,
         stackTrace: st,

@@ -15,8 +15,13 @@ import '../services/ad_service.dart';
 import '../services/permission_service.dart';
 import '../services/review_service.dart';
 import '../services/service_error_handler.dart';
+<<<<<<< HEAD
+import '../utils/app_logger.dart';
+import '../widgets/banner_ad_widget.dart';
+=======
 import '../theme/dynamic_theme_mode.dart';
 import '../widgets/shared/banner_ad_widget.dart';
+>>>>>>> main
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
@@ -923,6 +928,31 @@ class _SettingsModalState extends State<_SettingsModal> {
     widget.onChanged(updated);
   }
 
+  Future<void> _showRecentLogs(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final recentLogs = AppLogger.recentBufferedLogs(limit: 50);
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.recentLogs),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: recentLogs.isEmpty
+              ? Text(l10n.noRecentLogs)
+              : SingleChildScrollView(
+                  child: SelectableText(recentLogs.join('\n\n')),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1122,6 +1152,15 @@ class _SettingsModalState extends State<_SettingsModal> {
             ),
             const SizedBox(height: 8),
             const Divider(height: 32),
+            Text(l10n.developerSettings, style: textTheme.titleSmall),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.bug_report_outlined),
+              title: Text(l10n.recentLogs),
+              onTap: () => _showRecentLogs(context),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 32),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.privacy_tip_outlined),
@@ -1137,7 +1176,6 @@ class _SettingsModalState extends State<_SettingsModal> {
                   }
                 }
               },
-            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_rate_outlined),

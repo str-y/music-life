@@ -75,5 +75,17 @@ void main() {
       expect(lines.length, 1);
       expect(content, contains('[INFO] hello'));
     });
+
+    test('recentBufferedLogs returns the latest entries first', () {
+      AppLogger.info('first');
+      AppLogger.info('second');
+      AppLogger.info('third');
+
+      final logs = AppLogger.recentBufferedLogs(limit: 2);
+
+      expect(logs.length, 2);
+      expect(logs[0], contains('[INFO] third'));
+      expect(logs[1], contains('[INFO] second'));
+    });
   });
 }

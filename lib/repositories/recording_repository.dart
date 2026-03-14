@@ -11,7 +11,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
 import '../config/app_config.dart';
 import '../data/app_database.dart';
-import '../utils/app_logger.dart';
+import '../services/service_error_handler.dart';
 
 // ---------------------------------------------------------------------------
 // Waveform binary encoding helpers
@@ -318,7 +318,7 @@ class RecordingRepository {
                     }),
           );
         } catch (e, st) {
-          AppLogger.reportError(
+          ServiceErrorHandler.report(
             'RecordingRepository: recording migration failed',
             error: e,
             stackTrace: st,
@@ -342,7 +342,7 @@ class RecordingRepository {
                     }),
           );
         } catch (e, st) {
-          AppLogger.reportError(
+          ServiceErrorHandler.report(
             'RecordingRepository: practice log migration failed',
             error: e,
             stackTrace: st,
@@ -410,7 +410,7 @@ class RecordingRepository {
 
           AppLogger.info('RecordingRepository: migration completed successfully.');
         } catch (e, st) {
-          AppLogger.reportError(
+          ServiceErrorHandler.report(
             'RecordingRepository: migration failed during $currentStage',
             error: e,
             stackTrace: st,
@@ -430,7 +430,7 @@ class RecordingRepository {
         _migrationCompleter = null;
       }
     } catch (e, st) {
-      AppLogger.reportError(
+      ServiceErrorHandler.report(
         'RecordingRepository: migration failed',
         error: e,
         stackTrace: st,

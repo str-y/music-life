@@ -19,6 +19,7 @@ const double _themeContrastLevel = 0.5;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const config = AppConfig();
+  AppLogger.minimumLevel = config.effectiveLogLevel;
   try {
     await MobileAds.instance.initialize();
     await JustAudioBackground.init(

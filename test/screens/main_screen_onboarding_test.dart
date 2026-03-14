@@ -6,6 +6,7 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/utils/app_logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
@@ -139,6 +140,28 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
+    });
+
+    testWidgets('settings exposes recent buffered logs', (tester) async {
+      addTearDown(AppLogger.clearBufferedLogs);
+      AppLogger.clearBufferedLogs();
+      AppLogger.info('Settings log entry');
+
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Developer Settings'), findsOneWidget);
+      expect(find.text('Recent logs'), findsOneWidget);
+
+      await tester.tap(find.text('Recent logs'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Settings log entry'), findsOneWidget);
     });
 
     testWidgets('dynamic theme controls persist mode and intensity',
