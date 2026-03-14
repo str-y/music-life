@@ -44,7 +44,8 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
   Future<void> installMetronomeSoundPack(String packId) async {
     final pack = findMetronomeSoundPackById(packId);
-    if (pack == null || (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
+    if (pack == null ||
+        (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
       return;
     }
     await update(
