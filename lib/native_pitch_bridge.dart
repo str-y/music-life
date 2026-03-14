@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -99,6 +100,14 @@ class PitchResult {
   final double frequency;
   final double centsOffset;
   final int midiNote;
+}
+
+class TunerAnalysisFrame {
+  const TunerAnalysisFrame({
+    required this.bins,
+  });
+
+  final List<double> bins;
 }
 
 // ── Error handling ────────────────────────────────────────────────────────────
@@ -277,6 +286,23 @@ class TransferableFloatFrame {
   const TransferableFloatFrame(this.data, this.sampleCount);
   final TransferableTypedData data;
   final int sampleCount;
+}
+
+class TransferableTunerAnalysisFrame {
+  const TransferableTunerAnalysisFrame(this.data, this.binCount);
+  final TransferableTypedData data;
+  final int binCount;
+
+  TunerAnalysisFrame materialize() {
+    final buffer = data.materialize();
+    final maxBins = buffer.lengthInBytes ~/ Float32List.bytesPerElement;
+    final boundedBinCount = math.min(binCount, maxBins);
+    final bins = buffer
+        .asFloat32List(0, boundedBinCount)
+        .map((value) => value.toDouble())
+        .toList(growable: false);
+    return TunerAnalysisFrame(bins: bins);
+  }
 }
 
 class IsolateShutdownHandle {
@@ -643,6 +669,16 @@ void _audioProcessingIsolate(IsolateSetup setup) {
   int maxFrameProcessingMicros = 0;
   int lastChunkSampleCount = 0;
   int bufferBacklogEvents = 0;
+  final analysisBufferCount = AppConstants.tunerSpectrumBinCount;
+  final spectrumBuffers = [
+    Float32List(analysisBufferCount),
+    Float32List(analysisBufferCount),
+  ];
+  final fftSize = _largestPowerOfTwo(setup.frameSize);
+  final fftReal = Float32List(fftSize);
+  final fftImag = Float32List(fftSize);
+  final fftWindow = _buildHannWindow(fftSize);
+  int nextSpectrumBufferIndex = 0;
   // Two queued frames allows for normal buffering while still flagging when
   // processing begins to fall behind real-time capture.
   const int bufferBacklogThresholdMultiplier = 2;
@@ -681,6 +717,24 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     try {
       setup.buffer.asTypedList(frame.length).setAll(0, frame);
       final result = process(setup.handle, setup.buffer, frame.length);
+      if (analysisBufferCount > 0 && fftSize > 0) {
+        final spectrumBuffer = spectrumBuffers[nextSpectrumBufferIndex];
+        _fillSpectrumBins(
+          source: frame,
+          target: spectrumBuffer,
+          real: fftReal,
+          imag: fftImag,
+          window: fftWindow,
+        );
+        nextSpectrumBufferIndex =
+            (nextSpectrumBufferIndex + 1) % spectrumBuffers.length;
+        setup.resultPort.send(
+          TransferableTunerAnalysisFrame(
+            TransferableTypedData.fromList([spectrumBuffer]),
+            spectrumBuffer.length,
+          ),
+        );
+      }
       stopwatch.stop();
       framesProcessed++;
       lastFrameProcessingMicros = stopwatch.elapsedMicroseconds;
@@ -779,6 +833,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     } else if (msg is Float32List) {
       if (msg.length > setup.frameSize) {
         setup.resultPort.send(IsolateManagerError(
+          code: 'invalid-frame',
           phase: 'validate-raw-frame',
           message: 'Raw frame length (${msg.length}) exceeds frameSize (${setup.frameSize}).',
           stack: StackTrace.current.toString(),
@@ -831,6 +886,11 @@ class NativePitchBridge implements Finalizable {
   final StreamController<PitchResult> _pitchController =
       StreamController<PitchResult>.broadcast();
   Stream<PitchResult> get pitchStream => _pitchController.stream;
+
+  final StreamController<TunerAnalysisFrame> _analysisController =
+      StreamController<TunerAnalysisFrame>.broadcast();
+  Stream<TunerAnalysisFrame> get tunerAnalysisStream =>
+      _analysisController.stream;
 
   NativeIsolateMetrics _latestIsolateMetrics = const NativeIsolateMetrics();
   final StreamController<NativeIsolateMetrics> _metricsController =
@@ -994,6 +1054,10 @@ class NativePitchBridge implements Finalizable {
       frameSize: _frameSize,
       entryPoint: _audioProcessingIsolate,
       onMessage: (msg) {
+        if (msg is TransferableTunerAnalysisFrame) {
+          _onTunerAnalysisFrame(msg.materialize());
+          return;
+        }
         final pitch = _tryDecodePitchResultPayload(msg);
         if (pitch != null) {
           _onPitchResult(pitch);
@@ -1053,6 +1117,11 @@ class NativePitchBridge implements Finalizable {
     ));
   }
 
+  void _onTunerAnalysisFrame(TunerAnalysisFrame analysisFrame) {
+    if (_analysisController.isClosed) return;
+    _analysisController.add(analysisFrame);
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;
@@ -1074,6 +1143,7 @@ class NativePitchBridge implements Finalizable {
     _isolateManager = null;
     _controller.close();
     _pitchController.close();
+    _analysisController.close();
     _metricsController.close();
     final isolate = shutdownHandle?.isolate;
     final exitPort = shutdownHandle?.exitPort;
@@ -1117,4 +1187,135 @@ class NativePitchBridge implements Finalizable {
 
 Duration _clampDurationToZero(int microseconds) {
   return Duration(microseconds: microseconds < 0 ? 0 : microseconds);
+}
+
+int _largestPowerOfTwo(int value) {
+  if (value < 2) return 0;
+  var result = 1;
+  while ((result << 1) <= value) {
+    result <<= 1;
+  }
+  return result;
+}
+
+Float32List _buildHannWindow(int size) {
+  if (size <= 0) return Float32List(0);
+  if (size == 1) return Float32List.fromList(const [1.0]);
+  final window = Float32List(size);
+  for (var i = 0; i < size; i++) {
+    window[i] = 0.5 * (1 - math.cos((2 * math.pi * i) / (size - 1)));
+  }
+  return window;
+}
+
+void _fillSpectrumBins({
+  required Float32List source,
+  required Float32List target,
+  required Float32List real,
+  required Float32List imag,
+  required Float32List window,
+}) {
+  if (target.isEmpty) return;
+  target.fillRange(0, target.length, 0);
+  if (real.isEmpty || imag.length != real.length || window.length != real.length) {
+    return;
+  }
+
+  final fftSize = real.length;
+  final copyLength = math.min(source.length, fftSize);
+  for (var i = 0; i < copyLength; i++) {
+    real[i] = source[i] * window[i];
+    imag[i] = 0;
+  }
+  for (var i = copyLength; i < fftSize; i++) {
+    real[i] = 0;
+    imag[i] = 0;
+  }
+
+  _fftInPlace(real, imag);
+
+  // The tuner visualiser emphasizes the low-frequency region where instrument
+  // fundamentals and the strongest early harmonics typically appear.
+  final usableFrequencies = math.max(1, fftSize ~/ 4);
+  final frequenciesPerBin = usableFrequencies / target.length;
+  var peak = 0.0;
+  for (var i = 0; i < target.length; i++) {
+    final start = math.min((i * frequenciesPerBin).floor(), usableFrequencies - 1);
+    final rawEnd = ((i + 1) * frequenciesPerBin).ceil();
+    // Tiny buckets can round down to the same index; keep at least one FFT bin
+    // in every visual bucket so the preview remains stable.
+    final end = rawEnd <= start
+        ? start + 1
+        : math.min(rawEnd, usableFrequencies);
+    var sum = 0.0;
+    for (var j = start; j < end; j++) {
+      final magnitude = math.sqrt(
+        (real[j] * real[j]) + (imag[j] * imag[j]),
+      );
+      sum += magnitude;
+    }
+    final average = sum / (end - start);
+    target[i] = average.toDouble();
+    if (average > peak) {
+      peak = average;
+    }
+  }
+
+  if (peak <= 0) {
+    return;
+  }
+  final safePeak = peak;
+  for (var i = 0; i < target.length; i++) {
+    target[i] = math.sqrt(target[i] / safePeak).clamp(0.0, 1.0).toDouble();
+  }
+}
+
+void _fftInPlace(Float32List real, Float32List imag) {
+  final n = real.length;
+  if (n <= 1) return;
+
+  var j = 0;
+  for (var i = 1; i < n; i++) {
+    var bit = n >> 1;
+    while ((j & bit) != 0) {
+      j ^= bit;
+      bit >>= 1;
+    }
+    j ^= bit;
+    if (i < j) {
+      final realValue = real[i];
+      real[i] = real[j];
+      real[j] = realValue;
+      final imagValue = imag[i];
+      imag[i] = imag[j];
+      imag[j] = imagValue;
+    }
+  }
+
+  for (var len = 2; len <= n; len <<= 1) {
+    final angle = -2 * math.pi / len;
+    final wLenCos = math.cos(angle);
+    final wLenSin = math.sin(angle);
+    for (var i = 0; i < n; i += len) {
+      var wReal = 1.0;
+      var wImag = 0.0;
+      for (var k = 0; k < len ~/ 2; k++) {
+        final evenIndex = i + k;
+        final oddIndex = evenIndex + (len ~/ 2);
+        final uReal = real[evenIndex];
+        final uImag = imag[evenIndex];
+        final vReal =
+            (real[oddIndex] * wReal) - (imag[oddIndex] * wImag);
+        final vImag =
+            (real[oddIndex] * wImag) + (imag[oddIndex] * wReal);
+        real[evenIndex] = (uReal + vReal).toDouble();
+        imag[evenIndex] = (uImag + vImag).toDouble();
+        real[oddIndex] = (uReal - vReal).toDouble();
+        imag[oddIndex] = (uImag - vImag).toDouble();
+        final nextWReal = (wReal * wLenCos) - (wImag * wLenSin);
+        wImag = (wReal * wLenSin) + (wImag * wLenCos);
+        wReal = nextWReal;
+      }
+    }
+  }
 }
