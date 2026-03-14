@@ -41,11 +41,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
         .toDouble();
     state = state.copyWith(
       dynamicThemeNote: pitch.noteName,
-<<<<<<< HEAD
-      dynamicThemeEnergy: energy.clamp(0.0, 1.0),
-=======
       dynamicThemeEnergy: energy,
->>>>>>> 0ffa5905d34823e9aba5bf8616138036c0c54fac
     );
   }
 
