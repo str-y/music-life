@@ -36,7 +36,8 @@ void main() {
   });
 
   group('LibraryNotifier monthly log stats', () {
-    test('aggregates practice days and total minutes by month', () async {
+    test('build resolves to AsyncData with aggregated monthly log stats',
+        () async {
       final mockRepo = _MockRecordingRepository();
       when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
       when(() => mockRepo.loadPracticeLogs()).thenAnswer(
@@ -52,15 +53,9 @@ void main() {
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
       );
       addTearDown(container.dispose);
-      var state = container.read(libraryProvider);
-      final subscription = container.listen<LibraryState>(
-        libraryProvider,
-        (_, next) => state = next,
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
+      expect(container.read(libraryProvider).isLoading, isTrue);
 
-      await _waitUntilLoaded(() => state);
+      final state = await container.read(libraryProvider.future);
       final feb = state.monthlyLogStats['2026-02'];
       final mar = state.monthlyLogStats['2026-03'];
 
@@ -70,6 +65,7 @@ void main() {
       expect(mar, isNotNull);
       expect(mar!.practiceDays, {2});
       expect(mar.totalMinutes, 15);
+      expect(container.read(libraryProvider).hasValue, isTrue);
     });
 
     test('reuses memoized monthly stats when log entries are unchanged',
@@ -87,37 +83,33 @@ void main() {
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
       );
       addTearDown(container.dispose);
-      var state = container.read(libraryProvider);
-      final subscription = container.listen<LibraryState>(
-        libraryProvider,
-        (_, next) => state = next,
-        fireImmediately: true,
-      );
-      addTearDown(subscription.close);
-
-      await _waitUntilLoaded(() => state);
+      final state = await container.read(libraryProvider.future);
       final initialStats = state.monthlyLogStats;
 
       await container.read(libraryProvider.notifier).reload();
-      await _waitUntilLoaded(() => state);
-      final reloadedStats = state.monthlyLogStats;
+      final reloadedStats =
+          container.read(libraryProvider).valueOrNull!.monthlyLogStats;
 
       expect(identical(initialStats, reloadedStats), isTrue);
     });
-  });
-}
 
-Future<void> _waitUntilLoaded(LibraryState Function() readState) async {
-  final timeoutAt = DateTime.now().add(const Duration(seconds: 3));
-  while (DateTime.now().isBefore(timeoutAt)) {
-    if (!readState().loading) return;
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-  }
-  final state = readState();
-  fail(
-    'libraryProvider did not finish loading '
-    '(loading=${state.loading}, hasError=${state.hasError})',
-  );
+    test('build exposes AsyncError when repository load fails', () async {
+      final mockRepo = _MockRecordingRepository();
+      when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
+      when(() => mockRepo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+
+      final container = ProviderContainer(
+        overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(libraryProvider.future),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(libraryProvider).hasError, isTrue);
+    });
+  });
 }
 
 class _MockRecordingRepository extends Mock implements RecordingRepository {}

@@ -7,14 +7,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
-import '../providers/dependency_providers.dart';
+import '../providers/practice_log_provider.dart';
 import '../repositories/recording_repository.dart';
 import 'ai_practice_insights_screen.dart';
 import '../utils/app_logger.dart';
 import '../utils/practice_log_export.dart';
 import '../utils/practice_log_utils.dart';
 import '../utils/share_card_image.dart';
-import '../widgets/shared/loading_state_widget.dart';
+import '../widgets/shared/async_value_state_view.dart';
 
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
@@ -31,8 +31,6 @@ class PracticeLogScreen extends ConsumerStatefulWidget {
 
 class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
-  List<PracticeLogEntry> _entries = [];
-  bool _loading = true;
   late DateTime _displayMonth;
   late final TabController _tabController;
 
@@ -42,10 +40,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     _tabController = TabController(length: 2, vsync: this);
     final now = DateTime.now();
     _displayMonth = DateTime(now.year, now.month);
-    _loadEntries();
   }
-
-  RecordingRepository get _repository => ref.read(recordingRepositoryProvider);
 
   @override
   void dispose() {
@@ -53,41 +48,12 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     super.dispose();
   }
 
-  // ── Persistence ───────────────────────────────────────────────────────────
-
-  Future<void> _loadEntries() async {
-    try {
-      final entries = await _repository.loadPracticeLogs();
-      if (!mounted) return;
-      setState(() {
-        _entries = entries..sort((a, b) => b.date.compareTo(a.date));
-        _loading = false;
-      });
-    } catch (e, stackTrace) {
-      AppLogger.reportError(
-        'Failed to load practice logs',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _saveEntries() async {
-    await _repository.savePracticeLogs(_entries);
-  }
-
   Future<void> _addEntry(PracticeLogEntry entry) async {
-    final previous = _entries;
-    setState(() {
-      _entries = [entry, ...previous]..sort((a, b) => b.date.compareTo(a.date));
-    });
     try {
-      await _saveEntries();
+      await ref.read(practiceLogProvider.notifier).addEntry(entry);
     } catch (e, st) {
       AppLogger.reportError('Failed to save practice log entry', error: e, stackTrace: st);
       if (!mounted) return;
-      setState(() => _entries = previous);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to save entry')),
       );
@@ -107,7 +73,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     }
   }
 
-  Future<void> _exportCsv() async {
+  Future<void> _exportCsv(List<PracticeLogEntry> entries) async {
     final now = DateTime.now();
     final location = await getSaveLocation(
       suggestedName:
@@ -123,7 +89,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     if (!mounted || location == null) return;
 
     try {
-      final csv = buildPracticeLogCsv(_entries);
+      final csv = buildPracticeLogCsv(entries);
       final file = XFile.fromData(
         Uint8List.fromList(utf8.encode(csv)),
         mimeType: 'text/csv',
@@ -147,7 +113,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     }
   }
 
-  Future<void> _exportPdf() async {
+  Future<void> _exportPdf(List<PracticeLogEntry> entries) async {
     final now = DateTime.now();
     final location = await getSaveLocation(
       suggestedName:
@@ -164,7 +130,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
 
     try {
       final file = XFile.fromData(
-        buildPracticeLogPdf(_entries),
+        buildPracticeLogPdf(entries),
         mimeType: 'application/pdf',
         name: 'practice-logs.pdf',
       );
@@ -188,12 +154,12 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
 
   // ── Calendar helpers ──────────────────────────────────────────────────────
 
-  Set<int> _practiceDaysInMonth(int year, int month) => _entries
+  Set<int> _practiceDaysInMonth(List<PracticeLogEntry> entries, int year, int month) => entries
       .where((e) => e.date.year == year && e.date.month == month)
       .map((e) => e.date.day)
       .toSet();
 
-  int _totalMinutesInMonth(int year, int month) => _entries
+  int _totalMinutesInMonth(List<PracticeLogEntry> entries, int year, int month) => entries
       .where((e) => e.date.year == year && e.date.month == month)
       .fold(0, (sum, e) => sum + e.durationMinutes);
 
@@ -202,15 +168,17 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
             DateTime(_displayMonth.year, _displayMonth.month + delta);
       });
 
-  Future<void> _shareMonthlySummaryCard() async {
-    if (_entries.isEmpty || !mounted) return;
+  Future<void> _shareMonthlySummaryCard(List<PracticeLogEntry> entries) async {
+    if (entries.isEmpty || !mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.maybeOf(context);
     final practiceDays = _practiceDaysInMonth(
+      entries,
       _displayMonth.year,
       _displayMonth.month,
     );
     final totalMinutes = _totalMinutesInMonth(
+      entries,
       _displayMonth.year,
       _displayMonth.month,
     );
@@ -245,6 +213,9 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
 
   @override
   Widget build(BuildContext context) {
+    final practiceLogState = ref.watch(practiceLogProvider);
+    final entries = practiceLogState.valueOrNull ?? const <PracticeLogEntry>[];
+    final isLoaded = practiceLogState.hasValue;
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.practiceLogTitle),
@@ -266,13 +237,13 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
             onSelected: (value) {
               switch (value) {
                 case 'csv':
-                  _exportCsv();
+                  _exportCsv(entries);
                   break;
                 case 'pdf':
-                  _exportPdf();
+                  _exportPdf(entries);
                   break;
                 case 'share':
-                  _shareMonthlySummaryCard();
+                  _shareMonthlySummaryCard(entries);
                   break;
               }
             },
@@ -281,6 +252,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
               return [
                 PopupMenuItem<String>(
                   value: 'csv',
+                  enabled: isLoaded,
                   child: Row(
                     children: [
                       const Icon(Icons.description_outlined),
@@ -291,6 +263,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
                 ),
                 PopupMenuItem<String>(
                   value: 'pdf',
+                  enabled: isLoaded,
                   child: Row(
                     children: [
                       const Icon(Icons.picture_as_pdf_outlined),
@@ -301,7 +274,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
                 ),
                 PopupMenuItem<String>(
                   value: 'share',
-                  enabled: _entries.isNotEmpty,
+                  enabled: isLoaded && entries.isNotEmpty,
                   child: Row(
                     children: [
                       const Icon(Icons.calendar_month_outlined),
@@ -322,29 +295,40 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
           ],
         ),
       ),
-      body: _loading
-          ? const LoadingStateWidget()
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                 _CalendarTab(
-                   displayMonth: _displayMonth,
-                   practiceDays: _practiceDaysInMonth(
-                       _displayMonth.year, _displayMonth.month),
-                   totalMinutes: _totalMinutesInMonth(
-                       _displayMonth.year, _displayMonth.month),
-                   entries: _entries,
-                   onPrev: () => _changeMonth(-1),
-                   onNext: () => _changeMonth(1),
-                 ),
-                _ListTab(entries: _entries),
-              ],
+      body: AsyncValueStateView<List<PracticeLogEntry>>(
+        value: practiceLogState,
+        errorMessage: AppLocalizations.of(context)!.loadDataError,
+        onRetry: () => ref.read(practiceLogProvider.notifier).reload(),
+        data: (entries) => TabBarView(
+          controller: _tabController,
+          children: [
+            _CalendarTab(
+              displayMonth: _displayMonth,
+              practiceDays: _practiceDaysInMonth(
+                entries,
+                _displayMonth.year,
+                _displayMonth.month,
+              ),
+              totalMinutes: _totalMinutesInMonth(
+                entries,
+                _displayMonth.year,
+                _displayMonth.month,
+              ),
+              entries: entries,
+              onPrev: () => _changeMonth(-1),
+              onNext: () => _changeMonth(1),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        tooltip: AppLocalizations.of(context)!.recordPractice,
-        child: const Icon(Icons.add),
+            _ListTab(entries: entries),
+          ],
+        ),
       ),
+      floatingActionButton: isLoaded
+          ? FloatingActionButton(
+              onPressed: _showAddDialog,
+              tooltip: AppLocalizations.of(context)!.recordPractice,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

@@ -168,6 +168,33 @@ void main() {
       );
     });
   });
+
+  group('PracticeLogScreen async states', () {
+    testWidgets('shows retry UI when practice logs fail to load', (tester) async {
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+      late String loadError;
+      late String retry;
+
+      await tester.pumpWidget(
+        _wrapScreen(
+          Builder(builder: (context) {
+            final l10n = AppLocalizations.of(context)!;
+            loadError = l10n.loadDataError;
+            retry = l10n.retry;
+            return const PracticeLogScreen();
+          }),
+          overrides: [
+            recordingRepositoryProvider.overrideWithValue(repo),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(loadError), findsOneWidget);
+      expect(find.text(retry), findsOneWidget);
+    });
+  });
 }
 
 class _MockRecordingRepository extends Mock implements RecordingRepository {}

@@ -1,0 +1,46 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../l10n/app_localizations.dart';
+import 'loading_state_widget.dart';
+import 'status_message_view.dart';
+
+class AsyncValueStateView<T> extends StatelessWidget {
+  const AsyncValueStateView({
+    super.key,
+    required this.value,
+    required this.data,
+    required this.errorMessage,
+    this.loadingSemanticsLabel,
+    this.onRetry,
+  });
+
+  final AsyncValue<T> value;
+  final Widget Function(T data) data;
+  final String errorMessage;
+  final String? loadingSemanticsLabel;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return value.when(
+      loading: () => LoadingStateWidget(semanticsLabel: loadingSemanticsLabel),
+      error: (_, __) => StatusMessageView(
+        icon: Icons.error_outline,
+        iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        message: errorMessage,
+        messageStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        action: onRetry == null
+            ? null
+            : ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: Text(AppLocalizations.of(context)!.retry),
+              ),
+      ),
+      data: data,
+    );
+  }
+}
