@@ -70,7 +70,7 @@ final aiPracticeInsightsServiceProvider =
 
 final premiumVideoExportServiceProvider =
     Provider<PremiumVideoExportService>((ref) {
-  return const PremiumVideoExportService();
+  return PremiumVideoExportService();
 });
 
 final chordHistoryRepositoryProvider = Provider<ChordHistoryRepository>((ref) {

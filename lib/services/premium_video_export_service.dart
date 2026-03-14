@@ -4,6 +4,9 @@ import 'package:path/path.dart' as p;
 
 import '../models/premium_video_export.dart';
 
+typedef PremiumVideoProcessRunner =
+    Future<ProcessResult> Function(String executable, List<String> arguments);
+
 class PremiumVideoExportPlan {
   const PremiumVideoExportPlan({
     required this.sourceVideoPath,
@@ -37,7 +40,11 @@ class PremiumVideoExportPlan {
 }
 
 class PremiumVideoExportService {
-  const PremiumVideoExportService();
+  PremiumVideoExportService({
+    PremiumVideoProcessRunner processRunner = _defaultProcessRunner,
+  }) : _processRunner = processRunner;
+
+  final PremiumVideoProcessRunner _processRunner;
 
   PremiumVideoExportPlan buildPlan({
     required String sourceVideoPath,
@@ -110,11 +117,19 @@ class PremiumVideoExportService {
   }
 
   Future<File> createShareReadyCopy(PremiumVideoExportPlan plan) async {
-    final sourceFile = File(plan.sourceVideoPath);
     final outputFile = File(plan.outputVideoPath);
     if (await outputFile.exists()) {
       await outputFile.delete();
     }
+    final ffmpegArguments = plan.ffmpegArguments.first == 'ffmpeg'
+        ? plan.ffmpegArguments.sublist(1)
+        : plan.ffmpegArguments;
+    final result = await _processRunner('ffmpeg', ffmpegArguments);
+    if (result.exitCode == 0 && await outputFile.exists()) {
+      return outputFile;
+    }
+
+    final sourceFile = File(plan.sourceVideoPath);
     return sourceFile.copy(plan.outputVideoPath);
   }
 
@@ -132,6 +147,13 @@ class PremiumVideoExportService {
   String _formatColor(int colorValue) {
     return '#${(colorValue & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
+}
+
+Future<ProcessResult> _defaultProcessRunner(
+  String executable,
+  List<String> arguments,
+) {
+  return Process.run(executable, arguments);
 }
 
 class _QualityPreset {

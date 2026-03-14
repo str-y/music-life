@@ -5,7 +5,7 @@ import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/services/premium_video_export_service.dart';
 
 void main() {
-  const service = PremiumVideoExportService();
+  final service = PremiumVideoExportService();
 
   test('buildPlan includes premium waveform composition and logo overlay', () {
     final plan = service.buildPlan(
@@ -48,22 +48,58 @@ void main() {
     expect(plan.ffmpegCommandLine, isNot(contains('drawtext=text=\'music-life\'')));
   });
 
-  test('createShareReadyCopy writes a shareable exported file', () async {
+  test('createShareReadyCopy runs ffmpeg and returns the processed file',
+      () async {
     final sourceDirectory = await Directory.systemTemp.createTemp(
       'music_life_video_export_test_',
     );
     addTearDown(() => sourceDirectory.delete(recursive: true));
     final sourceFile = File('${sourceDirectory.path}/take.mp4');
     await sourceFile.writeAsBytes(const <int>[1, 2, 3, 4, 5]);
+    final executedCommands = <String>[];
+    final exportService = PremiumVideoExportService(
+      processRunner: (executable, arguments) async {
+        executedCommands.add('$executable ${arguments.join(' ')}');
+        final outputFile = File(arguments.last);
+        await outputFile.writeAsBytes(const <int>[9, 8, 7, 6]);
+        return ProcessResult(0, 0, '', '');
+      },
+    );
 
-    final plan = service.buildPlan(
+    final plan = exportService.buildPlan(
       sourceVideoPath: sourceFile.path,
       settings: const PremiumVideoExportSettings(),
     );
-    final exported = await service.createShareReadyCopy(plan);
+    final exported = await exportService.createShareReadyCopy(plan);
 
     expect(await exported.exists(), isTrue);
     expect(exported.path, endsWith('_high_sns_export.mp4'));
+    expect(executedCommands, hasLength(1));
+    expect(executedCommands.single, contains('ffmpeg -y -i'));
+    expect(
+      await exported.readAsBytes(),
+      isNot(equals(await sourceFile.readAsBytes())),
+    );
+  });
+
+  test('createShareReadyCopy falls back to copying the source when ffmpeg fails',
+      () async {
+    final sourceDirectory = await Directory.systemTemp.createTemp(
+      'music_life_video_export_fallback_test_',
+    );
+    addTearDown(() => sourceDirectory.delete(recursive: true));
+    final sourceFile = File('${sourceDirectory.path}/take.mp4');
+    await sourceFile.writeAsBytes(const <int>[1, 2, 3, 4, 5]);
+    final exportService = PremiumVideoExportService(
+      processRunner: (_, __) async => ProcessResult(0, 1, '', 'ffmpeg missing'),
+    );
+
+    final plan = exportService.buildPlan(
+      sourceVideoPath: sourceFile.path,
+      settings: const PremiumVideoExportSettings(),
+    );
+    final exported = await exportService.createShareReadyCopy(plan);
+
     expect(await exported.readAsBytes(), await sourceFile.readAsBytes());
   });
 }
