@@ -125,11 +125,11 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
       );
     }
 
-    final visibleCount = _visibleCount.clamp(0, _sorted.length).toInt();
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: visibleCount,
+      semanticChildCount: _sorted.length,
+      itemCount: _visibleCount,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = _sorted[index];

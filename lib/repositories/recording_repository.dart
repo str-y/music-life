@@ -496,12 +496,14 @@ class RecordingRepository {
             ))
         .toList();
     stopwatch.stop();
+    final rssSuffix = kDebugMode
+        ? ', rss: ${_formatMemoryUsage(ProcessInfo.currentRss)}'
+        : '';
     AppLogger.debug(
       'RecordingRepository: loaded ${recordings.length} recordings in '
       '${stopwatch.elapsedMilliseconds}ms '
       '(waveform cache hits: $cacheHits, misses: $cacheMisses, '
-      'cache size: ${_waveformCache.length}, '
-      'rss: ${_formatMemoryUsage(ProcessInfo.currentRss)})',
+      'cache size: ${_waveformCache.length}$rssSuffix)',
     );
     return recordings;
   }

@@ -370,12 +370,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final initialListView = tester.widget<ListView>(find.byType(ListView));
-    expect(initialListView.semanticChildCount, 40);
+    // 40 visible recordings render as 40 tiles plus 39 separators.
+    expect(initialListView.childrenDelegate.estimatedChildCount, 79);
 
     await tester.drag(find.byType(ListView), const Offset(0, -5000));
     await tester.pumpAndSettle();
 
     final pagedListView = tester.widget<ListView>(find.byType(ListView));
-    expect(pagedListView.semanticChildCount, 45);
+    // After scrolling, all 45 recordings are visible with 44 separators.
+    expect(pagedListView.childrenDelegate.estimatedChildCount, 89);
   });
 }
