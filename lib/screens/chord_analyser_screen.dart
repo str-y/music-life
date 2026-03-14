@@ -299,9 +299,9 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     final colorScheme = Theme.of(context).colorScheme;
     final dynamicThemeEnergy = ref.watch(
       appSettingsProvider.select(
-        (settings) => ((settings.dynamicThemeEnergy *
-                    settings.dynamicThemeIntensity)
-                .clamp(0.0, 1.0) as num)
+        (settings) => (settings.dynamicThemeEnergy *
+                settings.dynamicThemeIntensity)
+            .clamp(0.0, 1.0)
             .toDouble(),
       ),
     );
@@ -329,71 +329,72 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                     Text(
-                       AppLocalizations.of(context)!.currentChord,
-                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                             color: colorScheme.onSurfaceVariant,
-                           ),
-                     ),
-                     const SizedBox(height: 12),
-                     AnimatedScale(
-                       duration: const Duration(milliseconds: 240),
-                       curve: Curves.easeOutCubic,
-                       scale:
-                           1.0 + ((_currentChord == '---' ? 0.0 : dynamicThemeEnergy) * 0.04),
-                       child: AnimatedSwitcher(
-                         duration: const Duration(milliseconds: 400),
-                         transitionBuilder: (child, animation) => ScaleTransition(
-                           scale: animation,
-                           child: FadeTransition(opacity: animation, child: child),
-                         ),
-                         child: Text(
-                           _currentChord,
-                           key: ValueKey(_currentChord),
-                           style:
-                               Theme.of(context).textTheme.displayLarge?.copyWith(
-                                     fontWeight: FontWeight.bold,
-                                     color: colorScheme.primary,
-                                     fontSize: 80,
-                                     shadows: _currentChord == '---'
-                                         ? null
-                                         : [
-                                             Shadow(
-                                               color: colorScheme.primary.withValues(
-                                                 alpha: 0.10 +
-                                                     (dynamicThemeEnergy * 0.22),
-                                               ),
-                                               blurRadius:
-                                                   10 + (dynamicThemeEnergy * 12),
-                                             ),
-                                           ],
-                                   ),
-                         ),
-                       ),
-                     ),
-                     const SizedBox(height: 12),
-                     AnimatedContainer(
-                       duration: const Duration(milliseconds: 220),
-                       curve: Curves.easeOutCubic,
-                       padding: EdgeInsets.symmetric(
-                         horizontal: 10 + (dynamicThemeEnergy * 10),
-                         vertical: 6,
-                       ),
-                       decoration: BoxDecoration(
-                         color: colorScheme.secondaryContainer.withValues(
-                           alpha: 0.03 + (dynamicThemeEnergy * 0.08),
-                         ),
-                         borderRadius: BorderRadius.circular(18),
-                       ),
-                       child: ListeningIndicator(
-                         controller: _listeningCtrl,
-                         color: Color.lerp(
-                           colorScheme.primary,
-                           colorScheme.tertiary,
-                           dynamicThemeEnergy,
-                         ),
-                       ),
-                     ),
+                    Text(
+                      AppLocalizations.of(context)!.currentChord,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      scale: 1.0 +
+                          ((_currentChord == '---' ? 0.0 : dynamicThemeEnergy) *
+                              0.04),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        transitionBuilder: (child, animation) => ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(opacity: animation, child: child),
+                        ),
+                        child: Text(
+                          _currentChord,
+                          key: ValueKey(_currentChord),
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                                fontSize: 80,
+                                shadows: _currentChord == '---'
+                                    ? null
+                                    : [
+                                        Shadow(
+                                          color: colorScheme.primary.withValues(
+                                            alpha:
+                                                0.10 + (dynamicThemeEnergy * 0.22),
+                                          ),
+                                          blurRadius:
+                                              10 + (dynamicThemeEnergy * 12),
+                                        ),
+                                      ],
+                              ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10 + (dynamicThemeEnergy * 10),
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondaryContainer.withValues(
+                          alpha: 0.03 + (dynamicThemeEnergy * 0.08),
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: ListeningIndicator(
+                        controller: _listeningCtrl,
+                        color: Color.lerp(
+                          colorScheme.primary,
+                          colorScheme.tertiary,
+                          dynamicThemeEnergy,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

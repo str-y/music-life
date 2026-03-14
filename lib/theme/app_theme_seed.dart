@@ -39,8 +39,8 @@ Color themeSeedColor(
   final base = _baseThemeColor(key, mode);
   final octave = _parseOctave(noteName);
   final octaveTuned = _applyOctaveRange(base, octave);
-  final clampedEnergy = (energy.clamp(0.0, 1.0) as num).toDouble();
-  final clampedIntensity = (intensity.clamp(0.0, 1.0) as num).toDouble();
+  final clampedEnergy = energy.clamp(0.0, 1.0).toDouble();
+  final clampedIntensity = intensity.clamp(0.0, 1.0).toDouble();
   return Color.lerp(
         Colors.blueGrey,
         octaveTuned,

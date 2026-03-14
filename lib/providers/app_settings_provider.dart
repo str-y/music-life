@@ -33,15 +33,12 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 
   void updateDynamicThemeFromPitch(PitchResult pitch) {
-    final centsEnergy =
-        (pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy).clamp(
-      0.0,
-      1.0,
-    );
-    final energy = (centsEnergy * _frequencyRangeWeight(pitch.frequency)).clamp(
-      0.0,
-      1.0,
-    );
+    final centsEnergy = (pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    final energy = (centsEnergy * _frequencyRangeWeight(pitch.frequency))
+        .clamp(0.0, 1.0)
+        .toDouble();
     state = state.copyWith(
       dynamicThemeNote: pitch.noteName,
       dynamicThemeEnergy: energy,

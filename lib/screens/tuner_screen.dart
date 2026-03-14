@@ -107,9 +107,9 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     );
     final dynamicThemeEnergy = ref.watch(
       appSettingsProvider.select(
-        (settings) => ((settings.dynamicThemeEnergy *
-                    settings.dynamicThemeIntensity)
-                .clamp(0.0, 1.0) as num)
+        (settings) => (settings.dynamicThemeEnergy *
+                settings.dynamicThemeIntensity)
+            .clamp(0.0, 1.0)
             .toDouble(),
       ),
     );
