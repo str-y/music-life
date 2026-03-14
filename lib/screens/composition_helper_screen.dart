@@ -9,6 +9,7 @@ import '../providers/composition_provider.dart';
 import '../repositories/composition_repository.dart';
 import '../services/service_error_handler.dart';
 import '../utils/share_card_image.dart';
+import '../widgets/shared/chord_card.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ class _CompositionHelperScreenState
         text: sequenceText,
       );
     } catch (e, stackTrace) {
+      if (!mounted) return;
       ServiceErrorHandler.reportAndNotify(
         context: context,
         message: 'CompositionHelperScreen: failed to share composition card',
@@ -441,7 +443,8 @@ class _ChordPalette extends StatelessWidget {
                 context: context,
                 builder: (_) => const _ChordBuilderDialog(),
               );
-              if (chord != null) onChordTap(chord);
+              if (!context.mounted || chord == null) return;
+              onChordTap(chord);
             },
           ),
         ),
@@ -592,18 +595,11 @@ class _SequenceChordTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
+    return ChordCard(
+      highlighted: isActive,
+      padding: EdgeInsets.zero,
       margin: const EdgeInsets.symmetric(vertical: 3),
-      decoration: BoxDecoration(
-        color: isActive
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: isActive
-            ? Border.all(color: colorScheme.primary, width: 2)
-            : null,
-      ),
+      borderWidth: 2,
       child: ListTile(
         dense: true,
         leading: Text(
@@ -793,7 +789,11 @@ class _LoadCompositionSheetState extends State<_LoadCompositionSheet> {
                             icon: const Icon(Icons.delete_outline),
                             tooltip: l10n.compositionDeleteProject,
                             onPressed: () async {
-                              await widget.onDelete(comp);
+                              try {
+                                await widget.onDelete(comp);
+                              } catch (_) {
+                                return; // error already shown by onDelete
+                              }
                               if (!mounted) return;
                               setState(() => _items
                                   .removeWhere((c) => c.id == comp.id));

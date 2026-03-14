@@ -6,6 +6,7 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library_screen.dart';
+import 'package:music_life/widgets/shared/waveform_view.dart';
 import 'golden_test_utils.dart';
 
 void main() {

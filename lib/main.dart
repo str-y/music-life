@@ -97,6 +97,10 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
     final seedColor = themeSeedColor(
       selectedThemeNote,
       settings.themeColorNote == null ? settings.dynamicThemeEnergy : 1.0,
+      mode: settings.dynamicThemeMode,
+      intensity: settings.themeColorNote == null
+          ? settings.dynamicThemeIntensity
+          : 1.0,
     );
     final locale = settings.localeCode == null
         ? null

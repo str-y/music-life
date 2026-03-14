@@ -6,14 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
+import '../providers/app_settings_provider.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
+import '../widgets/shared/chord_card.dart';
+import '../widgets/shared/loading_state_widget.dart';
+import '../widgets/shared/status_message_view.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
-
 
 class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key, this.useMicPermissionGate = true});
@@ -100,6 +103,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _bridge = bridge;
     _subscription = bridge.chordStream.listen((chord) {
       if (!mounted) return;
+      ref.read(appSettingsProvider.notifier).updateDynamicThemeFromChord(chord);
       if (!_listeningCtrl.isAnimating) {
         _listeningCtrl.repeat(reverse: true);
       }
@@ -111,6 +115,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         ),
       );
     });
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
@@ -120,6 +125,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       await repository.addEntry(
         ChordHistoryEntry(chord: entry.chord, time: entry.time),
       );
+      if (!mounted) return;
       await _loadHistory();
     } catch (error, stackTrace) {
       AppLogger.reportError(
@@ -295,8 +301,16 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final dynamicThemeEnergy = ref.watch(
+      appSettingsProvider.select(
+        (settings) => (settings.dynamicThemeEnergy *
+                settings.dynamicThemeIntensity)
+            .clamp(0.0, 1.0)
+            .toDouble(),
+      ),
+    );
 
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const LoadingStateWidget();
 
     // Bridge failed to start (e.g. permission revoked after the gate check).
     if (_bridge == null) {
@@ -326,24 +340,65 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                           ),
                     ),
                     const SizedBox(height: 12),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation,
-                        child: FadeTransition(opacity: animation, child: child),
-                      ),
-                      child: Text(
-                        _currentChord,
-                        key: ValueKey(_currentChord),
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                              fontSize: 80,
-                            ),
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      scale: 1.0 +
+                          ((_currentChord == '---' ? 0.0 : dynamicThemeEnergy) *
+                              0.04),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        transitionBuilder: (child, animation) => ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(opacity: animation, child: child),
+                        ),
+                        child: Text(
+                          _currentChord,
+                          key: ValueKey(_currentChord),
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                                fontSize: 80,
+                                shadows: _currentChord == '---'
+                                    ? null
+                                    : [
+                                        Shadow(
+                                          color: colorScheme.primary.withValues(
+                                            alpha:
+                                                0.10 + (dynamicThemeEnergy * 0.22),
+                                          ),
+                                          blurRadius:
+                                              10 + (dynamicThemeEnergy * 12),
+                                        ),
+                                      ],
+                              ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ListeningIndicator(controller: _listeningCtrl),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10 + (dynamicThemeEnergy * 10),
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondaryContainer.withValues(
+                          alpha: 0.03 + (dynamicThemeEnergy * 0.08),
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: ListeningIndicator(
+                        controller: _listeningCtrl,
+                        color: Color.lerp(
+                          colorScheme.primary,
+                          colorScheme.tertiary,
+                          dynamicThemeEnergy,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -386,13 +441,13 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
             label: AppLocalizations.of(context)!.chordHistory,
             child: RepaintBoundary(
               child: _history.isEmpty
-                  ? Center(
-                      child: Text(
-                        AppLocalizations.of(context)!.noChordHistory,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                      ),
+                  ? StatusMessageView(
+                      message: AppLocalizations.of(context)!.noChordHistory,
+                      padding: EdgeInsets.zero,
+                      messageStyle:
+                          Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                     )
                   : ListView.builder(
                       padding:
@@ -461,20 +516,10 @@ class _ChordHistoryTile extends StatelessWidget {
         child: Semantics(
           label: '${entry.chord}, $timeLabel',
           excludeSemantics: true,
-          child: AnimatedOpacity(
+          child: ChordCard(
+            highlighted: isLatest,
             opacity: isLatest ? 1.0 : 0.65,
             duration: const Duration(milliseconds: 300),
-            child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isLatest
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-              border: isLatest
-                  ? Border.all(color: colorScheme.primary, width: 1.5)
-                  : null,
-            ),
             child: Row(
               children: [
                 Expanded(
@@ -502,7 +547,6 @@ class _ChordHistoryTile extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 }

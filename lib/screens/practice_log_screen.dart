@@ -13,6 +13,7 @@ import '../utils/app_logger.dart';
 import '../utils/practice_log_export.dart';
 import '../utils/practice_log_utils.dart';
 import '../utils/share_card_image.dart';
+import '../widgets/shared/loading_state_widget.dart';
 
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
@@ -76,11 +77,20 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   }
 
   Future<void> _addEntry(PracticeLogEntry entry) async {
+    final previous = _entries;
     setState(() {
-      _entries = [entry, ..._entries]
-        ..sort((a, b) => b.date.compareTo(a.date));
+      _entries = [entry, ...previous]..sort((a, b) => b.date.compareTo(a.date));
     });
-    await _saveEntries();
+    try {
+      await _saveEntries();
+    } catch (e, st) {
+      AppLogger.reportError('Failed to save practice log entry', error: e, stackTrace: st);
+      if (!mounted) return;
+      setState(() => _entries = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save entry')),
+      );
+    }
   }
 
   // ── Add-entry dialog ──────────────────────────────────────────────────────
@@ -301,7 +311,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingStateWidget()
           : TabBarView(
               controller: _tabController,
               children: [
