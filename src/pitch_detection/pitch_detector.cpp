@@ -79,17 +79,30 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
         std::fill(ring_buffer_.begin(), ring_buffer_.end(), 0.0f);
         write_pos_     = 0;
         samples_ready_ = 0;
+        samples_since_last_process_ = 0;
         last_result_   = {};
     }
 
-    // Feed incoming samples into the ring buffer
-    for (int i = 0; i < num_samples; ++i) {
-        ring_buffer_[write_pos_] = samples[i];
-        write_pos_ = (write_pos_ + 1) % (frame_size_ * 2);
-        if (samples_ready_ < frame_size_) {
-            ++samples_ready_;
+    const int ring_size = frame_size_ * 2;
+    const bool was_warm = samples_ready_ == frame_size_;
+
+    // Feed incoming samples into the ring buffer in contiguous chunks to avoid
+    // a modulo operation for every sample in the audio callback.
+    int input_offset = 0;
+    int remaining = num_samples;
+    while (remaining > 0) {
+        const int chunk = std::min(remaining, ring_size - write_pos_);
+        std::memcpy(ring_buffer_.data() + write_pos_,
+                    samples + input_offset,
+                    static_cast<size_t>(chunk) * sizeof(float));
+        write_pos_ += chunk;
+        if (write_pos_ == ring_size) {
+            write_pos_ = 0;
         }
+        input_offset += chunk;
+        remaining -= chunk;
     }
+    samples_ready_ = std::min(frame_size_, samples_ready_ + num_samples);
     samples_since_last_process_ += num_samples;
 
     // Not enough samples yet
@@ -98,14 +111,15 @@ PitchDetector::Result PitchDetector::process(const float* samples, int num_sampl
     }
 
     // Hop hasn't elapsed (50% overlap): only run YIN every frame_size/2 new samples
-    if (samples_since_last_process_ < frame_size_ / 2) {
+    const int hop_size = frame_size_ / 2;
+    if (samples_since_last_process_ < hop_size) {
         return last_result_;
     }
-    samples_since_last_process_ = 0;
+    samples_since_last_process_ = was_warm ? (samples_since_last_process_ - hop_size) : 0;
 
     // Assemble a contiguous frame from the ring buffer
-    int start = (write_pos_ - frame_size_ + frame_size_ * 2) % (frame_size_ * 2);
-    const int first_chunk = std::min(frame_size_, frame_size_ * 2 - start);
+    int start = (write_pos_ - frame_size_ + ring_size) % ring_size;
+    const int first_chunk = std::min(frame_size_, ring_size - start);
     std::memcpy(frame_buffer_.data(), ring_buffer_.data() + start, first_chunk * sizeof(float));
     if (first_chunk < frame_size_) {
         std::memcpy(frame_buffer_.data() + first_chunk,
