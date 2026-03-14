@@ -104,6 +104,47 @@ void main() {
       expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
     });
 
+    testWidgets('dynamic theme controls persist mode and intensity',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('settings-dynamic-theme-mode-selector')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('settings-dynamic-theme-intensity-slider')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Chill'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intense').last);
+      await tester.pumpAndSettle();
+
+      await tester.drag(
+        find.byKey(const ValueKey('settings-dynamic-theme-intensity-slider')),
+        const Offset(400, 0),
+      );
+      await tester.pumpAndSettle();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString(AppConfig.defaultDynamicThemeModeStorageKey),
+        'intense',
+      );
+      expect(
+        prefs.getDouble(AppConfig.defaultDynamicThemeIntensityStorageKey),
+        greaterThan(0.7),
+      );
+    });
+
     testWidgets('matches main screen golden baseline', (tester) async {
       await _pumpApp(
         tester,

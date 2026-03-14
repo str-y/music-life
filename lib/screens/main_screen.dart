@@ -12,6 +12,7 @@ import '../router/routes.dart';
 import '../services/ad_service.dart';
 import '../services/review_service.dart';
 import '../services/service_error_handler.dart';
+import '../theme/dynamic_theme_mode.dart';
 import '../widgets/banner_ad_widget.dart';
 
 const String _privacyPolicyUrl =
@@ -33,6 +34,17 @@ const List<String> _themeColorNoteOptions = <String>[
   'A#',
   'B',
 ];
+
+String _dynamicThemeModeLabel(
+  AppLocalizations l10n,
+  DynamicThemeMode mode,
+) {
+  return switch (mode) {
+    DynamicThemeMode.chill => l10n.dynamicThemeModeChill,
+    DynamicThemeMode.intense => l10n.dynamicThemeModeIntense,
+    DynamicThemeMode.classical => l10n.dynamicThemeModeClassical,
+  };
+}
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -599,175 +611,219 @@ class _SettingsModalState extends State<_SettingsModal> {
         right: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text(l10n.settingsTitle, style: textTheme.titleLarge),
-          const SizedBox(height: 24),
-          Text(l10n.languageSection, style: textTheme.titleSmall),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            key: const ValueKey('settings-language-selector'),
-            value: _local.localeCode ?? '',
-            decoration: InputDecoration(
-              labelText: l10n.languageLabel,
-            ),
-            items: <DropdownMenuItem<String>>[
-              DropdownMenuItem<String>(
-                value: '',
-                child: Text(l10n.systemDefaultLanguage),
-              ),
-              ..._supportedLanguageCodes.map(
-                (languageCode) => DropdownMenuItem<String>(
-                  value: languageCode,
-                  child: Text(
-                    switch (languageCode) {
-                      'ja' => l10n.languageJapanese,
-                      _ => l10n.languageEnglish,
-                    },
-                  ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ],
-            onChanged: (value) => _emit(
-              value == null || value.isEmpty
-                  ? _local.copyWith(clearLocaleCode: true)
-                  : _local.copyWith(localeCode: value),
             ),
-          ),
-          const Divider(height: 32),
-          Text(l10n.themeSection, style: textTheme.titleSmall),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.followSystemTheme),
-            value: _local.useSystemTheme,
-            onChanged: (v) => _emit(_local.copyWith(useSystemTheme: v)),
-          ),
-          if (!_local.useSystemTheme)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(l10n.darkMode),
-              value: _local.darkMode,
-              onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
-            ),
-          if (widget.isRewardedPremiumUnlocked)
+            Text(l10n.settingsTitle, style: textTheme.titleLarge),
+            const SizedBox(height: 24),
+            Text(l10n.languageSection, style: textTheme.titleSmall),
+            const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _local.themeColorNote ?? '',
+              key: const ValueKey('settings-language-selector'),
+              value: _local.localeCode ?? '',
               decoration: InputDecoration(
-                labelText: l10n.themeColorLabel,
+                labelText: l10n.languageLabel,
               ),
               items: <DropdownMenuItem<String>>[
                 DropdownMenuItem<String>(
                   value: '',
-                  child: Text(l10n.themeColorAuto),
+                  child: Text(l10n.systemDefaultLanguage),
                 ),
-                ..._themeColorNoteOptions.map(
-                  (note) => DropdownMenuItem<String>(
-                    value: note,
-                    child: Text(note),
+                ..._supportedLanguageCodes.map(
+                  (languageCode) => DropdownMenuItem<String>(
+                    value: languageCode,
+                    child: Text(
+                      switch (languageCode) {
+                        'ja' => l10n.languageJapanese,
+                        _ => l10n.languageEnglish,
+                      },
+                    ),
                   ),
                 ),
               ],
               onChanged: (value) => _emit(
                 value == null || value.isEmpty
-                    ? _local.copyWith(clearThemeColorNote: true)
-                    : _local.copyWith(themeColorNote: value),
+                    ? _local.copyWith(clearLocaleCode: true)
+                    : _local.copyWith(localeCode: value),
               ),
-            )
-          else ...[
-            Text(
-              l10n.premiumCustomizationTitle,
-              style: textTheme.titleSmall,
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.premiumCustomizationDescription(
-                _rewardedPremiumDuration.inHours,
+            const Divider(height: 32),
+            Text(l10n.themeSection, style: textTheme.titleSmall),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.followSystemTheme),
+              value: _local.useSystemTheme,
+              onChanged: (v) => _emit(_local.copyWith(useSystemTheme: v)),
+            ),
+            if (!_local.useSystemTheme)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.darkMode),
+                value: _local.darkMode,
+                onChanged: (v) => _emit(_local.copyWith(darkMode: v)),
               ),
-              style: textTheme.bodyMedium,
+            DropdownButtonFormField<DynamicThemeMode>(
+              key: const ValueKey('settings-dynamic-theme-mode-selector'),
+              value: _local.dynamicThemeMode,
+              decoration: InputDecoration(
+                labelText: l10n.dynamicThemeModeLabel,
+              ),
+              items: DynamicThemeMode.values
+                  .map(
+                    (mode) => DropdownMenuItem<DynamicThemeMode>(
+                      value: mode,
+                      child: Text(_dynamicThemeModeLabel(l10n, mode)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  _emit(_local.copyWith(dynamicThemeMode: value));
+                }
+              },
             ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: widget.onUnlockPremiumWithRewardedAd,
-              icon: const Icon(Icons.ondemand_video),
-              label: Text(l10n.watchAdAndUnlock),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(l10n.dynamicThemeIntensityLabel),
+                const SizedBox(width: 8),
+                Text(
+                  '${(_local.dynamicThemeIntensity * 100).round()}%',
+                  style:
+                      textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
-          ],
-          const Divider(height: 32),
-          Text(l10n.calibration, style: textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(l10n.referencePitchLabel),
-              const SizedBox(width: 8),
+            Slider(
+              key: const ValueKey('settings-dynamic-theme-intensity-slider'),
+              min: 0,
+              max: 1,
+              divisions: 10,
+              label: '${(_local.dynamicThemeIntensity * 100).round()}%',
+              value: _local.dynamicThemeIntensity,
+              onChanged: (v) => _emit(_local.copyWith(dynamicThemeIntensity: v)),
+            ),
+            const SizedBox(height: 4),
+            if (widget.isRewardedPremiumUnlocked)
+              DropdownButtonFormField<String>(
+                value: _local.themeColorNote ?? '',
+                decoration: InputDecoration(
+                  labelText: l10n.themeColorLabel,
+                ),
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: '',
+                    child: Text(l10n.themeColorAuto),
+                  ),
+                  ..._themeColorNoteOptions.map(
+                    (note) => DropdownMenuItem<String>(
+                      value: note,
+                      child: Text(note),
+                    ),
+                  ),
+                ],
+                onChanged: (value) => _emit(
+                  value == null || value.isEmpty
+                      ? _local.copyWith(clearThemeColorNote: true)
+                      : _local.copyWith(themeColorNote: value),
+                ),
+              )
+            else ...[
               Text(
-                '${_local.referencePitch.round()} Hz',
-                style: textTheme.bodyLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                l10n.premiumCustomizationTitle,
+                style: textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.premiumCustomizationDescription(
+                  _rewardedPremiumDuration.inHours,
+                ),
+                style: textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                onPressed: widget.onUnlockPremiumWithRewardedAd,
+                icon: const Icon(Icons.ondemand_video),
+                label: Text(l10n.watchAdAndUnlock),
               ),
             ],
-          ),
-          Slider(
-            min: 430,
-            max: 450,
-            divisions: 20,
-            label: '${_local.referencePitch.round()} Hz',
-            value: _local.referencePitch,
-            onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
-          ),
-          const SizedBox(height: 8),
-          const Divider(height: 32),
-          Text(l10n.backupAndRestore, style: textTheme.titleSmall),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.download_outlined),
-            title: Text(l10n.exportBackup),
-            onTap: widget.onExportBackup,
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.upload_file_outlined),
-            title: Text(l10n.importBackup),
-            onTap: widget.onImportBackup,
-          ),
-          const SizedBox(height: 8),
-          const Divider(height: 32),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.privacy_tip_outlined),
-            title: Text(l10n.privacyPolicy),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: () async {
-              final uri = Uri.parse(_privacyPolicyUrl);
-              if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.privacyPolicyOpenError)),
-                  );
+            const Divider(height: 32),
+            Text(l10n.calibration, style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(l10n.referencePitchLabel),
+                const SizedBox(width: 8),
+                Text(
+                  '${_local.referencePitch.round()} Hz',
+                  style: textTheme.bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            Slider(
+              min: 430,
+              max: 450,
+              divisions: 20,
+              label: '${_local.referencePitch.round()} Hz',
+              value: _local.referencePitch,
+              onChanged: (v) => _emit(_local.copyWith(referencePitch: v)),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 32),
+            Text(l10n.backupAndRestore, style: textTheme.titleSmall),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.download_outlined),
+              title: Text(l10n.exportBackup),
+              onTap: widget.onExportBackup,
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.upload_file_outlined),
+              title: Text(l10n.importBackup),
+              onTap: widget.onImportBackup,
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 32),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: Text(l10n.privacyPolicy),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () async {
+                final uri = Uri.parse(_privacyPolicyUrl);
+                if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.privacyPolicyOpenError)),
+                    );
+                  }
                 }
-              }
-            },
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.star_rate_outlined),
-            title: Text(l10n.rateThisApp),
-            onTap: widget.onRequestReview,
-          ),
-          const SizedBox(height: 8),
-        ],
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.star_rate_outlined),
+              title: Text(l10n.rateThisApp),
+              onTap: widget.onRequestReview,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

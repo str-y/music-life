@@ -5,6 +5,7 @@ import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/settings_repository.dart';
+import 'package:music_life/theme/dynamic_theme_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -33,6 +34,8 @@ void main() {
         useSystemTheme: false,
         localeCode: 'ja',
         themeColorNote: 'G',
+        dynamicThemeMode: DynamicThemeMode.chill,
+        dynamicThemeIntensity: 0.7,
         referencePitch: 442.0,
       ),
     );
@@ -53,6 +56,8 @@ void main() {
       useSystemTheme: false,
       localeCode: 'ja',
       themeColorNote: 'A#',
+      dynamicThemeMode: DynamicThemeMode.intense,
+      dynamicThemeIntensity: 0.25,
       referencePitch: 444.0,
     );
     await container.read(appSettingsProvider.notifier).update(updated);
@@ -62,6 +67,14 @@ void main() {
     expect(prefs.getBool(AppConfig.defaultUseSystemThemeStorageKey), isFalse);
     expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
     expect(prefs.getString(AppConfig.defaultThemeColorNoteStorageKey), 'A#');
+    expect(
+      prefs.getString(AppConfig.defaultDynamicThemeModeStorageKey),
+      'intense',
+    );
+    expect(
+      prefs.getDouble(AppConfig.defaultDynamicThemeIntensityStorageKey),
+      0.25,
+    );
     expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
   });
 
@@ -110,6 +123,26 @@ void main() {
     expect(container.read(appSettingsProvider).dynamicThemeEnergy, 1.0);
     expect(prefs.getString('dynamicThemeNote'), isNull);
     expect(prefs.getDouble('dynamicThemeEnergy'), isNull);
+  });
+
+  test('updateDynamicThemeFromChord maps root note and chord complexity', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(appSettingsProvider.notifier).updateDynamicThemeFromChord('Gmaj7');
+
+    final settings = container.read(appSettingsProvider);
+    expect(settings.dynamicThemeNote, 'G');
+    expect(settings.dynamicThemeEnergy, 0.64);
+
+    container.read(appSettingsProvider.notifier).updateDynamicThemeFromChord('C');
+    expect(container.read(appSettingsProvider).dynamicThemeEnergy, 0.28);
   });
 
   test('unlockRewardedPremiumFor sets and persists expiration', () async {
