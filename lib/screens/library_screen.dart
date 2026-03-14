@@ -15,8 +15,7 @@ import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../services/permission_service.dart';
 import '../utils/app_logger.dart';
-import '../widgets/shared/loading_state_widget.dart';
-import '../widgets/shared/status_message_view.dart';
+import '../widgets/shared/async_value_state_view.dart';
 import '../widgets/shared/waveform_view.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
@@ -121,7 +120,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(libraryProvider);
+    final libraryState = ref.watch(libraryProvider);
+    final data = libraryState.valueOrNull;
     final isWideLayout = MediaQuery.of(context).size.width >= 900;
     return Scaffold(
       appBar: AppBar(
@@ -136,60 +136,48 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 ],
               ),
       ),
-      body: state.loading
-          ? LoadingStateWidget(
-              semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
-            )
-          : state.hasError
-              ? StatusMessageView(
-                  icon: Icons.error_outline,
-                  iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                  message: AppLocalizations.of(context)!.loadDataError,
-                  messageStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  action: ElevatedButton.icon(
-                    onPressed: () => ref.read(libraryProvider.notifier).reload(),
-                    icon: const Icon(Icons.refresh),
-                    label: Text(AppLocalizations.of(context)!.retry),
-                  ),
-                )
-              : isWideLayout
-                  ? Row(
-                      key: const ValueKey('library-wide-layout'),
-                      children: [
-                        Expanded(
-                          child: RecordingsTab(
-                            recordings: state.recordings,
-                            onCreateRecording: _showAddDialog,
-                          ),
-                        ),
-                        const VerticalDivider(width: 1),
-                        Expanded(
-                          child: LogTab(
-                            monthlyLogStatsByMonth: state.monthlyLogStats,
-                            onRecordPractice: () => context.push('/practice-log'),
-                          ),
-                        ),
-                      ],
-                    )
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        RecordingsTab(
-                          recordings: state.recordings,
-                          onCreateRecording: _showAddDialog,
-                        ),
-                        LogTab(
-                          monthlyLogStatsByMonth: state.monthlyLogStats,
-                          onRecordPractice: () => context.push('/practice-log'),
-                        ),
-                      ],
+      body: AsyncValueStateView<LibraryState>(
+        value: libraryState,
+        loadingSemanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
+        errorMessage: AppLocalizations.of(context)!.loadDataError,
+        onRetry: () => ref.read(libraryProvider.notifier).reload(),
+        data: (state) => isWideLayout
+            ? Row(
+                key: const ValueKey('library-wide-layout'),
+                children: [
+                  Expanded(
+                    child: RecordingsTab(
+                      recordings: state.recordings,
+                      onCreateRecording: _showAddDialog,
                     ),
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(
+                    child: LogTab(
+                      monthlyLogStatsByMonth: state.monthlyLogStats,
+                      onRecordPractice: () => context.push('/practice-log'),
+                    ),
+                  ),
+                ],
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  RecordingsTab(
+                    recordings: state.recordings,
+                    onCreateRecording: _showAddDialog,
+                  ),
+                  LogTab(
+                    monthlyLogStatsByMonth: state.monthlyLogStats,
+                    onRecordPractice: () => context.push('/practice-log'),
+                  ),
+                ],
+              ),
+      ),
       floatingActionButton: ListenableBuilder(
         listenable: _tabController,
         builder: (context, _) {
-          if ((!isWideLayout && _tabController.index != 0) || state.loading || state.hasError) {
+          if ((!isWideLayout && _tabController.index != 0) || data == null) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton(

@@ -13,29 +13,21 @@ class LibraryState {
     this.recordings = const [],
     this.logs = const [],
     this.monthlyLogStats = const {},
-    this.loading = true,
-    this.hasError = false,
   });
 
   final List<RecordingEntry> recordings;
   final List<PracticeLogEntry> logs;
   final Map<String, MonthlyPracticeStats> monthlyLogStats;
-  final bool loading;
-  final bool hasError;
 
   LibraryState copyWith({
     List<RecordingEntry>? recordings,
     List<PracticeLogEntry>? logs,
     Map<String, MonthlyPracticeStats>? monthlyLogStats,
-    bool? loading,
-    bool? hasError,
   }) {
     return LibraryState(
       recordings: recordings ?? this.recordings,
       logs: logs ?? this.logs,
       monthlyLogStats: monthlyLogStats ?? this.monthlyLogStats,
-      loading: loading ?? this.loading,
-      hasError: hasError ?? this.hasError,
     );
   }
 }
@@ -100,28 +92,20 @@ DateTime _toDateOnly(DateTime date) => DateTime(date.year, date.month, date.day)
 // Notifier
 // ---------------------------------------------------------------------------
 
-class LibraryNotifier extends Notifier<LibraryState> {
+class LibraryNotifier extends AutoDisposeAsyncNotifier<LibraryState> {
   List<PracticeLogEntry> _memoizedLogs = const [];
   Map<String, MonthlyPracticeStats> _memoizedMonthlyLogStats = const {};
-  bool _active = true;
 
   @override
-  LibraryState build() {
-    _active = true;
-    ref.onDispose(() => _active = false);
-    _load();
-    return const LibraryState();
-  }
+  Future<LibraryState> build() => _load();
 
   RecordingRepository get _repo => ref.read(recordingRepositoryProvider);
 
-  Future<void> _load() async {
-    state = state.copyWith(loading: true, hasError: false);
+  Future<LibraryState> _load() async {
     try {
       final recordings = await _repo.loadRecordings();
       final logs = await _repo.loadPracticeLogs();
-      if (!_active) return;
-      state = LibraryState(
+      return LibraryState(
         recordings: recordings,
         logs: logs,
         monthlyLogStats: _monthlyLogStats(logs),
@@ -132,19 +116,28 @@ class LibraryNotifier extends Notifier<LibraryState> {
         error: e,
         stackTrace: st,
       );
-      if (!_active) return;
-      state = const LibraryState(loading: false, hasError: true);
+      rethrow;
     }
   }
 
   /// Reloads all library data from the repository.
-  Future<void> reload() => _load();
+  Future<void> reload() async {
+    state = const AsyncLoading<LibraryState>();
+    state = await AsyncValue.guard(_load);
+  }
 
   /// Prepends [entry] to the recordings list and persists the change.
   Future<void> addRecording(RecordingEntry entry) async {
-    final previous = state.recordings;
-    final updated = [entry, ...previous];
-    state = state.copyWith(recordings: updated);
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      throw StateError(
+        'Cannot add recording: library data not loaded. '
+        'Please wait for initialization to complete.',
+      );
+    }
+
+    final updated = [entry, ...previous.recordings];
+    state = AsyncValue.data(previous.copyWith(recordings: updated));
     try {
       await _repo.saveRecordings(updated);
     } catch (e, st) {
@@ -153,12 +146,14 @@ class LibraryNotifier extends Notifier<LibraryState> {
         error: e,
         stackTrace: st,
       );
-      if (_active) state = state.copyWith(recordings: previous);
+      state = AsyncValue.data(previous);
       rethrow;
     }
   }
 
-  Map<String, MonthlyPracticeStats> _monthlyLogStats(List<PracticeLogEntry> logs) {
+  Map<String, MonthlyPracticeStats> _monthlyLogStats(
+    List<PracticeLogEntry> logs,
+  ) {
     if (_areSameLogs(_memoizedLogs, logs)) return _memoizedMonthlyLogStats;
 
     final byMonth = <String, MonthlyPracticeStats>{};
@@ -166,8 +161,11 @@ class LibraryNotifier extends Notifier<LibraryState> {
     final totalMinutesByMonth = <String, int>{};
 
     for (final log in logs) {
-      final monthKey = '${log.date.year}-${log.date.month.toString().padLeft(2, '0')}';
-      practiceDaysByMonth.putIfAbsent(monthKey, () => <int>{}).add(log.date.day);
+      final monthKey =
+          '${log.date.year}-${log.date.month.toString().padLeft(2, '0')}';
+      practiceDaysByMonth
+          .putIfAbsent(monthKey, () => <int>{})
+          .add(log.date.day);
       totalMinutesByMonth[monthKey] =
           (totalMinutesByMonth[monthKey] ?? 0) + log.durationMinutes;
     }
@@ -205,6 +203,6 @@ class LibraryNotifier extends Notifier<LibraryState> {
 // ---------------------------------------------------------------------------
 
 final libraryProvider =
-    NotifierProvider.autoDispose<LibraryNotifier, LibraryState>(
+    AsyncNotifierProvider.autoDispose<LibraryNotifier, LibraryState>(
   LibraryNotifier.new,
 );

@@ -257,7 +257,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
     final libraryState = ref.watch(libraryProvider);
-    final practiceSummary = computePracticeSummary(libraryState.logs);
+    final practiceSummary =
+        computePracticeSummary(libraryState.valueOrNull?.logs ?? const []);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
