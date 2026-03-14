@@ -14,8 +14,68 @@ const _backupTypeGroups = [
 ];
 
 /// Handles export and import of database backups as JSON bundles.
+abstract interface class BackupStore {
+  Future<List<Map<String, Object?>>> queryAllRecordings();
+
+  Future<List<Map<String, Object?>>> queryAllPracticeLogs();
+
+  Future<List<Map<String, Object?>>> queryAllPracticeLogEntries();
+
+  Future<List<Map<String, Object?>>> queryAllCompositions();
+
+  Future<void> replaceAllBackupData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+    required List<Map<String, Object?>> practiceLogEntries,
+    required List<Map<String, Object?>> compositions,
+  });
+}
+
+class _AppDatabaseBackupStore implements BackupStore {
+  const _AppDatabaseBackupStore();
+
+  @override
+  Future<List<Map<String, Object?>>> queryAllRecordings() {
+    return AppDatabase.instance.queryAllRecordings();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> queryAllPracticeLogs() {
+    return AppDatabase.instance.queryAllPracticeLogs();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> queryAllPracticeLogEntries() {
+    return AppDatabase.instance.queryAllPracticeLogEntries();
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> queryAllCompositions() {
+    return AppDatabase.instance.queryAllCompositions();
+  }
+
+  @override
+  Future<void> replaceAllBackupData({
+    required List<Map<String, Object?>> recordings,
+    required List<Map<String, Object?>> practiceLogs,
+    required List<Map<String, Object?>> practiceLogEntries,
+    required List<Map<String, Object?>> compositions,
+  }) {
+    return AppDatabase.instance.replaceAllBackupData(
+      recordings: recordings,
+      practiceLogs: practiceLogs,
+      practiceLogEntries: practiceLogEntries,
+      compositions: compositions,
+    );
+  }
+}
+
 class BackupRepository {
-  const BackupRepository();
+  const BackupRepository({
+    BackupStore store = const _AppDatabaseBackupStore(),
+  }) : _store = store;
+
+  final BackupStore _store;
 
   /// Prompts for a save location and writes the current backup JSON bundle.
   ///
@@ -50,10 +110,10 @@ class BackupRepository {
 
   /// Exports all backup-supported tables as a single JSON bundle string.
   Future<String> exportJsonBundle() async {
-    final recordings = await AppDatabase.instance.queryAllRecordings();
-    final practiceLogs = await AppDatabase.instance.queryAllPracticeLogs();
-    final practiceLogEntries = await AppDatabase.instance.queryAllPracticeLogEntries();
-    final compositions = await AppDatabase.instance.queryAllCompositions();
+    final recordings = await _store.queryAllRecordings();
+    final practiceLogs = await _store.queryAllPracticeLogs();
+    final practiceLogEntries = await _store.queryAllPracticeLogEntries();
+    final compositions = await _store.queryAllCompositions();
     final bundle = BackupBundle.fromDatabaseRows(
       recordings: recordings,
       practiceLogs: practiceLogs,
@@ -67,7 +127,7 @@ class BackupRepository {
   Future<void> importJsonBundle(String jsonContent) async {
     final decoded = jsonDecode(jsonContent) as Map<String, dynamic>;
     final bundle = BackupBundle.fromJson(decoded);
-    await AppDatabase.instance.replaceAllBackupData(
+    await _store.replaceAllBackupData(
       recordings: bundle.recordingRows,
       practiceLogs: bundle.practiceLogRows,
       practiceLogEntries: bundle.practiceLogEntryRows,
