@@ -130,8 +130,19 @@ typedef _RemoveValue = Future<bool> Function(String key);
 
 /// Persists recordings and practice logs with one-time legacy migration support.
 class RecordingRepository {
+  // Writes the probe file in 1 MB chunks so the one-time preflight does not
+  // allocate the entire estimated migration size in memory.
   static const int _diskSpaceCheckChunkBytes = 1024 * 1024;
+  // Reserves an extra 512 KB beyond the serialized payload estimate so small
+  // differences in SQLite page growth do not invalidate the preflight check.
   static const int _diskSpaceCheckSafetyMarginBytes = 512 * 1024;
+  // Adds roughly 20% headroom for SQLite transaction files, index updates, and
+  // page growth while the migrated rows are being written.
+  static const int _diskSpaceCheckOverheadDivisor = 5;
+  // Accounts for per-row SQLite metadata, page alignment, and row headers when
+  // estimating scratch space from serialized payload sizes alone.
+  static const int _estimatedRowOverheadBytes = 256;
+  static final Uint8List _diskSpaceCheckChunk = Uint8List(_diskSpaceCheckChunkBytes);
 
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
   RecordingRepository(
@@ -202,19 +213,15 @@ class RecordingRepository {
     RandomAccessFile? handle;
     try {
       handle = await probeFile.open(mode: FileMode.write);
-      final chunk = Uint8List(_diskSpaceCheckChunkBytes);
       var remainingBytes = requiredBytes;
       while (remainingBytes > 0) {
-        final nextChunkBytes = min(remainingBytes, chunk.length);
-        await handle.writeFrom(chunk, 0, nextChunkBytes);
+        final nextChunkBytes = min(remainingBytes, _diskSpaceCheckChunk.length);
+        await handle.writeFrom(_diskSpaceCheckChunk, 0, nextChunkBytes);
         remainingBytes -= nextChunkBytes;
       }
       await handle.flush();
-    } on FileSystemException catch (error) {
-      throw StateError(
-        'Insufficient disk space for recording migration '
-        '(${requiredBytes} bytes required): $error',
-      );
+    } on FileSystemException {
+      rethrow;
     } finally {
       await handle?.close();
       if (await probeFile.exists()) {
@@ -236,13 +243,16 @@ class RecordingRepository {
         recordingRows.fold<int>(0, _estimateRowBytes) +
         practiceLogRows.fold<int>(0, _estimateRowBytes);
     final rowOverheadBytes =
-        (recordingRows.length + practiceLogRows.length) * 256;
+        (recordingRows.length + practiceLogRows.length) *
+        _estimatedRowOverheadBytes;
     final estimatedBytes =
         legacyPayloadBytes + rowPayloadBytes + rowOverheadBytes;
     if (estimatedBytes == 0) {
       return 0;
     }
-    return estimatedBytes + (estimatedBytes ~/ 5) + _diskSpaceCheckSafetyMarginBytes;
+    return estimatedBytes +
+        (estimatedBytes ~/ _diskSpaceCheckOverheadDivisor) +
+        _diskSpaceCheckSafetyMarginBytes;
   }
 
   static int _estimateRowBytes(int total, Map<String, Object?> row) {
@@ -349,7 +359,10 @@ class RecordingRepository {
           currentStage = 'migration state persistence';
           final inProgressSaved = await _persistBool(_migrationInProgressKey, true);
           if (!inProgressSaved) {
-            throw StateError('Failed to persist migration in-progress state.');
+            throw StateError(
+              'Failed to persist migration in-progress state '
+              'for $_migrationInProgressKey.',
+            );
           }
 
           final estimatedBytes = _estimateMigrationBytes(
@@ -380,7 +393,10 @@ class RecordingRepository {
             true,
           );
           if (!migratedSaved) {
-            throw StateError('Failed to persist migration completion state.');
+            throw StateError(
+              'Failed to persist migration completion state '
+              'for ${_config.recordingsMigratedStorageKey}.',
+            );
           }
 
           final clearedInProgress = await _removeValue(_migrationInProgressKey);

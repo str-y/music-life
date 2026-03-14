@@ -226,7 +226,7 @@ void main() {
           if (key == config.recordingsMigratedStorageKey) {
             completionAttempts += 1;
             if (completionAttempts == 1) {
-              throw StateError('simulated interruption after DB write');
+              throw StateError('Simulated persistence failure after DB write');
             }
           }
           return prefs.setBool(key, value);
