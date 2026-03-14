@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library/recordings_tab.dart';
+import 'package:music_life/widgets/shared/waveform_view.dart';
 
 Widget _wrap(Widget child, {Locale? locale, ThemeData? theme}) {
   return MaterialApp(

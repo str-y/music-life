@@ -10,10 +10,12 @@ import '../providers/dependency_providers.dart';
 import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
 import '../utils/chord_utils.dart';
+import '../widgets/shared/chord_card.dart';
+import '../widgets/shared/loading_state_widget.dart';
+import '../widgets/shared/status_message_view.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
-
 
 class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key, this.useMicPermissionGate = true});
@@ -296,7 +298,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const LoadingStateWidget();
 
     // Bridge failed to start (e.g. permission revoked after the gate check).
     if (_bridge == null) {
@@ -386,13 +388,13 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
             label: AppLocalizations.of(context)!.chordHistory,
             child: RepaintBoundary(
               child: _history.isEmpty
-                  ? Center(
-                      child: Text(
-                        AppLocalizations.of(context)!.noChordHistory,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                      ),
+                  ? StatusMessageView(
+                      message: AppLocalizations.of(context)!.noChordHistory,
+                      padding: EdgeInsets.zero,
+                      messageStyle:
+                          Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                     )
                   : ListView.builder(
                       padding:
@@ -461,20 +463,10 @@ class _ChordHistoryTile extends StatelessWidget {
         child: Semantics(
           label: '${entry.chord}, $timeLabel',
           excludeSemantics: true,
-          child: AnimatedOpacity(
+          child: ChordCard(
+            highlighted: isLatest,
             opacity: isLatest ? 1.0 : 0.65,
             duration: const Duration(milliseconds: 300),
-            child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isLatest
-                  ? colorScheme.primaryContainer
-                  : colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-              border: isLatest
-                  ? Border.all(color: colorScheme.primary, width: 1.5)
-                  : null,
-            ),
             child: Row(
               children: [
                 Expanded(
@@ -502,7 +494,6 @@ class _ChordHistoryTile extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 }

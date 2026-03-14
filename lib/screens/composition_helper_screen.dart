@@ -9,6 +9,7 @@ import '../providers/composition_provider.dart';
 import '../repositories/composition_repository.dart';
 import '../services/service_error_handler.dart';
 import '../utils/share_card_image.dart';
+import '../widgets/shared/chord_card.dart';
 
 // ── Palette chords ────────────────────────────────────────────────────────────
 
@@ -592,18 +593,11 @@ class _SequenceChordTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
+    return ChordCard(
+      highlighted: isActive,
+      padding: EdgeInsets.zero,
       margin: const EdgeInsets.symmetric(vertical: 3),
-      decoration: BoxDecoration(
-        color: isActive
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: isActive
-            ? Border.all(color: colorScheme.primary, width: 2)
-            : null,
-      ),
+      borderWidth: 2,
       child: ListTile(
         dense: true,
         leading: Text(
