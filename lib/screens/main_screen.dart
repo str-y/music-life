@@ -12,6 +12,7 @@ import '../router/routes.dart';
 import '../services/ad_service.dart';
 import '../services/review_service.dart';
 import '../services/service_error_handler.dart';
+import '../utils/app_logger.dart';
 import '../widgets/banner_ad_widget.dart';
 
 const String _privacyPolicyUrl =
@@ -588,6 +589,31 @@ class _SettingsModalState extends State<_SettingsModal> {
     widget.onChanged(updated);
   }
 
+  Future<void> _showRecentLogs(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final recentLogs = AppLogger.recentBufferedLogs(limit: 50);
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.recentLogs),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: recentLogs.isEmpty
+              ? Text(l10n.noRecentLogs)
+              : SingleChildScrollView(
+                  child: SelectableText(recentLogs.join('\n\n')),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(MaterialLocalizations.of(dialogContext).okButtonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -741,6 +767,15 @@ class _SettingsModalState extends State<_SettingsModal> {
             leading: const Icon(Icons.upload_file_outlined),
             title: Text(l10n.importBackup),
             onTap: widget.onImportBackup,
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 32),
+          Text(l10n.developerSettings, style: textTheme.titleSmall),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.bug_report_outlined),
+            title: Text(l10n.recentLogs),
+            onTap: () => _showRecentLogs(context),
           ),
           const SizedBox(height: 8),
           const Divider(height: 32),

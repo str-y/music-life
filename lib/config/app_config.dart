@@ -1,10 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../utils/app_logger.dart';
 
 class AppConfig {
   const AppConfig({
     this.audioFrameSize = defaultAudioFrameSize,
     this.audioSampleRate = defaultAudioSampleRate,
     this.pitchDetectionThreshold = defaultPitchDetectionThreshold,
+    this.logLevel,
     this.testBannerIdAndroid = defaultTestBannerIdAndroid,
     this.testBannerIdIos = defaultTestBannerIdIos,
     this.testInterstitialIdAndroid = defaultTestInterstitialIdAndroid,
@@ -72,6 +76,7 @@ class AppConfig {
   final int audioFrameSize;
   final int audioSampleRate;
   final double pitchDetectionThreshold;
+  final AppLogLevel? logLevel;
 
   final String testBannerIdAndroid;
   final String testBannerIdIos;
@@ -99,6 +104,9 @@ class AppConfig {
   final bool defaultUseSystemTheme;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
+
+  AppLogLevel get effectiveLogLevel =>
+      logLevel ?? (kReleaseMode ? AppLogLevel.info : AppLogLevel.debug);
 }
 
 final appConfigProvider = Provider<AppConfig>((ref) => const AppConfig());

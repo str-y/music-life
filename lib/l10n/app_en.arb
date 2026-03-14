@@ -180,6 +180,21 @@
     }
   },
 
+  "developerSettings": "Developer Settings",
+  "@developerSettings": {
+    "description": "Section header for developer-only diagnostics tools"
+  },
+
+  "recentLogs": "Recent logs",
+  "@recentLogs": {
+    "description": "Action label and dialog title for viewing buffered application logs"
+  },
+
+  "noRecentLogs": "No recent logs available.",
+  "@noRecentLogs": {
+    "description": "Empty state shown when there are no buffered application logs"
+  },
+
   "cancel": "Cancel",
   "@cancel": {
     "description": "Cancel button label"

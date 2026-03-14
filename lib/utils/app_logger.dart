@@ -95,6 +95,20 @@ class AppLogger {
     return file;
   }
 
+  static List<String> recentBufferedLogs({int limit = 50}) {
+    if (limit <= 0 || _bufferedLogs.isEmpty) {
+      return const <String>[];
+    }
+    final logs = _bufferedLogs.toList(growable: false);
+    final recentLogs = <String>[];
+    for (var i = logs.length - 1;
+        i >= 0 && recentLogs.length < limit;
+        i--) {
+      recentLogs.add(logs[i]);
+    }
+    return List.unmodifiable(recentLogs);
+  }
+
   @visibleForTesting
   static List<String> get bufferedLogs => List.unmodifiable(_bufferedLogs.toList());
 
