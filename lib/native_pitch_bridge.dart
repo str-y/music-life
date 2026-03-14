@@ -108,6 +108,105 @@ typedef FfiErrorHandler = void Function(Object error, StackTrace stack);
 
 // ── Isolate support ───────────────────────────────────────────────────────────
 
+class NativeIsolateFailure implements Exception {
+  const NativeIsolateFailure({
+    required this.code,
+    required this.phase,
+    required this.message,
+  });
+
+  final String code;
+  final String phase;
+  final String message;
+
+  @override
+  String toString() => '[native-isolate:$code][$phase] $message';
+}
+
+class NativeIsolateMetrics {
+  const NativeIsolateMetrics({
+    this.lastHeartbeatLatency = Duration.zero,
+    this.lastHeartbeatRoundTrip = Duration.zero,
+    this.averageHeartbeatRoundTrip = Duration.zero,
+    this.maxHeartbeatRoundTrip = Duration.zero,
+    this.heartbeatSamples = 0,
+    this.bufferedSamples = 0,
+    this.peakBufferedSamples = 0,
+    this.bufferUtilization = 0,
+    this.peakBufferUtilization = 0,
+    this.framesProcessed = 0,
+    this.lastFrameProcessingTime = Duration.zero,
+    this.averageFrameProcessingTime = Duration.zero,
+    this.maxFrameProcessingTime = Duration.zero,
+    this.lastChunkSampleCount = 0,
+    this.bufferBacklogEvents = 0,
+    this.lastUpdatedAtMicros = 0,
+  });
+
+  final Duration lastHeartbeatLatency;
+  final Duration lastHeartbeatRoundTrip;
+  final Duration averageHeartbeatRoundTrip;
+  final Duration maxHeartbeatRoundTrip;
+  final int heartbeatSamples;
+  final int bufferedSamples;
+  final int peakBufferedSamples;
+  final double bufferUtilization;
+  final double peakBufferUtilization;
+  final int framesProcessed;
+  final Duration lastFrameProcessingTime;
+  final Duration averageFrameProcessingTime;
+  final Duration maxFrameProcessingTime;
+  final int lastChunkSampleCount;
+  final int bufferBacklogEvents;
+  final int lastUpdatedAtMicros;
+
+  NativeIsolateMetrics copyWith({
+    Duration? lastHeartbeatLatency,
+    Duration? lastHeartbeatRoundTrip,
+    Duration? averageHeartbeatRoundTrip,
+    Duration? maxHeartbeatRoundTrip,
+    int? heartbeatSamples,
+    int? bufferedSamples,
+    int? peakBufferedSamples,
+    double? bufferUtilization,
+    double? peakBufferUtilization,
+    int? framesProcessed,
+    Duration? lastFrameProcessingTime,
+    Duration? averageFrameProcessingTime,
+    Duration? maxFrameProcessingTime,
+    int? lastChunkSampleCount,
+    int? bufferBacklogEvents,
+    int? lastUpdatedAtMicros,
+  }) {
+    return NativeIsolateMetrics(
+      lastHeartbeatLatency:
+          lastHeartbeatLatency ?? this.lastHeartbeatLatency,
+      lastHeartbeatRoundTrip:
+          lastHeartbeatRoundTrip ?? this.lastHeartbeatRoundTrip,
+      averageHeartbeatRoundTrip:
+          averageHeartbeatRoundTrip ?? this.averageHeartbeatRoundTrip,
+      maxHeartbeatRoundTrip:
+          maxHeartbeatRoundTrip ?? this.maxHeartbeatRoundTrip,
+      heartbeatSamples: heartbeatSamples ?? this.heartbeatSamples,
+      bufferedSamples: bufferedSamples ?? this.bufferedSamples,
+      peakBufferedSamples: peakBufferedSamples ?? this.peakBufferedSamples,
+      bufferUtilization: bufferUtilization ?? this.bufferUtilization,
+      peakBufferUtilization:
+          peakBufferUtilization ?? this.peakBufferUtilization,
+      framesProcessed: framesProcessed ?? this.framesProcessed,
+      lastFrameProcessingTime:
+          lastFrameProcessingTime ?? this.lastFrameProcessingTime,
+      averageFrameProcessingTime:
+          averageFrameProcessingTime ?? this.averageFrameProcessingTime,
+      maxFrameProcessingTime:
+          maxFrameProcessingTime ?? this.maxFrameProcessingTime,
+      lastChunkSampleCount: lastChunkSampleCount ?? this.lastChunkSampleCount,
+      bufferBacklogEvents: bufferBacklogEvents ?? this.bufferBacklogEvents,
+      lastUpdatedAtMicros: lastUpdatedAtMicros ?? this.lastUpdatedAtMicros,
+    );
+  }
+}
+
 class IsolateSetup {
   const IsolateSetup({
     required this.resultPort,
@@ -124,10 +223,12 @@ class IsolateSetup {
 
 class IsolateManagerError {
   const IsolateManagerError({
+    required this.code,
     required this.phase,
     required this.message,
     required this.stack,
   });
+  final String code;
   final String phase;
   final String message;
   final String stack;
@@ -149,13 +250,22 @@ class IsolateHandshakeAck {
 }
 
 class IsolateHeartbeatPing {
-  const IsolateHeartbeatPing(this.token);
+  const IsolateHeartbeatPing(this.token, this.sentAtMicros);
   final int token;
+  final int sentAtMicros;
 }
 
 class IsolateHeartbeatPong {
-  const IsolateHeartbeatPong(this.token);
+  const IsolateHeartbeatPong({
+    required this.token,
+    required this.pingSentAtMicros,
+    required this.receivedAtMicros,
+    required this.sentAtMicros,
+  });
   final int token;
+  final int pingSentAtMicros;
+  final int receivedAtMicros;
+  final int sentAtMicros;
 }
 
 class TransferablePcmChunk {
@@ -186,6 +296,7 @@ class NativePitchIsolateManager {
     required this.entryPoint,
     required this.onMessage,
     required this.onError,
+    this.onMetrics,
     this.protocolVersion = 1,
     this.handshakeTimeout = const Duration(seconds: 3),
     this.heartbeatInterval = const Duration(seconds: 2),
@@ -198,6 +309,7 @@ class NativePitchIsolateManager {
   final void Function(IsolateSetup setup) entryPoint;
   final void Function(dynamic message) onMessage;
   final FfiErrorHandler? onError;
+  final void Function(NativeIsolateMetrics metrics)? onMetrics;
   final int protocolVersion;
   final Duration handshakeTimeout;
   final Duration heartbeatInterval;
@@ -213,6 +325,7 @@ class NativePitchIsolateManager {
   int? _pendingHeartbeatToken;
   Stopwatch? _pendingHeartbeatClock;
   int _nextHeartbeatToken = 0;
+  NativeIsolateMetrics _metrics = const NativeIsolateMetrics();
 
   bool _isFatalErrorEnvelope(dynamic message) {
     // VM isolate errors arrive via `onError` as `[error, stackTraceString]`.
@@ -262,7 +375,11 @@ class NativePitchIsolateManager {
     exitSub = exitPort.listen((_) {
       if (!completer.isCompleted) {
         failStart(
-          StateError('Isolate exited unexpectedly during startup.'),
+          const NativeIsolateFailure(
+            code: 'startup-exit',
+            phase: 'startup',
+            message: 'Isolate exited unexpectedly during startup.',
+          ),
           StackTrace.current,
         );
       }
@@ -270,9 +387,10 @@ class NativePitchIsolateManager {
 
     _handshakeTimer = Timer(handshakeTimeout, () {
       failStart(
-        TimeoutException(
-          'Timed out waiting for isolate handshake.',
-          handshakeTimeout,
+        const NativeIsolateFailure(
+          code: 'handshake-timeout',
+          phase: 'handshake',
+          message: 'Timed out waiting for isolate handshake.',
         ),
         StackTrace.current,
       );
@@ -286,9 +404,11 @@ class NativePitchIsolateManager {
         } else if (msg is IsolateHandshakeAck) {
           if (msg.protocolVersion != protocolVersion) {
             failStart(
-              StateError(
-                'Isolate protocol mismatch. '
-                'Expected $protocolVersion, got ${msg.protocolVersion}.',
+              NativeIsolateFailure(
+                code: 'protocol-mismatch',
+                phase: 'handshake',
+                message: 'Isolate protocol mismatch. '
+                    'Expected $protocolVersion, got ${msg.protocolVersion}.',
               ),
               StackTrace.current,
             );
@@ -312,11 +432,39 @@ class NativePitchIsolateManager {
         _reportIsolateError(msg);
       } else if (_isFatalErrorEnvelope(msg)) {
         _forwardFatalError(msg);
+      } else if (msg is NativeIsolateMetrics) {
+        _mergeProcessingMetrics(msg);
       } else if (msg is IsolateHeartbeatPong) {
         if (msg.token == _pendingHeartbeatToken) {
           _pendingHeartbeatToken = null;
           _pendingHeartbeatClock?.stop();
           _pendingHeartbeatClock = null;
+          final heartbeatLatencyMicros =
+              msg.receivedAtMicros - msg.pingSentAtMicros;
+          final roundTripMicros =
+              _nowMicros().differenceMicros(msg.pingSentAtMicros);
+          final nextSamples = _metrics.heartbeatSamples + 1;
+          final averageRoundTripMicros =
+              ((_metrics.averageHeartbeatRoundTrip.inMicroseconds *
+                              _metrics.heartbeatSamples) +
+                          roundTripMicros) ~/
+                  nextSamples;
+          _publishMetrics(
+            _metrics.copyWith(
+              lastHeartbeatLatency:
+                  Duration(microseconds: heartbeatLatencyMicros < 0 ? 0 : heartbeatLatencyMicros),
+              lastHeartbeatRoundTrip:
+                  Duration(microseconds: roundTripMicros < 0 ? 0 : roundTripMicros),
+              averageHeartbeatRoundTrip:
+                  Duration(microseconds: averageRoundTripMicros < 0 ? 0 : averageRoundTripMicros),
+              maxHeartbeatRoundTrip: roundTripMicros >
+                      _metrics.maxHeartbeatRoundTrip.inMicroseconds
+                  ? Duration(microseconds: roundTripMicros)
+                  : _metrics.maxHeartbeatRoundTrip,
+              heartbeatSamples: nextSamples,
+              lastUpdatedAtMicros: _nowMicros().value,
+            ),
+          );
         }
       } else {
         onMessage(msg);
@@ -374,9 +522,10 @@ class NativePitchIsolateManager {
       if (_pendingHeartbeatToken != null && clock != null) {
         if (clock.elapsed > heartbeatTimeout) {
           onError?.call(
-            TimeoutException(
-              'Isolate heartbeat timed out.',
-              heartbeatTimeout,
+            const NativeIsolateFailure(
+              code: 'heartbeat-timeout',
+              phase: 'heartbeat',
+              message: 'Isolate heartbeat timed out.',
             ),
             StackTrace.current,
           );
@@ -392,7 +541,9 @@ class NativePitchIsolateManager {
       final token = _nextHeartbeatToken;
       _pendingHeartbeatToken = token;
       _pendingHeartbeatClock = Stopwatch()..start();
-      _audioSendPort?.send(IsolateHeartbeatPing(token));
+      _audioSendPort?.send(
+        IsolateHeartbeatPing(token, _nowMicros().value),
+      );
     });
   }
 
@@ -406,7 +557,11 @@ class NativePitchIsolateManager {
 
   void _reportIsolateError(IsolateManagerError msg) {
     onError?.call(
-      StateError('[${msg.phase}] ${msg.message}'),
+      NativeIsolateFailure(
+        code: msg.code,
+        phase: msg.phase,
+        message: msg.message,
+      ),
       StackTrace.fromString(msg.stack),
     );
   }
@@ -414,7 +569,35 @@ class NativePitchIsolateManager {
   void _forwardFatalError(List<dynamic> msg) {
     final error = msg.isNotEmpty ? msg[0] : 'Unknown isolate error';
     final stackStr = msg.length > 1 ? (msg[1] as String?) ?? '' : '';
-    onError?.call(error, StackTrace.fromString(stackStr));
+    onError?.call(
+      NativeIsolateFailure(
+        code: 'fatal-error',
+        phase: 'runtime',
+        message: error.toString(),
+      ),
+      StackTrace.fromString(stackStr),
+    );
+  }
+
+  void _mergeProcessingMetrics(NativeIsolateMetrics processingMetrics) {
+    _publishMetrics(
+      processingMetrics.copyWith(
+        lastHeartbeatLatency: _metrics.lastHeartbeatLatency,
+        lastHeartbeatRoundTrip: _metrics.lastHeartbeatRoundTrip,
+        averageHeartbeatRoundTrip: _metrics.averageHeartbeatRoundTrip,
+        maxHeartbeatRoundTrip: _metrics.maxHeartbeatRoundTrip,
+        heartbeatSamples: _metrics.heartbeatSamples,
+      ),
+    );
+  }
+
+  void _publishMetrics(NativeIsolateMetrics metrics) {
+    _metrics = metrics;
+    onMetrics?.call(metrics);
+  }
+
+  _MicrosecondClock _nowMicros() {
+    return _MicrosecondClock(DateTime.now().microsecondsSinceEpoch);
   }
 
   void _closePorts() {
@@ -440,6 +623,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     lib = _loadNativeLib();
   } catch (e, stack) {
     setup.resultPort.send(IsolateManagerError(
+      code: 'load-native-lib',
       phase: 'load-native-lib',
       message: e.toString(),
       stack: stack.toString(),
@@ -451,11 +635,52 @@ void _audioProcessingIsolate(IsolateSetup setup) {
       'ml_pitch_detector_process');
 
   final sampleBuf = RingBuffer();
+  int peakBufferedSamples = 0;
+  int framesProcessed = 0;
+  int totalFrameProcessingMicros = 0;
+  int lastFrameProcessingMicros = 0;
+  int maxFrameProcessingMicros = 0;
+  int lastChunkSampleCount = 0;
+  int bufferBacklogEvents = 0;
+
+  void publishMetrics() {
+    final bufferedSamples = sampleBuf.length;
+    final bufferUtilization =
+        setup.frameSize <= 0 ? 0.0 : bufferedSamples / setup.frameSize;
+    final peakBufferUtilization =
+        setup.frameSize <= 0 ? 0.0 : peakBufferedSamples / setup.frameSize;
+    setup.resultPort.send(
+      NativeIsolateMetrics(
+        bufferedSamples: bufferedSamples,
+        peakBufferedSamples: peakBufferedSamples,
+        bufferUtilization: bufferUtilization,
+        peakBufferUtilization: peakBufferUtilization,
+        framesProcessed: framesProcessed,
+        lastFrameProcessingTime:
+            Duration(microseconds: lastFrameProcessingMicros),
+        averageFrameProcessingTime: framesProcessed == 0
+            ? Duration.zero
+            : Duration(microseconds: totalFrameProcessingMicros ~/ framesProcessed),
+        maxFrameProcessingTime: Duration(microseconds: maxFrameProcessingMicros),
+        lastChunkSampleCount: lastChunkSampleCount,
+        bufferBacklogEvents: bufferBacklogEvents,
+        lastUpdatedAtMicros: DateTime.now().microsecondsSinceEpoch,
+      ),
+    );
+  }
 
   void processFrame(Float32List frame) {
+    final stopwatch = Stopwatch()..start();
     try {
       setup.buffer.asTypedList(frame.length).setAll(0, frame);
       final result = process(setup.handle, setup.buffer, frame.length);
+      stopwatch.stop();
+      framesProcessed++;
+      lastFrameProcessingMicros = stopwatch.elapsedMicroseconds;
+      totalFrameProcessingMicros += lastFrameProcessingMicros;
+      if (lastFrameProcessingMicros > maxFrameProcessingMicros) {
+        maxFrameProcessingMicros = lastFrameProcessingMicros;
+      }
       if (result.pitched != 0) {
         final bytes = <int>[];
         for (int i = 0; i < 8; i++) {
@@ -473,25 +698,40 @@ void _audioProcessingIsolate(IsolateSetup setup) {
         );
       }
     } catch (e, stack) {
+      stopwatch.stop();
       setup.resultPort.send(IsolateManagerError(
+        code: 'process-frame',
         phase: 'process-frame',
         message: e.toString(),
         stack: stack.toString(),
       ));
+    } finally {
+      publishMetrics();
     }
   }
 
   void processPcmChunk(Uint8List chunk) {
+    lastChunkSampleCount = chunk.length ~/ Int16List.bytesPerElement;
     for (int i = 0; i + 1 < chunk.length; i += 2) {
       int s = chunk[i] | (chunk[i + 1] << 8);
       if (s >= 0x8000) s -= 0x10000;
       sampleBuf.add(s / 32768.0);
+    }
+    if (sampleBuf.length > peakBufferedSamples) {
+      peakBufferedSamples = sampleBuf.length;
+    }
+    if (setup.frameSize > 0 && sampleBuf.length > setup.frameSize * 2) {
+      bufferBacklogEvents++;
     }
     while (sampleBuf.length >= setup.frameSize) {
       final frame = Float32List(setup.frameSize);
       if (!sampleBuf.readInto(frame)) break;
       processFrame(frame);
     }
+    if (sampleBuf.length > peakBufferedSamples) {
+      peakBufferedSamples = sampleBuf.length;
+    }
+    publishMetrics();
   }
 
   final port = ReceivePort();
@@ -505,7 +745,13 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     if (msg is IsolateHandshakeRequest) {
       setup.resultPort.send(IsolateHandshakeAck(msg.protocolVersion));
     } else if (msg is IsolateHeartbeatPing) {
-      setup.resultPort.send(IsolateHeartbeatPong(msg.token));
+      final nowMicros = DateTime.now().microsecondsSinceEpoch;
+      setup.resultPort.send(IsolateHeartbeatPong(
+        token: msg.token,
+        pingSentAtMicros: msg.sentAtMicros,
+        receivedAtMicros: nowMicros,
+        sentAtMicros: DateTime.now().microsecondsSinceEpoch,
+      ));
     } else if (msg is TransferablePcmChunk) {
       processPcmChunk(msg.data.materialize().asUint8List());
     } else if (msg is Uint8List) {
@@ -515,6 +761,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
       final maxSamples = buffer.lengthInBytes ~/ Float32List.bytesPerElement;
       if (msg.sampleCount < 0 || msg.sampleCount > maxSamples) {
         setup.resultPort.send(IsolateManagerError(
+          code: 'invalid-frame',
           phase: 'validate-frame',
           message: 'Invalid transferable frame length: '
               '${msg.sampleCount} samples requested from $maxSamples available.',
@@ -570,6 +817,13 @@ class NativePitchBridge implements Finalizable {
   final StreamController<PitchResult> _pitchController =
       StreamController<PitchResult>.broadcast();
   Stream<PitchResult> get pitchStream => _pitchController.stream;
+
+  NativeIsolateMetrics _latestIsolateMetrics = const NativeIsolateMetrics();
+  final StreamController<NativeIsolateMetrics> _metricsController =
+      StreamController<NativeIsolateMetrics>.broadcast();
+  Stream<NativeIsolateMetrics> get isolateMetricsStream =>
+      _metricsController.stream;
+  NativeIsolateMetrics get latestIsolateMetrics => _latestIsolateMetrics;
 
   final AudioRecorder _recorder = AudioRecorder();
   StreamSubscription<Uint8List>? _audioSub;
@@ -726,6 +980,12 @@ class NativePitchBridge implements Finalizable {
           _onPitchResult(pitch);
         }
       },
+      onMetrics: (metrics) {
+        _latestIsolateMetrics = metrics;
+        if (!_metricsController.isClosed) {
+          _metricsController.add(metrics);
+        }
+      },
       onError: _onError,
     );
     _isolateManager = manager;
@@ -795,6 +1055,7 @@ class NativePitchBridge implements Finalizable {
     _isolateManager = null;
     _controller.close();
     _pitchController.close();
+    _metricsController.close();
     final isolate = shutdownHandle?.isolate;
     final exitPort = shutdownHandle?.exitPort;
 
@@ -833,4 +1094,12 @@ class NativePitchBridge implements Finalizable {
       isolate.kill(priority: Isolate.immediate);
     });
   }
+}
+
+final class _MicrosecondClock {
+  const _MicrosecondClock(this.value);
+
+  final int value;
+
+  int differenceMicros(int startMicros) => value - startMicros;
 }
