@@ -35,6 +35,9 @@ class AppConfig {
     this.cloudBackupBundleStorageKey = defaultCloudBackupBundleStorageKey,
     this.rewardedPremiumExpiresAtStorageKey =
         defaultRewardedPremiumExpiresAtStorageKey,
+    this.metronomeSoundPacksStorageKey = defaultMetronomeSoundPacksStorageKey,
+    this.selectedMetronomeSoundPackStorageKey =
+        defaultSelectedMetronomeSoundPackStorageKey,
     this.premiumVideoExportSkinStorageKey =
         defaultPremiumVideoExportSkinStorageKey,
     this.premiumVideoExportColorStorageKey =
@@ -99,6 +102,10 @@ class AppConfig {
   static const String defaultCloudBackupBundleStorageKey = 'cloudBackupBundle';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
+  static const String defaultMetronomeSoundPacksStorageKey =
+      'metronomeSoundPacks';
+  static const String defaultSelectedMetronomeSoundPackStorageKey =
+      'selectedMetronomeSoundPack';
   static const String defaultPremiumVideoExportSkinStorageKey =
       'premiumVideoExportSkin';
   static const String defaultPremiumVideoExportColorStorageKey =
@@ -147,6 +154,8 @@ class AppConfig {
   final String lastCloudSyncAtStorageKey;
   final String cloudBackupBundleStorageKey;
   final String rewardedPremiumExpiresAtStorageKey;
+  final String metronomeSoundPacksStorageKey;
+  final String selectedMetronomeSoundPackStorageKey;
   final String premiumVideoExportSkinStorageKey;
   final String premiumVideoExportColorStorageKey;
   final String premiumVideoExportEffectStorageKey;

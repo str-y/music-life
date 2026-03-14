@@ -390,6 +390,7 @@ class _PitchOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(tunerProvider);
+    final cs = Theme.of(context).colorScheme;
     final transposition = ref.watch(
       appSettingsProvider.select((s) => s.tunerTransposition),
     );
@@ -414,7 +415,7 @@ class _PitchOverlay extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.black54,
+          color: cs.inverseSurface.withOpacity(0.86),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -426,8 +427,8 @@ class _PitchOverlay extends ConsumerWidget {
             ],
             Text(
               noteName,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onInverseSurface,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
@@ -437,7 +438,11 @@ class _PitchOverlay extends ConsumerWidget {
               Text(
                 '$centsText¢',
                 style: TextStyle(
-                  color: inTune ? Colors.greenAccent : Colors.orangeAccent,
+                  color: inTune
+                      ? (Color.lerp(cs.primary, cs.tertiary, 0.35) ??
+                          cs.primary)
+                      : (Color.lerp(cs.secondary, cs.error, 0.4) ??
+                          cs.secondary),
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -480,11 +485,12 @@ class _RecordingDotState extends State<_RecordingDot>
 
   @override
   Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, __) => Opacity(
         opacity: _ctrl.value,
-        child: const Icon(Icons.circle, color: Colors.red, size: 12),
+        child: Icon(Icons.circle, color: errorColor, size: 12),
       ),
     );
   }
@@ -504,6 +510,7 @@ class _RecordButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       label: isRecording
@@ -516,9 +523,9 @@ class _RecordButton extends StatelessWidget {
           height: 72,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
+            color: cs.surface,
             border: Border.all(
-              color: isRecording ? Colors.red : Colors.white54,
+              color: isRecording ? cs.error : cs.outlineVariant,
               width: 4,
             ),
           ),
@@ -527,7 +534,7 @@ class _RecordButton extends StatelessWidget {
               width: isRecording ? 28 : 56,
               height: isRecording ? 28 : 56,
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: cs.error,
                 borderRadius: isRecording
                     ? BorderRadius.circular(6)
                     : BorderRadius.circular(28),

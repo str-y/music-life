@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../metronome_sound_library.dart';
 import '../models/premium_video_export.dart';
 import '../theme/dynamic_theme_mode.dart';
 
@@ -21,6 +23,8 @@ class AppSettings {
   final bool cloudSyncEnabled;
   final DateTime? lastCloudSyncAt;
   final DateTime? rewardedPremiumExpiresAt;
+  final List<String> installedMetronomeSoundPackIds;
+  final String selectedMetronomeSoundPackId;
   final PremiumVideoExportSkin premiumVideoExportSkin;
   final int premiumVideoExportColor;
   final PremiumVideoExportEffect premiumVideoExportEffect;
@@ -41,6 +45,10 @@ class AppSettings {
     this.cloudSyncEnabled = false,
     this.lastCloudSyncAt,
     this.rewardedPremiumExpiresAt,
+    this.installedMetronomeSoundPackIds = const <String>[
+      defaultMetronomeSoundPackId,
+    ],
+    this.selectedMetronomeSoundPackId = defaultMetronomeSoundPackId,
     this.premiumVideoExportSkin = PremiumVideoExportSkin.aurora,
     this.premiumVideoExportColor = 0xFF7C4DFF,
     this.premiumVideoExportEffect = PremiumVideoExportEffect.glow,
@@ -62,6 +70,8 @@ class AppSettings {
     bool? cloudSyncEnabled,
     DateTime? lastCloudSyncAt,
     DateTime? rewardedPremiumExpiresAt,
+    List<String>? installedMetronomeSoundPackIds,
+    String? selectedMetronomeSoundPackId,
     PremiumVideoExportSkin? premiumVideoExportSkin,
     int? premiumVideoExportColor,
     PremiumVideoExportEffect? premiumVideoExportEffect,
@@ -95,6 +105,15 @@ class AppSettings {
       rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
           ? null
           : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
+      installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
+        installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
+      ),
+      selectedMetronomeSoundPackId: normalizeSelectedMetronomeSoundPackId(
+        selectedMetronomeSoundPackId ?? this.selectedMetronomeSoundPackId,
+        normalizeInstalledMetronomeSoundPackIds(
+          installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
+        ),
+      ),
       premiumVideoExportSkin:
           premiumVideoExportSkin ?? this.premiumVideoExportSkin,
       premiumVideoExportColor:
@@ -137,6 +156,11 @@ class AppSettings {
           cloudSyncEnabled == other.cloudSyncEnabled &&
           lastCloudSyncAt == other.lastCloudSyncAt &&
           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
+          listEquals(
+            installedMetronomeSoundPackIds,
+            other.installedMetronomeSoundPackIds,
+          ) &&
+          selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId &&
           premiumVideoExportSkin == other.premiumVideoExportSkin &&
           premiumVideoExportColor == other.premiumVideoExportColor &&
           premiumVideoExportEffect == other.premiumVideoExportEffect &&
@@ -159,6 +183,8 @@ class AppSettings {
         cloudSyncEnabled,
         lastCloudSyncAt,
         rewardedPremiumExpiresAt,
+        Object.hashAll(installedMetronomeSoundPackIds),
+        selectedMetronomeSoundPackId,
         premiumVideoExportSkin,
         premiumVideoExportColor,
         premiumVideoExportEffect,
@@ -210,6 +236,15 @@ class SettingsRepository {
       ),
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
+      ),
+      installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
+        _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
+      ),
+      selectedMetronomeSoundPackId: normalizeSelectedMetronomeSoundPackId(
+        _prefs.getString(_config.selectedMetronomeSoundPackStorageKey),
+        normalizeInstalledMetronomeSoundPackIds(
+          _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
+        ),
       ),
       premiumVideoExportSkin: PremiumVideoExportSkin.fromStorage(
         _prefs.getString(_config.premiumVideoExportSkinStorageKey) ??
@@ -291,6 +326,21 @@ class SettingsRepository {
         settings.rewardedPremiumExpiresAt!.toIso8601String(),
       );
     }
+    await _prefs.setStringList(
+      _config.metronomeSoundPacksStorageKey,
+      normalizeInstalledMetronomeSoundPackIds(
+        settings.installedMetronomeSoundPackIds,
+      ),
+    );
+    await _prefs.setString(
+      _config.selectedMetronomeSoundPackStorageKey,
+      normalizeSelectedMetronomeSoundPackId(
+        settings.selectedMetronomeSoundPackId,
+        normalizeInstalledMetronomeSoundPackIds(
+          settings.installedMetronomeSoundPackIds,
+        ),
+      ),
+    );
     await _prefs.setString(
       _config.premiumVideoExportSkinStorageKey,
       settings.premiumVideoExportSkin.storageValue,
