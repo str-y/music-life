@@ -53,7 +53,7 @@ class PremiumVideoExportService {
     final quality = _resolveQualityPreset(settings.quality);
     final skin = _resolveSkinPreset(settings.skin);
     final effect = _resolveEffectPreset(settings.effect);
-    final waveformColorHex = _formatColor(settings.waveformColorValue);
+    final waveformColorHex = _formatColorForFfmpeg(settings.waveformColorValue);
     final outputVideoPath = _buildOutputPath(sourceVideoPath, settings.quality);
     final logoFilter = settings.showLogo
         ? ',drawtext=text=\'music-life\':fontcolor=white:fontsize=42:'
@@ -144,7 +144,7 @@ class PremiumVideoExportService {
     );
   }
 
-  String _formatColor(int colorValue) {
+  String _formatColorForFfmpeg(int colorValue) {
     return '#${(colorValue & 0x00FFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
 }
@@ -254,7 +254,7 @@ _EffectPreset _resolveEffectPreset(PremiumVideoExportEffect effect) {
             '[ab][cb]blend=all_mode=screen,',
       ),
     PremiumVideoExportEffect.shimmer => const _EffectPreset(
-        waveformFilter: 'tmix=frames=3:weights=\'1 2 1\',',
+        waveformFilter: 'tmix=frames=3:weights="1 2 1",',
       ),
   };
 }
