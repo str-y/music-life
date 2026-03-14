@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/l10n/app_localizations.dart';
 
 const bool runScreenGoldens = bool.fromEnvironment('RUN_SCREEN_GOLDENS');
 const Size screenGoldenSurfaceSize = Size(800, 600);
