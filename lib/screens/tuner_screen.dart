@@ -427,6 +427,8 @@ class _TunerWavePainter extends CustomPainter {
   static const double _amplitudeScale = 8.0;
   static const double _idleAmplitude = 2.5;
   static const double _waveCycles = 2.5;
+  static const double _baseSpectrumScale = 0.65;
+  static const double _spectrumScaleRange = 0.35;
 
   const _TunerWavePainter({
     required this.hasReading,
@@ -455,15 +457,14 @@ class _TunerWavePainter extends CustomPainter {
     final path = Path();
     if (spectrumBins.isNotEmpty) {
       final availableHeight = (size.height / 2) - 2;
-      final amplitudeScale = 0.65 +
+      final amplitudeScale = _baseSpectrumScale +
           ((cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
-              0.35)
+              _spectrumScaleRange)
               .toDouble();
-      final step = spectrumBins.length == 1
-          ? 0.0
-          : size.width / (spectrumBins.length - 1);
+      final hasSingleBin = spectrumBins.length == 1;
+      final step = hasSingleBin ? 0.0 : size.width / (spectrumBins.length - 1);
       for (var i = 0; i < spectrumBins.length; i++) {
-        final x = i * step;
+        final x = hasSingleBin ? size.width / 2 : i * step;
         final magnitude = spectrumBins[i].clamp(0.0, 1.0).toDouble();
         final y = centerY - (magnitude * availableHeight * amplitudeScale);
         if (i == 0) {

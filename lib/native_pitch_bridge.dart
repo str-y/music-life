@@ -833,7 +833,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     } else if (msg is Float32List) {
       if (msg.length > setup.frameSize) {
         setup.resultPort.send(IsolateManagerError(
-          code: 'invalid-raw-frame',
+          code: 'invalid-frame',
           phase: 'validate-raw-frame',
           message: 'Raw frame length (${msg.length}) exceeds frameSize (${setup.frameSize}).',
           stack: StackTrace.current.toString(),
@@ -1234,12 +1234,16 @@ void _fillSpectrumBins({
 
   _fftInPlace(real, imag);
 
+  // The tuner visualiser emphasizes the low-frequency region where instrument
+  // fundamentals and the strongest early harmonics typically appear.
   final usableFrequencies = math.max(1, fftSize ~/ 4);
   final frequenciesPerBin = usableFrequencies / target.length;
   var peak = 0.0;
   for (var i = 0; i < target.length; i++) {
-    final start = (i * frequenciesPerBin).floor();
+    final start = math.min((i * frequenciesPerBin).floor(), usableFrequencies - 1);
     final rawEnd = ((i + 1) * frequenciesPerBin).ceil();
+    // Tiny buckets can round down to the same index; keep at least one FFT bin
+    // in every visual bucket so the preview remains stable.
     final end = rawEnd <= start
         ? start + 1
         : math.min(rawEnd, usableFrequencies);
