@@ -96,11 +96,19 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
     final seedColor = themeSeedColor(
       selectedThemeNote,
       settings.themeColorNote == null ? settings.dynamicThemeEnergy : 1.0,
+      mode: settings.dynamicThemeMode,
+      intensity: settings.themeColorNote == null
+          ? settings.dynamicThemeIntensity
+          : 1.0,
     );
+    final locale = settings.localeCode == null
+        ? null
+        : Locale(settings.localeCode!);
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       theme: _buildTheme(seedColor, brightness: Brightness.light),
       darkTheme: _buildTheme(seedColor, brightness: Brightness.dark),
       themeMode: settings.useSystemTheme

@@ -515,7 +515,6 @@ float Yin::detect(const float* samples, std::vector<float>& workspace) {
         probability_ = 0.0f;
         return -1.0f;
     }
-    std::memset(workspace.data(), 0, static_cast<size_t>(half_buffer_) * sizeof(float));
 
     difference(samples, workspace);
     cmndf(workspace);

@@ -438,6 +438,32 @@ static bool test_pd_hop_size_skips_processing() {
     return true;
 }
 
+static bool test_pd_preserves_hop_remainder_between_calls() {
+    // When a callback block is larger than the hop size, the extra samples
+    // beyond one hop must count toward the next analysis window instead of
+    // being discarded.
+    const int SR    = 44100;
+    const int FRAME = 2048;
+    const int HOP   = FRAME / 2;
+
+    PitchDetector pd(SR, FRAME);
+    std::vector<float> tone(FRAME);
+    make_sine(tone, 440.0f, SR);
+
+    PitchDetector::Result first = pd.process(tone.data(), FRAME);
+    ASSERT_TRUE(first.pitched);
+
+    std::vector<float> silence_a(HOP + 100, 0.0f);
+    std::vector<float> silence_b(HOP - 100, 0.0f);
+
+    (void)pd.process(silence_a.data(), static_cast<int>(silence_a.size()));
+    PitchDetector::Result second = pd.process(silence_b.data(), static_cast<int>(silence_b.size()));
+
+    ASSERT_TRUE(!second.pitched);
+    ASSERT_TRUE(second.frequency == 0.0f);
+    return true;
+}
+
 static bool test_ffi_process_null_handle() {
     // ml_pitch_detector_process must return a zeroed result (not crash) when
     // the handle is null.
@@ -591,6 +617,7 @@ int main() {
     run_test("ffi: process null samples is safe",   test_ffi_process_null_samples);
     run_test("ffi: process zero num_samples safe",  test_ffi_process_zero_num_samples);
     run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
+    run_test("pd:  preserves hop remainder across calls", test_pd_preserves_hop_remainder_between_calls);
     run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
     run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
     run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
