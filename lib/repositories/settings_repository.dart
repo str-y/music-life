@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../models/premium_video_export.dart';
 import '../theme/dynamic_theme_mode.dart';
 
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
@@ -20,6 +21,11 @@ class AppSettings {
   final bool cloudSyncEnabled;
   final DateTime? lastCloudSyncAt;
   final DateTime? rewardedPremiumExpiresAt;
+  final PremiumVideoExportSkin premiumVideoExportSkin;
+  final int premiumVideoExportColor;
+  final PremiumVideoExportEffect premiumVideoExportEffect;
+  final bool premiumVideoExportShowLogo;
+  final PremiumVideoExportQuality premiumVideoExportQuality;
 
   const AppSettings({
     this.darkMode = false,
@@ -35,6 +41,11 @@ class AppSettings {
     this.cloudSyncEnabled = false,
     this.lastCloudSyncAt,
     this.rewardedPremiumExpiresAt,
+    this.premiumVideoExportSkin = PremiumVideoExportSkin.aurora,
+    this.premiumVideoExportColor = 0xFF7C4DFF,
+    this.premiumVideoExportEffect = PremiumVideoExportEffect.glow,
+    this.premiumVideoExportShowLogo = true,
+    this.premiumVideoExportQuality = PremiumVideoExportQuality.high,
   });
 
   AppSettings copyWith({
@@ -51,6 +62,11 @@ class AppSettings {
     bool? cloudSyncEnabled,
     DateTime? lastCloudSyncAt,
     DateTime? rewardedPremiumExpiresAt,
+    PremiumVideoExportSkin? premiumVideoExportSkin,
+    int? premiumVideoExportColor,
+    PremiumVideoExportEffect? premiumVideoExportEffect,
+    bool? premiumVideoExportShowLogo,
+    PremiumVideoExportQuality? premiumVideoExportQuality,
     bool clearLastCloudSyncAt = false,
     bool clearRewardedPremiumExpiresAt = false,
     bool clearLocaleCode = false,
@@ -79,11 +95,30 @@ class AppSettings {
       rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
           ? null
           : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
+      premiumVideoExportSkin:
+          premiumVideoExportSkin ?? this.premiumVideoExportSkin,
+      premiumVideoExportColor:
+          premiumVideoExportColor ?? this.premiumVideoExportColor,
+      premiumVideoExportEffect:
+          premiumVideoExportEffect ?? this.premiumVideoExportEffect,
+      premiumVideoExportShowLogo:
+          premiumVideoExportShowLogo ?? this.premiumVideoExportShowLogo,
+      premiumVideoExportQuality:
+          premiumVideoExportQuality ?? this.premiumVideoExportQuality,
     );
   }
 
   bool get hasRewardedPremiumAccess =>
       rewardedPremiumExpiresAt?.isAfter(DateTime.now()) ?? false;
+
+  PremiumVideoExportSettings get premiumVideoExportSettings =>
+      PremiumVideoExportSettings(
+        skin: premiumVideoExportSkin,
+        waveformColorValue: premiumVideoExportColor,
+        effect: premiumVideoExportEffect,
+        showLogo: premiumVideoExportShowLogo,
+        quality: premiumVideoExportQuality,
+      );
 
   @override
   bool operator ==(Object other) =>
@@ -101,24 +136,35 @@ class AppSettings {
           dynamicThemeEnergy == other.dynamicThemeEnergy &&
           cloudSyncEnabled == other.cloudSyncEnabled &&
           lastCloudSyncAt == other.lastCloudSyncAt &&
-          rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt;
+          rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
+          premiumVideoExportSkin == other.premiumVideoExportSkin &&
+          premiumVideoExportColor == other.premiumVideoExportColor &&
+          premiumVideoExportEffect == other.premiumVideoExportEffect &&
+          premiumVideoExportShowLogo == other.premiumVideoExportShowLogo &&
+          premiumVideoExportQuality == other.premiumVideoExportQuality;
 
   @override
   int get hashCode =>
-       Object.hash(
-           darkMode,
-           useSystemTheme,
-           localeCode,
-           themeColorNote,
-           referencePitch,
-           tunerTransposition,
-           dynamicThemeMode,
-           dynamicThemeIntensity,
-           dynamicThemeNote,
-           dynamicThemeEnergy,
-           cloudSyncEnabled,
-           lastCloudSyncAt,
-           rewardedPremiumExpiresAt);
+      Object.hash(
+        darkMode,
+        useSystemTheme,
+        localeCode,
+        themeColorNote,
+        referencePitch,
+        tunerTransposition,
+        dynamicThemeMode,
+        dynamicThemeIntensity,
+        dynamicThemeNote,
+        dynamicThemeEnergy,
+        cloudSyncEnabled,
+        lastCloudSyncAt,
+        rewardedPremiumExpiresAt,
+        premiumVideoExportSkin,
+        premiumVideoExportColor,
+        premiumVideoExportEffect,
+        premiumVideoExportShowLogo,
+        premiumVideoExportQuality,
+      );
 
   static double _clampDynamicThemeIntensity(double intensity) {
     return intensity.clamp(0.0, 1.0).toDouble();
@@ -164,6 +210,24 @@ class SettingsRepository {
       ),
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
+      ),
+      premiumVideoExportSkin: PremiumVideoExportSkin.fromStorage(
+        _prefs.getString(_config.premiumVideoExportSkinStorageKey) ??
+            _config.defaultPremiumVideoExportSkin,
+      ),
+      premiumVideoExportColor:
+          _prefs.getInt(_config.premiumVideoExportColorStorageKey) ??
+              _config.defaultPremiumVideoExportColor,
+      premiumVideoExportEffect: PremiumVideoExportEffect.fromStorage(
+        _prefs.getString(_config.premiumVideoExportEffectStorageKey) ??
+            _config.defaultPremiumVideoExportEffect,
+      ),
+      premiumVideoExportShowLogo:
+          _prefs.getBool(_config.premiumVideoExportShowLogoStorageKey) ??
+              _config.defaultPremiumVideoExportShowLogo,
+      premiumVideoExportQuality: PremiumVideoExportQuality.fromStorage(
+        _prefs.getString(_config.premiumVideoExportQualityStorageKey) ??
+            _config.defaultPremiumVideoExportQuality,
       ),
     );
   }
@@ -227,6 +291,26 @@ class SettingsRepository {
         settings.rewardedPremiumExpiresAt!.toIso8601String(),
       );
     }
+    await _prefs.setString(
+      _config.premiumVideoExportSkinStorageKey,
+      settings.premiumVideoExportSkin.storageValue,
+    );
+    await _prefs.setInt(
+      _config.premiumVideoExportColorStorageKey,
+      settings.premiumVideoExportColor,
+    );
+    await _prefs.setString(
+      _config.premiumVideoExportEffectStorageKey,
+      settings.premiumVideoExportEffect.storageValue,
+    );
+    await _prefs.setBool(
+      _config.premiumVideoExportShowLogoStorageKey,
+      settings.premiumVideoExportShowLogo,
+    );
+    await _prefs.setString(
+      _config.premiumVideoExportQualityStorageKey,
+      settings.premiumVideoExportQuality.storageValue,
+    );
   }
 
   DateTime? _decodeDateTime(String? value) {

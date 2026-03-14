@@ -11,6 +11,7 @@ import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ai_practice_insights_service.dart';
 import '../services/permission_service.dart';
+import '../services/premium_video_export_service.dart';
 
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
@@ -65,6 +66,11 @@ final permissionServiceProvider = Provider<PermissionService>((ref) {
 final aiPracticeInsightsServiceProvider =
     Provider<AiPracticeInsightsService>((ref) {
   return HybridAiPracticeInsightsService();
+});
+
+final premiumVideoExportServiceProvider =
+    Provider<PremiumVideoExportService>((ref) {
+  return const PremiumVideoExportService();
 });
 
 final chordHistoryRepositoryProvider = Provider<ChordHistoryRepository>((ref) {

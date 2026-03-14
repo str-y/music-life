@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
+import '../models/premium_video_export.dart';
 import '../native_pitch_bridge.dart';
 import '../repositories/settings_repository.dart';
 
@@ -36,8 +37,8 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     await update(
       state.copyWith(
         rewardedPremiumExpiresAt: grantedAt.add(duration),
-        ),
-      );
+      ),
+    );
   }
 
   Future<DateTime?> setCloudSyncEnabled(bool enabled) async {
@@ -54,7 +55,9 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 
   Future<bool> restoreLatestCloudBackup() async {
-    final syncedAt = await ref.read(cloudSyncRepositoryProvider).restoreLatestBackup();
+    final syncedAt = await ref
+        .read(cloudSyncRepositoryProvider)
+        .restoreLatestBackup();
     if (syncedAt == null) return false;
     await update(
       state.copyWith(lastCloudSyncAt: syncedAt),
@@ -70,6 +73,25 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
       syncCloudBackup: false,
     );
     return syncedAt;
+  }
+
+  Future<void> updatePremiumVideoExportSettings({
+    PremiumVideoExportSkin? skin,
+    int? waveformColorValue,
+    PremiumVideoExportEffect? effect,
+    bool? showLogo,
+    PremiumVideoExportQuality? quality,
+  }) async {
+    await update(
+      state.copyWith(
+        premiumVideoExportSkin: skin,
+        premiumVideoExportColor: waveformColorValue,
+        premiumVideoExportEffect: effect,
+        premiumVideoExportShowLogo: showLogo,
+        premiumVideoExportQuality: quality,
+      ),
+      syncCloudBackup: false,
+    );
   }
 
   void updateDynamicThemeFromPitch(PitchResult pitch) {

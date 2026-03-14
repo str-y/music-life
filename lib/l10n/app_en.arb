@@ -1021,7 +1021,7 @@
   "@videoPracticePremiumTitle": {
     "description": "Title shown in the premium paywall for video practice"
   },
-  "videoPracticePremiumDescription": "Watch an ad to unlock video recording with real-time pitch overlay for {hours} hours.",
+  "videoPracticePremiumDescription": "Watch an ad to unlock video recording, premium waveform SNS export, and real-time pitch overlay for {hours} hours.",
   "@videoPracticePremiumDescription": {
     "description": "Description shown in the premium paywall for video practice",
     "placeholders": {
@@ -1033,5 +1033,113 @@
   "videoPracticeCameraPermissionDenied": "Camera access is denied. Please allow it in Settings.",
   "@videoPracticeCameraPermissionDenied": {
     "description": "Message shown when camera permission is denied"
+  },
+  "videoPracticeSnsExport": "SNS Export",
+  "@videoPracticeSnsExport": {
+    "description": "Button label for exporting a premium social video"
+  },
+  "videoPracticeSnsExportTitle": "Premium SNS video export",
+  "@videoPracticeSnsExportTitle": {
+    "description": "Title for the premium SNS export sheet"
+  },
+  "videoPracticeSnsExportDescription": "Blend an animated waveform with premium skins, colors, and effects into a vertical video tuned for Instagram and TikTok.",
+  "@videoPracticeSnsExportDescription": {
+    "description": "Description for the premium SNS export feature"
+  },
+  "videoPracticeSnsExportRecordFirst": "Record a performance before exporting a premium SNS video.",
+  "@videoPracticeSnsExportRecordFirst": {
+    "description": "Snackbar shown when export is requested before a recording exists"
+  },
+  "videoPracticeSnsExportReady": "Export preset ready: {resolution} / {bitrate}",
+  "@videoPracticeSnsExportReady": {
+    "description": "Message shown after preparing the premium SNS export",
+    "placeholders": {
+      "resolution": {
+        "type": "String"
+      },
+      "bitrate": {
+        "type": "String"
+      }
+    }
+  },
+  "videoPracticeSnsExportShareText": "music-life premium SNS export • {resolution} • {bitrate}",
+  "@videoPracticeSnsExportShareText": {
+    "description": "Share text attached to the exported premium SNS video",
+    "placeholders": {
+      "resolution": {
+        "type": "String"
+      },
+      "bitrate": {
+        "type": "String"
+      }
+    }
+  },
+  "videoPracticeSnsExportFailed": "Failed to prepare the premium SNS export.",
+  "@videoPracticeSnsExportFailed": {
+    "description": "Error message shown when the premium SNS export fails"
+  },
+  "videoPracticeExportSkin": "Waveform skin",
+  "@videoPracticeExportSkin": {
+    "description": "Section label for selecting the waveform skin"
+  },
+  "videoPracticeExportColor": "Waveform color",
+  "@videoPracticeExportColor": {
+    "description": "Section label for selecting the waveform color"
+  },
+  "videoPracticeExportEffect": "Visual effect",
+  "@videoPracticeExportEffect": {
+    "description": "Section label for selecting the waveform effect"
+  },
+  "videoPracticeExportLogo": "music-life logo",
+  "@videoPracticeExportLogo": {
+    "description": "Label for toggling the logo overlay in the export"
+  },
+  "videoPracticeExportLogoShown": "Show branding in the exported video",
+  "@videoPracticeExportLogoShown": {
+    "description": "Subtitle for the enabled logo toggle"
+  },
+  "videoPracticeExportLogoHidden": "Hide branding for a clean export",
+  "@videoPracticeExportLogoHidden": {
+    "description": "Subtitle for the disabled logo toggle"
+  },
+  "videoPracticeExportQuality": "Output quality",
+  "@videoPracticeExportQuality": {
+    "description": "Section label for selecting the export quality"
+  },
+  "videoPracticeExportSkinAurora": "Aurora",
+  "@videoPracticeExportSkinAurora": {
+    "description": "Label for the aurora waveform skin"
+  },
+  "videoPracticeExportSkinNeonPulse": "Neon Pulse",
+  "@videoPracticeExportSkinNeonPulse": {
+    "description": "Label for the neon pulse waveform skin"
+  },
+  "videoPracticeExportSkinSunsetGold": "Sunset Gold",
+  "@videoPracticeExportSkinSunsetGold": {
+    "description": "Label for the sunset gold waveform skin"
+  },
+  "videoPracticeExportEffectGlow": "Glow",
+  "@videoPracticeExportEffectGlow": {
+    "description": "Label for the glow effect"
+  },
+  "videoPracticeExportEffectPrism": "Prism",
+  "@videoPracticeExportEffectPrism": {
+    "description": "Label for the prism effect"
+  },
+  "videoPracticeExportEffectShimmer": "Shimmer",
+  "@videoPracticeExportEffectShimmer": {
+    "description": "Label for the shimmer effect"
+  },
+  "videoPracticeExportQualitySocial": "Social 1080p",
+  "@videoPracticeExportQualitySocial": {
+    "description": "Label for the social export quality preset"
+  },
+  "videoPracticeExportQualityHigh": "High bitrate 1440p",
+  "@videoPracticeExportQualityHigh": {
+    "description": "Label for the high export quality preset"
+  },
+  "videoPracticeExportQualityUltra": "Ultra 4K",
+  "@videoPracticeExportQualityUltra": {
+    "description": "Label for the ultra export quality preset"
   }
 }

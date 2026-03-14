@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
+import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -169,6 +170,53 @@ void main() {
     expect(
       prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
       '2026-01-02T00:00:00.000Z',
+    );
+  });
+
+  test('updatePremiumVideoExportSettings persists premium export preferences',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(appSettingsProvider.notifier).updatePremiumVideoExportSettings(
+          skin: PremiumVideoExportSkin.neonPulse,
+          waveformColorValue: 0xFFFF4081,
+          effect: PremiumVideoExportEffect.prism,
+          showLogo: false,
+          quality: PremiumVideoExportQuality.ultra,
+        );
+
+    final settings = container.read(appSettingsProvider);
+    expect(settings.premiumVideoExportSkin, PremiumVideoExportSkin.neonPulse);
+    expect(settings.premiumVideoExportColor, 0xFFFF4081);
+    expect(settings.premiumVideoExportEffect, PremiumVideoExportEffect.prism);
+    expect(settings.premiumVideoExportShowLogo, isFalse);
+    expect(settings.premiumVideoExportQuality, PremiumVideoExportQuality.ultra);
+    expect(
+      prefs.getString(AppConfig.defaultPremiumVideoExportSkinStorageKey),
+      'neon_pulse',
+    );
+    expect(
+      prefs.getInt(AppConfig.defaultPremiumVideoExportColorStorageKey),
+      0xFFFF4081,
+    );
+    expect(
+      prefs.getString(AppConfig.defaultPremiumVideoExportEffectStorageKey),
+      'prism',
+    );
+    expect(
+      prefs.getBool(AppConfig.defaultPremiumVideoExportShowLogoStorageKey),
+      isFalse,
+    );
+    expect(
+      prefs.getString(AppConfig.defaultPremiumVideoExportQualityStorageKey),
+      'ultra',
     );
   });
 

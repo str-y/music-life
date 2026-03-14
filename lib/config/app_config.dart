@@ -35,12 +35,27 @@ class AppConfig {
     this.cloudBackupBundleStorageKey = defaultCloudBackupBundleStorageKey,
     this.rewardedPremiumExpiresAtStorageKey =
         defaultRewardedPremiumExpiresAtStorageKey,
+    this.premiumVideoExportSkinStorageKey =
+        defaultPremiumVideoExportSkinStorageKey,
+    this.premiumVideoExportColorStorageKey =
+        defaultPremiumVideoExportColorStorageKey,
+    this.premiumVideoExportEffectStorageKey =
+        defaultPremiumVideoExportEffectStorageKey,
+    this.premiumVideoExportShowLogoStorageKey =
+        defaultPremiumVideoExportShowLogoStorageKey,
+    this.premiumVideoExportQualityStorageKey =
+        defaultPremiumVideoExportQualityStorageKey,
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
     this.defaultDynamicThemeMode = defaultChillDynamicThemeMode,
     this.defaultDynamicThemeIntensity = 0.7,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = _defaultTunerTransposition,
+    this.defaultPremiumVideoExportSkin = defaultAuroraPremiumVideoExportSkin,
+    this.defaultPremiumVideoExportColor = defaultPremiumVideoExportColor,
+    this.defaultPremiumVideoExportEffect = defaultGlowPremiumVideoExportEffect,
+    this.defaultPremiumVideoExportShowLogo = true,
+    this.defaultPremiumVideoExportQuality = defaultHighPremiumVideoExportQuality,
   });
 
   static const int defaultAudioFrameSize = 2048;
@@ -84,8 +99,22 @@ class AppConfig {
   static const String defaultCloudBackupBundleStorageKey = 'cloudBackupBundle';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
+  static const String defaultPremiumVideoExportSkinStorageKey =
+      'premiumVideoExportSkin';
+  static const String defaultPremiumVideoExportColorStorageKey =
+      'premiumVideoExportColor';
+  static const String defaultPremiumVideoExportEffectStorageKey =
+      'premiumVideoExportEffect';
+  static const String defaultPremiumVideoExportShowLogoStorageKey =
+      'premiumVideoExportShowLogo';
+  static const String defaultPremiumVideoExportQualityStorageKey =
+      'premiumVideoExportQuality';
   static const String _defaultTunerTransposition = 'C';
   static const String defaultChillDynamicThemeMode = 'chill';
+  static const String defaultAuroraPremiumVideoExportSkin = 'aurora';
+  static const int defaultPremiumVideoExportColor = 0xFF7C4DFF;
+  static const String defaultGlowPremiumVideoExportEffect = 'glow';
+  static const String defaultHighPremiumVideoExportQuality = 'high';
 
   final int audioFrameSize;
   final int audioSampleRate;
@@ -118,6 +147,11 @@ class AppConfig {
   final String lastCloudSyncAtStorageKey;
   final String cloudBackupBundleStorageKey;
   final String rewardedPremiumExpiresAtStorageKey;
+  final String premiumVideoExportSkinStorageKey;
+  final String premiumVideoExportColorStorageKey;
+  final String premiumVideoExportEffectStorageKey;
+  final String premiumVideoExportShowLogoStorageKey;
+  final String premiumVideoExportQualityStorageKey;
 
   final bool defaultDarkMode;
   final bool defaultUseSystemTheme;
@@ -125,6 +159,11 @@ class AppConfig {
   final double defaultDynamicThemeIntensity;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
+  final String defaultPremiumVideoExportSkin;
+  final int defaultPremiumVideoExportColor;
+  final String defaultPremiumVideoExportEffect;
+  final bool defaultPremiumVideoExportShowLogo;
+  final String defaultPremiumVideoExportQuality;
 
   AppLogLevel get effectiveLogLevel =>
       logLevel ?? (kReleaseMode ? AppLogLevel.info : AppLogLevel.debug);

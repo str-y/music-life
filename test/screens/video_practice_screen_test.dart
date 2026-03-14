@@ -179,6 +179,35 @@ void main() {
               expect(l10n.videoPracticePremiumTitle, isNotEmpty);
               expect(l10n.videoPracticePremiumDescription(24), isNotEmpty);
               expect(l10n.videoPracticeCameraPermissionDenied, isNotEmpty);
+              expect(l10n.videoPracticeSnsExport, isNotEmpty);
+              expect(l10n.videoPracticeSnsExportTitle, isNotEmpty);
+              expect(l10n.videoPracticeSnsExportDescription, isNotEmpty);
+              expect(l10n.videoPracticeSnsExportRecordFirst, isNotEmpty);
+              expect(
+                l10n.videoPracticeSnsExportReady('1080×1920', '8 Mbps'),
+                isNotEmpty,
+              );
+              expect(
+                l10n.videoPracticeSnsExportShareText('1080×1920', '8 Mbps'),
+                isNotEmpty,
+              );
+              expect(l10n.videoPracticeSnsExportFailed, isNotEmpty);
+              expect(l10n.videoPracticeExportSkin, isNotEmpty);
+              expect(l10n.videoPracticeExportColor, isNotEmpty);
+              expect(l10n.videoPracticeExportEffect, isNotEmpty);
+              expect(l10n.videoPracticeExportLogo, isNotEmpty);
+              expect(l10n.videoPracticeExportLogoShown, isNotEmpty);
+              expect(l10n.videoPracticeExportLogoHidden, isNotEmpty);
+              expect(l10n.videoPracticeExportQuality, isNotEmpty);
+              expect(l10n.videoPracticeExportSkinAurora, isNotEmpty);
+              expect(l10n.videoPracticeExportSkinNeonPulse, isNotEmpty);
+              expect(l10n.videoPracticeExportSkinSunsetGold, isNotEmpty);
+              expect(l10n.videoPracticeExportEffectGlow, isNotEmpty);
+              expect(l10n.videoPracticeExportEffectPrism, isNotEmpty);
+              expect(l10n.videoPracticeExportEffectShimmer, isNotEmpty);
+              expect(l10n.videoPracticeExportQualitySocial, isNotEmpty);
+              expect(l10n.videoPracticeExportQualityHigh, isNotEmpty);
+              expect(l10n.videoPracticeExportQualityUltra, isNotEmpty);
               return const SizedBox.shrink();
             },
           ),
