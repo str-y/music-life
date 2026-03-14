@@ -28,7 +28,14 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
   static const int _schemaVersion = 6;
   static const String _databasePasswordKey = 'database_password';
+  static const String _encryptedDatabaseAlias = 'encrypted';
   static const String _legacyPlaintextDatabaseSuffix = '.unencrypted';
+  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: const IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
   static Future<SharedPreferences> Function() _sharedPreferencesLoader =
       SharedPreferences.getInstance;
   static Future<String?> Function(String key) _secureValueReader =
@@ -103,9 +110,9 @@ class AppDatabase {
   }
 
   Future<void> _verifyEncryption(File file) async {
-    final probe = _DriftDatabase(NativeDatabase.createInBackground(file));
+    final unencryptedProbe = _DriftDatabase(NativeDatabase.createInBackground(file));
     try {
-      await probe.customSelect('SELECT count(*) AS tables FROM sqlite_master').get();
+      await unencryptedProbe.customSelect('PRAGMA user_version').get();
       throw StateError(
         'Database encryption verification failed: database can be opened without a key.',
       );
@@ -115,7 +122,7 @@ class AppDatabase {
       }
       rethrow;
     } finally {
-      await probe.close();
+      await unencryptedProbe.close();
     }
   }
 
@@ -164,9 +171,9 @@ class AppDatabase {
       return false;
     }
 
-    final probe = _DriftDatabase(NativeDatabase.createInBackground(file));
+    final plaintextProbe = _DriftDatabase(NativeDatabase.createInBackground(file));
     try {
-      await probe.customSelect('PRAGMA user_version').getSingle();
+      await plaintextProbe.customSelect('PRAGMA user_version').get();
       return true;
     } catch (error) {
       if (_isMissingKeyError(error) || _isCorruptionError(error)) {
@@ -174,7 +181,7 @@ class AppDatabase {
       }
       rethrow;
     } finally {
-      await probe.close();
+      await plaintextProbe.close();
     }
   }
 
@@ -194,13 +201,15 @@ class AppDatabase {
     try {
       await plaintextDb.customStatement(
         'ATTACH DATABASE ${_sqlStringLiteral(encryptedFile.path)} '
-        'AS encrypted KEY ${_sqlStringLiteral(password)}',
+        'AS $_encryptedDatabaseAlias KEY ${_sqlStringLiteral(password)}',
       );
       attachedEncryptedDatabase = true;
-      await plaintextDb.customSelect("SELECT sqlcipher_export('encrypted')").get();
+      await plaintextDb.customSelect(
+        'SELECT sqlcipher_export(${_sqlStringLiteral(_encryptedDatabaseAlias)})',
+      ).get();
     } finally {
       if (attachedEncryptedDatabase) {
-        await plaintextDb.customStatement('DETACH DATABASE encrypted');
+        await plaintextDb.customStatement('DETACH DATABASE $_encryptedDatabaseAlias');
       }
       await plaintextDb.close();
     }
@@ -648,16 +657,15 @@ class AppDatabase {
       List<int>.generate(32, (_) => random.nextInt(256)),
     );
     await _secureValueWriter(_databasePasswordKey, generatedPassword);
-    await prefs.remove(_databasePasswordKey);
     return generatedPassword;
   }
 
   static Future<String?> _defaultSecureValueReader(String key) {
-    return FlutterSecureStorage().read(key: key);
+    return _secureStorage.read(key: key);
   }
 
   static Future<void> _defaultSecureValueWriter(String key, String value) {
-    return FlutterSecureStorage().write(key: key, value: value);
+    return _secureStorage.write(key: key, value: value);
   }
 
   static String _sqlStringLiteral(String value) {
