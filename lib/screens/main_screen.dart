@@ -1118,7 +1118,7 @@ class _CelebrationDot extends StatelessWidget {
     return Transform.translate(
       offset: offset,
       child: Opacity(
-        opacity: opacity.clamp(0.0, 1.0).toDouble(),
+        opacity: opacity.clamp(0.0, 1.0),
         child: Container(
           width: size,
           height: size,
