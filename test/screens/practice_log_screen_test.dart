@@ -167,6 +167,51 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('analytics bars animate selection details when tapped',
+        (tester) async {
+      final logs = [
+        PracticeLogEntry(
+          date: DateTime(2026, 2, 14),
+          durationMinutes: 30,
+          memo: 'Guitar: scales',
+        ),
+        PracticeLogEntry(
+          date: DateTime(2026, 2, 10),
+          durationMinutes: 20,
+          memo: 'Piano: arpeggio',
+        ),
+      ];
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+
+      await tester.pumpWidget(
+        _wrapScreen(
+          const PracticeLogScreen(),
+          overrides: [
+            recordingRepositoryProvider.overrideWithValue(repo),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(PracticeLogScreen)),
+      )!;
+      expect(
+        find.text('2/14 • ${l10n.durationMinutes(30)}'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('practice-trend-bar-2/10')));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('2/10 • ${l10n.durationMinutes(20)}'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('PracticeLogScreen async states', () {

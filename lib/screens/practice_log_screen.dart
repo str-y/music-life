@@ -518,7 +518,7 @@ class _AnalyticsSection extends StatelessWidget {
   }
 }
 
-class _MiniBarChart extends StatelessWidget {
+class _MiniBarChart extends StatefulWidget {
   const _MiniBarChart({
     required this.title,
     required this.points,
@@ -528,58 +528,157 @@ class _MiniBarChart extends StatelessWidget {
   final List<PracticeTrendPoint> points;
 
   @override
+  State<_MiniBarChart> createState() => _MiniBarChartState();
+}
+
+class _MiniBarChartState extends State<_MiniBarChart> {
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.points.isEmpty ? -1 : widget.points.length - 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant _MiniBarChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.points.isEmpty) {
+      _selectedIndex = -1;
+      return;
+    }
+    if (_selectedIndex < 0 || _selectedIndex >= widget.points.length) {
+      _selectedIndex = widget.points.length - 1;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final maxMinutes = points.fold<int>(0, (max, point) => point.minutes > max ? point.minutes : max);
+    final points = widget.points;
+    final maxMinutes = points.fold<int>(
+      0,
+      (max, point) => point.minutes > max ? point.minutes : max,
+    );
     final base = maxMinutes == 0 ? 1 : maxMinutes;
+    final selectedPoint =
+        _selectedIndex >= 0 && _selectedIndex < points.length
+            ? points[_selectedIndex]
+            : null;
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
+          widget.title,
           style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: selectedPoint == null
+              ? const SizedBox(height: 20)
+              : Text(
+                  '${selectedPoint.label} • ${l10n.durationMinutes(selectedPoint.minutes)}',
+                  key: ValueKey<String>('practice-chart-selection-${selectedPoint.label}'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                ),
         ),
         const SizedBox(height: 8),
         SizedBox(
           height: 120,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: points.map((point) {
+            children: points.asMap().entries.map((entry) {
+              final index = entry.key;
+              final point = entry.value;
               final ratio = point.minutes / base;
+              final isSelected = index == _selectedIndex;
+              final targetHeight = ratio == 0
+                  ? 0.0
+                  : ratio * _chartBarMaxHeight + _chartBarMinHeight;
               return Expanded(
                 child: Semantics(
                   container: true,
+                  button: true,
+                  selected: isSelected,
                   label: '${point.label}, ${l10n.durationMinutes(point.minutes)}',
                   child: ExcludeSemantics(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              child: Container(
-                                width: 12,
-                                height: ratio == 0
-                                    ? 0
-                                    : ratio * _chartBarMaxHeight + _chartBarMinHeight,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(4),
+                      child: InkWell(
+                        key: ValueKey<String>('practice-trend-bar-${point.label}'),
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => setState(() => _selectedIndex = index),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Align(
+                                alignment: Alignment.bottomCenter,
+                                child: TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(
+                                    begin: 0,
+                                    end: targetHeight,
+                                  ),
+                                  duration: Duration(
+                                    milliseconds: 320 + index * 50,
+                                  ),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, animatedHeight, _) {
+                                    return AnimatedContainer(
+                                      duration: const Duration(milliseconds: 220),
+                                      curve: Curves.easeOutCubic,
+                                      width: isSelected ? 16 : 12,
+                                      height: animatedHeight,
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? cs.primary
+                                            : cs.primary.withOpacity(0.65),
+                                        borderRadius: BorderRadius.circular(
+                                          isSelected ? 6 : 4,
+                                        ),
+                                        boxShadow: isSelected
+                                            ? [
+                                                BoxShadow(
+                                                  color: cs.primary.withOpacity(0.24),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            point.label,
-                            style: Theme.of(context).textTheme.labelSmall,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                              style:
+                                  (Theme.of(context).textTheme.labelSmall ??
+                                          const TextStyle(fontSize: 11))
+                                      .copyWith(
+                                        color: isSelected ? cs.primary : null,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                      ),
+                              child: Text(
+                                point.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
