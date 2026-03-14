@@ -22,12 +22,16 @@ class AppConfig {
     this.useSystemThemeStorageKey = defaultUseSystemThemeStorageKey,
     this.localeStorageKey = defaultLocaleStorageKey,
     this.themeColorNoteStorageKey = defaultThemeColorNoteStorageKey,
+    this.dynamicThemeModeStorageKey = defaultDynamicThemeModeStorageKey,
+    this.dynamicThemeIntensityStorageKey = defaultDynamicThemeIntensityStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
     this.rewardedPremiumExpiresAtStorageKey =
         defaultRewardedPremiumExpiresAtStorageKey,
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
+    this.defaultDynamicThemeMode = defaultChillDynamicThemeMode,
+    this.defaultDynamicThemeIntensity = 0.7,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = _defaultTunerTransposition,
   });
@@ -63,11 +67,15 @@ class AppConfig {
   static const String defaultUseSystemThemeStorageKey = 'useSystemTheme';
   static const String defaultLocaleStorageKey = 'localeCode';
   static const String defaultThemeColorNoteStorageKey = 'themeColorNote';
+  static const String defaultDynamicThemeModeStorageKey = 'dynamicThemeMode';
+  static const String defaultDynamicThemeIntensityStorageKey =
+      'dynamicThemeIntensity';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
   static const String _defaultTunerTransposition = 'C';
+  static const String defaultChillDynamicThemeMode = 'chill';
 
   final int audioFrameSize;
   final int audioSampleRate;
@@ -91,12 +99,16 @@ class AppConfig {
   final String useSystemThemeStorageKey;
   final String localeStorageKey;
   final String themeColorNoteStorageKey;
+  final String dynamicThemeModeStorageKey;
+  final String dynamicThemeIntensityStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
   final String rewardedPremiumExpiresAtStorageKey;
 
   final bool defaultDarkMode;
   final bool defaultUseSystemTheme;
+  final String defaultDynamicThemeMode;
+  final double defaultDynamicThemeIntensity;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
 }

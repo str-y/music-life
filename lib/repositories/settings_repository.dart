@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../theme/dynamic_theme_mode.dart';
 
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
 
@@ -12,6 +13,8 @@ class AppSettings {
   final String? themeColorNote;
   final double referencePitch;
   final String tunerTransposition;
+  final DynamicThemeMode dynamicThemeMode;
+  final double dynamicThemeIntensity;
   final String? dynamicThemeNote;
   final double dynamicThemeEnergy;
   final DateTime? rewardedPremiumExpiresAt;
@@ -23,6 +26,8 @@ class AppSettings {
     this.themeColorNote,
     this.referencePitch = 440.0,
     this.tunerTransposition = 'C',
+    this.dynamicThemeMode = DynamicThemeMode.chill,
+    this.dynamicThemeIntensity = 0.7,
     this.dynamicThemeNote,
     this.dynamicThemeEnergy = 0.0,
     this.rewardedPremiumExpiresAt,
@@ -35,6 +40,8 @@ class AppSettings {
     String? themeColorNote,
     double? referencePitch,
     String? tunerTransposition,
+    DynamicThemeMode? dynamicThemeMode,
+    double? dynamicThemeIntensity,
     String? dynamicThemeNote,
     double? dynamicThemeEnergy,
     DateTime? rewardedPremiumExpiresAt,
@@ -51,6 +58,10 @@ class AppSettings {
           clearThemeColorNote ? null : (themeColorNote ?? this.themeColorNote),
       referencePitch: referencePitch ?? this.referencePitch,
       tunerTransposition: tunerTransposition ?? this.tunerTransposition,
+      dynamicThemeMode: dynamicThemeMode ?? this.dynamicThemeMode,
+      dynamicThemeIntensity: _clampDynamicThemeIntensity(
+        dynamicThemeIntensity ?? this.dynamicThemeIntensity,
+      ),
       dynamicThemeNote: clearDynamicThemeNote
           ? null
           : (dynamicThemeNote ?? this.dynamicThemeNote),
@@ -74,6 +85,8 @@ class AppSettings {
           themeColorNote == other.themeColorNote &&
           referencePitch == other.referencePitch &&
           tunerTransposition == other.tunerTransposition &&
+          dynamicThemeMode == other.dynamicThemeMode &&
+          dynamicThemeIntensity == other.dynamicThemeIntensity &&
           dynamicThemeNote == other.dynamicThemeNote &&
           dynamicThemeEnergy == other.dynamicThemeEnergy &&
           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt;
@@ -87,9 +100,15 @@ class AppSettings {
           themeColorNote,
           referencePitch,
           tunerTransposition,
+          dynamicThemeMode,
+          dynamicThemeIntensity,
           dynamicThemeNote,
           dynamicThemeEnergy,
           rewardedPremiumExpiresAt);
+
+  static double _clampDynamicThemeIntensity(double intensity) {
+    return intensity.clamp(0.0, 1.0).toDouble();
+  }
 }
 
 /// Loads and saves [AppSettings] values via shared preferences.
@@ -116,6 +135,14 @@ class SettingsRepository {
       tunerTransposition:
           _prefs.getString(_config.tunerTranspositionStorageKey) ??
               _config.defaultTunerTransposition,
+      dynamicThemeMode: DynamicThemeMode.fromStorage(
+        _prefs.getString(_config.dynamicThemeModeStorageKey) ??
+            _config.defaultDynamicThemeMode,
+      ),
+      dynamicThemeIntensity: AppSettings._clampDynamicThemeIntensity(
+        _prefs.getDouble(_config.dynamicThemeIntensityStorageKey) ??
+            _config.defaultDynamicThemeIntensity,
+      ),
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
       ),
@@ -152,6 +179,14 @@ class SettingsRepository {
     await _prefs.setString(
       _config.tunerTranspositionStorageKey,
       settings.tunerTransposition,
+    );
+    await _prefs.setString(
+      _config.dynamicThemeModeStorageKey,
+      settings.dynamicThemeMode.storageValue,
+    );
+    await _prefs.setDouble(
+      _config.dynamicThemeIntensityStorageKey,
+      AppSettings._clampDynamicThemeIntensity(settings.dynamicThemeIntensity),
     );
     if (settings.rewardedPremiumExpiresAt == null) {
       await _prefs.remove(_config.rewardedPremiumExpiresAtStorageKey);

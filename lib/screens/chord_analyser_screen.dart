@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
+import '../providers/app_settings_provider.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
@@ -100,6 +101,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _bridge = bridge;
     _subscription = bridge.chordStream.listen((chord) {
       if (!mounted) return;
+      ref.read(appSettingsProvider.notifier).updateDynamicThemeFromChord(chord);
       if (!_listeningCtrl.isAnimating) {
         _listeningCtrl.repeat(reverse: true);
       }
@@ -295,6 +297,14 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final dynamicThemeEnergy = ref.watch(
+      appSettingsProvider.select(
+        (settings) => (settings.dynamicThemeEnergy *
+                settings.dynamicThemeIntensity)
+            .clamp(0.0, 1.0)
+            .toDouble(),
+      ),
+    );
 
     if (_loading) return const Center(child: CircularProgressIndicator());
 
@@ -326,24 +336,65 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                           ),
                     ),
                     const SizedBox(height: 12),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      transitionBuilder: (child, animation) => ScaleTransition(
-                        scale: animation,
-                        child: FadeTransition(opacity: animation, child: child),
-                      ),
-                      child: Text(
-                        _currentChord,
-                        key: ValueKey(_currentChord),
-                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                              fontSize: 80,
-                            ),
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      scale: 1.0 +
+                          ((_currentChord == '---' ? 0.0 : dynamicThemeEnergy) *
+                              0.04),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        transitionBuilder: (child, animation) => ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(opacity: animation, child: child),
+                        ),
+                        child: Text(
+                          _currentChord,
+                          key: ValueKey(_currentChord),
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                                fontSize: 80,
+                                shadows: _currentChord == '---'
+                                    ? null
+                                    : [
+                                        Shadow(
+                                          color: colorScheme.primary.withValues(
+                                            alpha:
+                                                0.10 + (dynamicThemeEnergy * 0.22),
+                                          ),
+                                          blurRadius:
+                                              10 + (dynamicThemeEnergy * 12),
+                                        ),
+                                      ],
+                              ),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ListeningIndicator(controller: _listeningCtrl),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10 + (dynamicThemeEnergy * 10),
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondaryContainer.withValues(
+                          alpha: 0.03 + (dynamicThemeEnergy * 0.08),
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: ListeningIndicator(
+                        controller: _listeningCtrl,
+                        color: Color.lerp(
+                          colorScheme.primary,
+                          colorScheme.tertiary,
+                          dynamicThemeEnergy,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
