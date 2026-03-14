@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/utils/app_logger.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -16,6 +18,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
   PermissionService testPermissionService = defaultPermissionService,
+  List<Override> overrides = const <Override>[],
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
   final prefs = await SharedPreferences.getInstance();
@@ -24,6 +27,7 @@ Future<void> _pumpApp(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         permissionServiceProvider.overrideWithValue(testPermissionService),
+        ...overrides,
       ],
       child: const MusicLifeApp(),
     ),
@@ -113,6 +117,41 @@ void main() {
           hint: localizations.practiceLogSubtitle,
         ),
       );
+    });
+
+    testWidgets(
+        'practice summary celebrates streaks and daily milestone achievements',
+        (tester) async {
+      final repo = _MockRecordingRepository();
+      final now = DateTime.now();
+      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
+      when(() => repo.loadPracticeLogs()).thenAnswer(
+        (_) async => [
+          PracticeLogEntry(date: now, durationMinutes: 20),
+          PracticeLogEntry(date: now, durationMinutes: 15),
+          PracticeLogEntry(
+            date: now.subtract(const Duration(days: 1)),
+            durationMinutes: 25,
+          ),
+        ],
+      );
+
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+        overrides: [
+          recordingRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 900));
+
+      final localizations =
+          AppLocalizations.of(tester.element(find.byType(Scaffold).first))!;
+
+      expect(find.byKey(const ValueKey('daily-goal-badge')), findsOneWidget);
+      expect(find.byKey(const ValueKey('summary-streak-flame')), findsOneWidget);
+      expect(find.text(localizations.durationMinutes(35)), findsOneWidget);
+      expect(find.text(localizations.practiceDayCount(2)), findsOneWidget);
     });
 
     testWidgets('language selector updates app locale and persists choice',
@@ -273,3 +312,5 @@ class _FakePermissionService extends PermissionService {
     return _results[index];
   }
 }
+
+class _MockRecordingRepository extends Mock implements RecordingRepository {}

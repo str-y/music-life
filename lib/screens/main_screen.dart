@@ -22,6 +22,7 @@ const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 const String _onboardingShownKey = 'onboarding_completed_v2';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
+const int _dailyGoalMinutes = 30;
 const int _onboardingStepCount = 3;
 const List<String> _supportedLanguageCodes = <String>['en', 'ja'];
 const List<String> _themeColorNoteOptions = <String>[
@@ -356,6 +357,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final libraryState = ref.watch(libraryProvider);
     final practiceSummary =
         computePracticeSummary(libraryState.valueOrNull?.logs ?? const []);
+    final hasDailyGoalAchievement =
+        practiceSummary.todayMinutes >= _dailyGoalMinutes;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
@@ -417,26 +420,33 @@ class _MainScreenState extends ConsumerState<MainScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        l10n.practiceSummaryTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.practiceSummaryTitle,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          if (hasDailyGoalAchievement)
+                            _GoalAchievementBadge(
+                              label: l10n.durationMinutes(_dailyGoalMinutes),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _SummaryMetric(
+                          _CountUpSummaryMetric(
                             icon: Icons.today,
-                            value: l10n.durationMinutes(
-                              practiceSummary.todayMinutes,
-                            ),
+                            value: practiceSummary.todayMinutes,
+                            formatter: l10n.durationMinutes,
                             label: l10n.todayPracticeTime,
                           ),
-                          _SummaryMetric(
-                            icon: Icons.local_fire_department,
-                            value: l10n.practiceDayCount(
-                              practiceSummary.streakDays,
-                            ),
+                          _StreakSummaryMetric(
+                            streakDays: practiceSummary.streakDays,
+                            formatter: l10n.practiceDayCount,
                             label: l10n.streakDays,
                           ),
                         ],
@@ -880,15 +890,17 @@ class _FeatureTile extends StatefulWidget {
   State<_FeatureTile> createState() => _FeatureTileState();
 }
 
-class _SummaryMetric extends StatelessWidget {
-  const _SummaryMetric({
+class _CountUpSummaryMetric extends StatelessWidget {
+  const _CountUpSummaryMetric({
     required this.icon,
     required this.value,
+    required this.formatter,
     required this.label,
   });
 
   final IconData icon;
-  final String value;
+  final int value;
+  final String Function(int) formatter;
   final String label;
 
   @override
@@ -899,14 +911,223 @@ class _SummaryMetric extends StatelessWidget {
       children: [
         Icon(icon, color: cs.primary),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        _CountUpMetricText(
+          key: ValueKey<String>('summary-metric-$label'),
+          value: value,
+          formatter: formatter,
         ),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
+    );
+  }
+}
+
+class _StreakSummaryMetric extends StatelessWidget {
+  const _StreakSummaryMetric({
+    required this.streakDays,
+    required this.formatter,
+    required this.label,
+  });
+
+  final int streakDays;
+  final String Function(int) formatter;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: streakDays == 0 ? 0 : 1),
+          duration: const Duration(milliseconds: 850),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, _) {
+            final glowSize = 24 + value * 12;
+            final sparkOpacity = 0.18 + (1 - value) * 0.35;
+            return Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                if (streakDays > 0)
+                  Container(
+                    width: glowSize,
+                    height: glowSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          Colors.orange.withOpacity(0.2 + value * 0.18),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                if (streakDays > 0)
+                  _CelebrationDot(
+                    offset: Offset(-10 - value * 8, -8 - value * 10),
+                    color: Colors.orangeAccent,
+                    opacity: sparkOpacity,
+                    size: 5,
+                  ),
+                if (streakDays > 0)
+                  _CelebrationDot(
+                    offset: Offset(10 + value * 6, -10 - value * 12),
+                    color: cs.secondary,
+                    opacity: sparkOpacity * 0.85,
+                    size: 4,
+                  ),
+                Transform.scale(
+                  scale: 1 + value * 0.08,
+                  child: Icon(
+                    Icons.local_fire_department,
+                    key: const ValueKey<String>('summary-streak-flame'),
+                    color: streakDays > 0
+                        ? Color.lerp(cs.primary, cs.tertiary, 0.45)
+                        : cs.outline,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 4),
+        _CountUpMetricText(
+          key: const ValueKey<String>('summary-streak-value'),
+          value: streakDays,
+          formatter: formatter,
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _CountUpMetricText extends StatelessWidget {
+  const _CountUpMetricText({
+    super.key,
+    required this.value,
+    required this.formatter,
+  });
+
+  final int value;
+  final String Function(int) formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: value.toDouble()),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedValue, _) {
+        return Text(
+          formatter(animatedValue.round()),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        );
+      },
+    );
+  }
+}
+
+class _GoalAchievementBadge extends StatelessWidget {
+  const _GoalAchievementBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutBack,
+      child: Chip(
+        key: const ValueKey<String>('daily-goal-badge'),
+        visualDensity: VisualDensity.compact,
+        avatar: Icon(
+          Icons.workspace_premium,
+          size: 18,
+          color: cs.onPrimaryContainer,
+        ),
+        backgroundColor: cs.primaryContainer,
+        side: BorderSide(color: cs.primary.withOpacity(0.12)),
+        label: Text(
+          label,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: cs.onPrimaryContainer,
+              ),
+        ),
+      ),
+      builder: (context, value, child) {
+        final confettiOpacity = 0.12 + (1 - value) * 0.45;
+        return SizedBox(
+          height: 40,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.centerRight,
+            children: [
+              _CelebrationDot(
+                offset: Offset(-14 - value * 16, -14 - value * 6),
+                color: cs.secondary,
+                opacity: confettiOpacity,
+                size: 6,
+              ),
+              _CelebrationDot(
+                offset: Offset(-2 - value * 12, -22 - value * 8),
+                color: cs.tertiary,
+                opacity: confettiOpacity * 0.9,
+                size: 5,
+              ),
+              _CelebrationDot(
+                offset: Offset(12 + value * 10, -12 - value * 10),
+                color: Colors.orangeAccent,
+                opacity: confettiOpacity * 0.8,
+                size: 4,
+              ),
+              Transform.scale(
+                scale: 0.92 + value * 0.08,
+                child: child,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CelebrationDot extends StatelessWidget {
+  const _CelebrationDot({
+    required this.offset,
+    required this.color,
+    required this.opacity,
+    required this.size,
+  });
+
+  final Offset offset;
+  final Color color;
+  final double opacity;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: offset,
+      child: Opacity(
+        opacity: opacity.clamp(0.0, 1.0),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(size / 2),
+          ),
+        ),
+      ),
     );
   }
 }
