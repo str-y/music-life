@@ -70,6 +70,36 @@ void main() {
       expect(container.read(rhythmProvider).beatIndex, 0);
     });
 
+    test('applying a new time signature updates beat duration and restarts', () {
+      final factory = _FakeRhythmTickerFactory();
+      var now = DateTime.utc(2026, 3, 11, 13);
+      final container = ProviderContainer(
+        overrides: [
+          rhythmClockProvider.overrideWithValue(() => now),
+          rhythmTickerFactoryProvider.overrideWithValue(factory.call),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(rhythmProvider.notifier);
+      notifier.startMetronome();
+      final firstTicker = factory.created.single;
+
+      now = now.add(const Duration(seconds: 1));
+      notifier.applyMetronomeSettings(
+        bpm: 120,
+        timeSignatureNumerator: 6,
+        timeSignatureDenominator: 8,
+      );
+
+      final state = container.read(rhythmProvider);
+      expect(firstTicker.disposed, isTrue);
+      expect(factory.created, hasLength(2));
+      expect(state.timeSignatureNumerator, 6);
+      expect(state.timeSignatureDenominator, 8);
+      expect(state.beatDuration.inMilliseconds, 250);
+    });
+
     test('onGrooveTap updates offset and score using scheduled beat timing', () {
       final factory = _FakeRhythmTickerFactory();
       var now = DateTime.utc(2026, 3, 11, 13);

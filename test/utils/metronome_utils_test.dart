@@ -32,6 +32,24 @@ void main() {
     });
   });
 
+  group('metronomeBeatDurationFor', () {
+    test('4/4 keeps the quarter-note BPM duration', () {
+      expect(
+        metronomeBeatDurationFor(bpm: 120, timeSignatureDenominator: 4)
+            .inMilliseconds,
+        500,
+      );
+    });
+
+    test('8th-note denominator halves the beat duration', () {
+      expect(
+        metronomeBeatDurationFor(bpm: 120, timeSignatureDenominator: 8)
+            .inMilliseconds,
+        250,
+      );
+    });
+  });
+
   // ── computeGrooveTapOffset ─────────────────────────────────────────────────
 
   group('computeGrooveTapOffset', () {

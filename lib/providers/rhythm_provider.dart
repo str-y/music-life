@@ -41,6 +41,8 @@ class StopwatchRhythmTicker implements RhythmTicker {
 class RhythmState {
   const RhythmState({
     this.bpm = 120,
+    this.timeSignatureNumerator = 4,
+    this.timeSignatureDenominator = 4,
     this.isPlaying = false,
     this.beatIndex = -1,
     this.lastOffsetMs = 0,
@@ -48,15 +50,22 @@ class RhythmState {
   });
 
   final int bpm;
+  final int timeSignatureNumerator;
+  final int timeSignatureDenominator;
   final bool isPlaying;
   final int beatIndex;
   final double lastOffsetMs;
   final double timingScore;
 
-  Duration get beatDuration => beatDurationFor(bpm);
+  Duration get beatDuration => metronomeBeatDurationFor(
+        bpm: bpm,
+        timeSignatureDenominator: timeSignatureDenominator,
+      );
 
   RhythmState copyWith({
     int? bpm,
+    int? timeSignatureNumerator,
+    int? timeSignatureDenominator,
     bool? isPlaying,
     int? beatIndex,
     double? lastOffsetMs,
@@ -64,6 +73,10 @@ class RhythmState {
   }) {
     return RhythmState(
       bpm: bpm ?? this.bpm,
+      timeSignatureNumerator:
+          timeSignatureNumerator ?? this.timeSignatureNumerator,
+      timeSignatureDenominator:
+          timeSignatureDenominator ?? this.timeSignatureDenominator,
       isPlaying: isPlaying ?? this.isPlaying,
       beatIndex: beatIndex ?? this.beatIndex,
       lastOffsetMs: lastOffsetMs ?? this.lastOffsetMs,
@@ -123,12 +136,25 @@ class RhythmNotifier extends Notifier<RhythmState> {
   }
 
   void changeBpm(int delta) {
-    final nextBpm = (state.bpm + delta).clamp(
-      AppConstants.metronomeMinBpm,
-      AppConstants.metronomeMaxBpm,
-    );
+    final nextBpm = _clampBpm(state.bpm + delta);
     state = state.copyWith(bpm: nextBpm);
     if (state.isPlaying) {
+      startMetronome();
+    }
+  }
+
+  void applyMetronomeSettings({
+    required int bpm,
+    required int timeSignatureNumerator,
+    required int timeSignatureDenominator,
+  }) {
+    final shouldRestart = state.isPlaying;
+    state = state.copyWith(
+      bpm: _clampBpm(bpm),
+      timeSignatureNumerator: timeSignatureNumerator,
+      timeSignatureDenominator: timeSignatureDenominator,
+    );
+    if (shouldRestart) {
       startMetronome();
     }
   }
@@ -168,3 +194,10 @@ final rhythmProvider =
     NotifierProvider.autoDispose<RhythmNotifier, RhythmState>(
       RhythmNotifier.new,
     );
+
+int _clampBpm(int bpm) {
+  return bpm.clamp(
+    AppConstants.metronomeMinBpm,
+    AppConstants.metronomeMaxBpm,
+  ).toInt();
+}

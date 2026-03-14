@@ -826,6 +826,69 @@
     "description": "Label displayed beneath the BPM number on the Rhythm screen"
   },
 
+  "metronomePresetLabel": "Preset",
+  "@metronomePresetLabel": {
+    "description": "Label for selecting a metronome preset"
+  },
+
+  "metronomePresetHint": "Choose a preset",
+  "@metronomePresetHint": {
+    "description": "Hint text shown before a metronome preset is selected"
+  },
+
+  "metronomeSavePreset": "Save preset",
+  "@metronomeSavePreset": {
+    "description": "Button label for saving the current metronome preset"
+  },
+
+  "metronomePresetNameLabel": "Preset name",
+  "@metronomePresetNameLabel": {
+    "description": "Label for naming a metronome preset"
+  },
+
+  "metronomePresetSaved": "Saved preset: {name}",
+  "@metronomePresetSaved": {
+    "description": "Snackbar shown after saving a metronome preset",
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "metronomePresetDefaultName": "Preset {number}",
+  "@metronomePresetDefaultName": {
+    "description": "Default name for a newly saved metronome preset",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+
+  "metronomeTimeSignatureLabel": "Time signature",
+  "@metronomeTimeSignatureLabel": {
+    "description": "Label for the metronome time signature controls"
+  },
+
+  "metronomePresetBallad": "Ballad",
+  "@metronomePresetBallad": {
+    "description": "Built-in ballad metronome preset name"
+  },
+
+  "metronomePresetUpTempo": "Up-tempo",
+  "@metronomePresetUpTempo": {
+    "description": "Built-in up-tempo metronome preset name"
+  },
+
+  "metronomePresetWaltz": "Waltz",
+  "@metronomePresetWaltz": {
+    "description": "Built-in waltz metronome preset name"
+  },
+
+  "metronomePresetShuffle": "Shuffle",
+  "@metronomePresetShuffle": {
+    "description": "Built-in shuffle metronome preset name"
+  },
+
   "metronomePlayTooltip": "Start metronome",
   "@metronomePlayTooltip": {
     "description": "Tooltip for the play/start button on the Rhythm screen"

@@ -28,6 +28,37 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     await _repo.save(state);
   }
 
+  Future<void> updateMetronomeSettings({
+    required int bpm,
+    required int timeSignatureNumerator,
+    required int timeSignatureDenominator,
+  }) {
+    return update(
+      state.copyWith(
+        metronomeBpm: bpm,
+        metronomeTimeSignatureNumerator: timeSignatureNumerator,
+        metronomeTimeSignatureDenominator: timeSignatureDenominator,
+      ),
+      syncCloudBackup: false,
+    );
+  }
+
+  Future<void> saveMetronomePreset(MetronomePreset preset) {
+    final updatedPresets = [...state.metronomePresets];
+    final existingIndex = updatedPresets.indexWhere(
+      (candidate) => candidate.name == preset.name,
+    );
+    if (existingIndex >= 0) {
+      updatedPresets[existingIndex] = preset;
+    } else {
+      updatedPresets.add(preset);
+    }
+    return update(
+      state.copyWith(metronomePresets: updatedPresets),
+      syncCloudBackup: false,
+    );
+  }
+
   Future<void> unlockRewardedPremiumFor(
     Duration duration, {
     DateTime? now,
@@ -36,8 +67,8 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     await update(
       state.copyWith(
         rewardedPremiumExpiresAt: grantedAt.add(duration),
-        ),
-      );
+      ),
+    );
   }
 
   Future<DateTime?> setCloudSyncEnabled(bool enabled) async {
@@ -54,7 +85,9 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 
   Future<bool> restoreLatestCloudBackup() async {
-    final syncedAt = await ref.read(cloudSyncRepositoryProvider).restoreLatestBackup();
+    final syncedAt = await ref
+        .read(cloudSyncRepositoryProvider)
+        .restoreLatestBackup();
     if (syncedAt == null) return false;
     await update(
       state.copyWith(lastCloudSyncAt: syncedAt),
