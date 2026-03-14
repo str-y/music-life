@@ -26,6 +26,8 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
   }
 
   Future<void> _loadAd() async {
+    if (_bannerAd != null) return;
+
     final adService = ref.read(adServiceProvider);
 
     final size = await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
@@ -40,6 +42,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
       size: size,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          if (!mounted) return;
           setState(() {
             _isLoaded = true;
           });

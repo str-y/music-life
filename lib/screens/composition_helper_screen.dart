@@ -127,6 +127,7 @@ class _CompositionHelperScreenState
         text: sequenceText,
       );
     } catch (e, stackTrace) {
+      if (!mounted) return;
       ServiceErrorHandler.reportAndNotify(
         context: context,
         message: 'CompositionHelperScreen: failed to share composition card',
@@ -442,7 +443,8 @@ class _ChordPalette extends StatelessWidget {
                 context: context,
                 builder: (_) => const _ChordBuilderDialog(),
               );
-              if (chord != null) onChordTap(chord);
+              if (!context.mounted || chord == null) return;
+              onChordTap(chord);
             },
           ),
         ),
@@ -787,7 +789,11 @@ class _LoadCompositionSheetState extends State<_LoadCompositionSheet> {
                             icon: const Icon(Icons.delete_outline),
                             tooltip: l10n.compositionDeleteProject,
                             onPressed: () async {
-                              await widget.onDelete(comp);
+                              try {
+                                await widget.onDelete(comp);
+                              } catch (_) {
+                                return; // error already shown by onDelete
+                              }
                               if (!mounted) return;
                               setState(() => _items
                                   .removeWhere((c) => c.id == comp.id));

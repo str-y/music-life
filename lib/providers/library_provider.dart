@@ -103,9 +103,12 @@ DateTime _toDateOnly(DateTime date) => DateTime(date.year, date.month, date.day)
 class LibraryNotifier extends Notifier<LibraryState> {
   List<PracticeLogEntry> _memoizedLogs = const [];
   Map<String, MonthlyPracticeStats> _memoizedMonthlyLogStats = const {};
+  bool _active = true;
 
   @override
   LibraryState build() {
+    _active = true;
+    ref.onDispose(() => _active = false);
     _load();
     return const LibraryState();
   }
@@ -117,6 +120,7 @@ class LibraryNotifier extends Notifier<LibraryState> {
     try {
       final recordings = await _repo.loadRecordings();
       final logs = await _repo.loadPracticeLogs();
+      if (!_active) return;
       state = LibraryState(
         recordings: recordings,
         logs: logs,
@@ -128,6 +132,7 @@ class LibraryNotifier extends Notifier<LibraryState> {
         error: e,
         stackTrace: st,
       );
+      if (!_active) return;
       state = const LibraryState(loading: false, hasError: true);
     }
   }
@@ -137,9 +142,20 @@ class LibraryNotifier extends Notifier<LibraryState> {
 
   /// Prepends [entry] to the recordings list and persists the change.
   Future<void> addRecording(RecordingEntry entry) async {
-    final updated = [entry, ...state.recordings];
+    final previous = state.recordings;
+    final updated = [entry, ...previous];
     state = state.copyWith(recordings: updated);
-    await _repo.saveRecordings(updated);
+    try {
+      await _repo.saveRecordings(updated);
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'LibraryNotifier: failed to save recordings',
+        error: e,
+        stackTrace: st,
+      );
+      if (_active) state = state.copyWith(recordings: previous);
+      rethrow;
+    }
   }
 
   Map<String, MonthlyPracticeStats> _monthlyLogStats(List<PracticeLogEntry> logs) {

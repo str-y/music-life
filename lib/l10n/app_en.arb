@@ -89,6 +89,26 @@
   "@followSystemTheme": {
     "description": "Label for toggling automatic light/dark theme mode based on OS setting"
   },
+  "dynamicThemeModeLabel": "Dynamic mode",
+  "@dynamicThemeModeLabel": {
+    "description": "Label for selecting the dynamic theme palette mode"
+  },
+  "dynamicThemeModeChill": "Chill",
+  "@dynamicThemeModeChill": {
+    "description": "Dynamic theme mode option for a relaxed palette"
+  },
+  "dynamicThemeModeIntense": "Intense",
+  "@dynamicThemeModeIntense": {
+    "description": "Dynamic theme mode option for a vivid palette"
+  },
+  "dynamicThemeModeClassical": "Classical",
+  "@dynamicThemeModeClassical": {
+    "description": "Dynamic theme mode option for a warm classical palette"
+  },
+  "dynamicThemeIntensityLabel": "Dynamic theme intensity",
+  "@dynamicThemeIntensityLabel": {
+    "description": "Label for the slider controlling dynamic theme responsiveness"
+  },
   "themeColorLabel": "Theme color",
   "@themeColorLabel": {
     "description": "Label for selecting a custom theme color"
@@ -223,6 +243,70 @@
   "welcomeSubtitle": "Let's start today's practice.",
   "@welcomeSubtitle": {
     "description": "Welcome sub-headline on the main screen"
+  },
+  "onboardingWelcomeDescription": "Music Life brings your essential practice tools together so you can tune up, log sessions, and review progress in one place.",
+  "@onboardingWelcomeDescription": {
+    "description": "Description on the welcome step of onboarding"
+  },
+  "onboardingGetStarted": "Get started",
+  "@onboardingGetStarted": {
+    "description": "Primary action on the welcome step of onboarding"
+  },
+  "onboardingBack": "Back",
+  "@onboardingBack": {
+    "description": "Back button label in the onboarding flow"
+  },
+  "onboardingContinue": "Continue",
+  "@onboardingContinue": {
+    "description": "Continue button label in the onboarding flow"
+  },
+  "onboardingFinish": "Finish",
+  "@onboardingFinish": {
+    "description": "Finish button label in the onboarding flow"
+  },
+  "onboardingMicrophoneTitle": "Enable microphone access",
+  "@onboardingMicrophoneTitle": {
+    "description": "Title of the microphone permission onboarding step"
+  },
+  "onboardingMicrophoneReason": "Microphone access powers live tuning, chord analysis, and recording. Audio stays on your device unless you choose to save or share a recording.",
+  "@onboardingMicrophoneReason": {
+    "description": "Explanation for why microphone access is useful in onboarding"
+  },
+  "onboardingMicrophonePrompt": "You can allow microphone access now or keep exploring and enable it later in system settings.",
+  "@onboardingMicrophonePrompt": {
+    "description": "Prompt text shown before microphone permission is requested in onboarding"
+  },
+  "onboardingAllowMicrophone": "Allow microphone",
+  "@onboardingAllowMicrophone": {
+    "description": "Primary action to request microphone access during onboarding"
+  },
+  "onboardingSkipPermission": "Not now",
+  "@onboardingSkipPermission": {
+    "description": "Action to continue onboarding without granting microphone access"
+  },
+  "onboardingMicrophoneGranted": "Microphone access enabled. You're ready to use tuner and recording features.",
+  "@onboardingMicrophoneGranted": {
+    "description": "Status text shown after microphone access is granted in onboarding"
+  },
+  "onboardingMicrophoneDeferred": "You can continue without microphone access and turn it on later when you're ready.",
+  "@onboardingMicrophoneDeferred": {
+    "description": "Status text shown when microphone access is skipped or denied during onboarding"
+  },
+  "onboardingMicrophoneSettingsHint": "If permission is blocked, open system settings to allow the microphone later.",
+  "@onboardingMicrophoneSettingsHint": {
+    "description": "Hint shown when microphone permission is permanently denied during onboarding"
+  },
+  "onboardingHowToUseTitle": "How to use Music Life",
+  "@onboardingHowToUseTitle": {
+    "description": "Title of the final onboarding step"
+  },
+  "onboardingHowToUseBody": "Start with the home cards and use the built-in labels and tooltips on each screen for quick guidance.",
+  "@onboardingHowToUseBody": {
+    "description": "Body text on the final onboarding step"
+  },
+  "onboardingSettingsHint": "Open Settings any time to switch language or theme, manage backups, and review privacy options.",
+  "@onboardingSettingsHint": {
+    "description": "Hint about using settings in the final onboarding step"
   },
   "practiceSummaryTitle": "Practice Summary",
   "@practiceSummaryTitle": {

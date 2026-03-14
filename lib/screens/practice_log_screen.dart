@@ -77,11 +77,20 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   }
 
   Future<void> _addEntry(PracticeLogEntry entry) async {
+    final previous = _entries;
     setState(() {
-      _entries = [entry, ..._entries]
-        ..sort((a, b) => b.date.compareTo(a.date));
+      _entries = [entry, ...previous]..sort((a, b) => b.date.compareTo(a.date));
     });
-    await _saveEntries();
+    try {
+      await _saveEntries();
+    } catch (e, st) {
+      AppLogger.reportError('Failed to save practice log entry', error: e, stackTrace: st);
+      if (!mounted) return;
+      setState(() => _entries = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save entry')),
+      );
+    }
   }
 
   // ── Add-entry dialog ──────────────────────────────────────────────────────

@@ -106,6 +106,14 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     final transposition = ref.watch(
       appSettingsProvider.select((settings) => settings.tunerTransposition),
     );
+    final dynamicThemeEnergy = ref.watch(
+      appSettingsProvider.select(
+        (settings) => (settings.dynamicThemeEnergy *
+                settings.dynamicThemeIntensity)
+            .clamp(0.0, 1.0)
+            .toDouble(),
+      ),
+    );
 
     if (state.loading) return const LoadingStateWidget();
 
@@ -120,6 +128,7 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
         latest: state.latest,
         pulseCtrl: _pulseCtrl,
         transposition: transposition,
+        dynamicThemeEnergy: dynamicThemeEnergy,
         showTranspositionControl: widget.showTranspositionControl,
         onTranspositionChanged: (value) {
           final currentSettings = ref.read(appSettingsProvider);
@@ -139,6 +148,7 @@ class _TunerBody extends StatelessWidget {
     required this.latest,
     required this.pulseCtrl,
     required this.transposition,
+    required this.dynamicThemeEnergy,
     required this.showTranspositionControl,
     required this.onTranspositionChanged,
   });
@@ -146,6 +156,7 @@ class _TunerBody extends StatelessWidget {
   final PitchResult? latest;
   final AnimationController pulseCtrl;
   final String transposition;
+  final double dynamicThemeEnergy;
   final bool showTranspositionControl;
   final ValueChanged<String> onTranspositionChanged;
 
@@ -206,31 +217,51 @@ class _TunerBody extends StatelessWidget {
           Semantics(
             label: l10n.currentNoteSemanticLabel,
             value: latest != null ? '$noteName, $freqText' : null,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) => ScaleTransition(
-                scale: anim,
-                child: FadeTransition(opacity: anim, child: child),
-              ),
-              child: Text(
-                noteName,
-                key: ValueKey(noteName),
-                style: tt.displayLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: latest != null
-                      ? (inTune ? inTuneColor : cs.primary)
-                      : cs.onSurfaceVariant,
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              scale: latest == null ? 1.0 : 1.0 + (dynamicThemeEnergy * 0.035),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, anim) => ScaleTransition(
+                  scale: anim,
+                  child: FadeTransition(opacity: anim, child: child),
+                ),
+                child: Text(
+                  noteName,
+                  key: ValueKey(noteName),
+                  style: tt.displayLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: latest != null
+                        ? (inTune ? inTuneColor : cs.primary)
+                        : cs.onSurfaceVariant,
+                    shadows: latest == null
+                        ? null
+                        : [
+                            Shadow(
+                              color: cs.primary.withValues(
+                                alpha: 0.12 + (dynamicThemeEnergy * 0.18),
+                              ),
+                              blurRadius: 10 + (dynamicThemeEnergy * 10),
+                            ),
+                          ],
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          AnimatedSwitcher(
+          AnimatedScale(
             duration: const Duration(milliseconds: 220),
-            child: Text(
-              freqText,
-              key: ValueKey(freqText),
-              style: tt.titleLarge,
+            curve: Curves.easeOutCubic,
+            scale: latest == null ? 1.0 : 1.0 + (dynamicThemeEnergy * 0.02),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: Text(
+                freqText,
+                key: ValueKey(freqText),
+                style: tt.titleLarge,
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -242,15 +273,31 @@ class _TunerBody extends StatelessWidget {
             child: _CentsMeter(cents: cents, hasReading: latest != null),
           ),
           const SizedBox(height: 12),
-          Semantics(
-            label: l10n.waveformSemanticLabel,
-            child: AnimatedBuilder(
-              animation: pulseCtrl,
-              builder: (_, __) => _TunerWaveform(
-                hasReading: latest != null,
-                cents: cents,
-                phase: pulseCtrl.value,
-                color: latest != null ? _centColor(context, cents) : cs.primary,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(
+              horizontal: 10 + (dynamicThemeEnergy * 8),
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: latest == null
+                  ? Colors.transparent
+                  : cs.primaryContainer.withValues(
+                      alpha: 0.04 + (dynamicThemeEnergy * 0.08),
+                    ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Semantics(
+              label: l10n.waveformSemanticLabel,
+              child: AnimatedBuilder(
+                animation: pulseCtrl,
+                builder: (_, __) => _TunerWaveform(
+                  hasReading: latest != null,
+                  cents: cents,
+                  phase: pulseCtrl.value,
+                  color: latest != null ? _centColor(context, cents) : cs.primary,
+                ),
               ),
             ),
           ),

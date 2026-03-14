@@ -118,9 +118,9 @@ abstract class IAdService {
   /// Ad unit ID used for rewarded ads.
   String get rewardedAdUnitId;
 
-  Future<void> loadInterstitialAd();
+  void loadInterstitialAd();
   void showInterstitialAd();
-  Future<void> loadRewardedAd();
+  void loadRewardedAd();
   Future<bool> showRewardedAd({
     required void Function(RewardItem reward) onUserEarnedReward,
   });
@@ -183,7 +183,7 @@ class GoogleMobileAdsService implements IAdService {
   static const int _maxRewardedLoadAttempts = 3;
 
   @override
-  Future<void> loadInterstitialAd() async {
+  void loadInterstitialAd() {
     _stateNotifier?.setInterstitialLoading();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
@@ -241,7 +241,7 @@ class GoogleMobileAdsService implements IAdService {
   }
 
   @override
-  Future<void> loadRewardedAd() async {
+  void loadRewardedAd() {
     _stateNotifier?.setRewardedLoading();
     RewardedAd.load(
       adUnitId: rewardedAdUnitId,
