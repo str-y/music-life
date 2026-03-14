@@ -116,99 +116,99 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-          // BPM display
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, -0.3),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            // BPM display
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, -0.3),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+                  child: child,
                 ),
-                child: child,
+              ),
+              child: Text(
+                '${rhythmState.bpm}',
+                key: ValueKey(rhythmState.bpm),
+                style: TextStyle(
+                  fontSize: 96,
+                  fontWeight: FontWeight.bold,
+                  color: cs.primary,
+                  letterSpacing: -4,
+                ),
               ),
             ),
-            child: Text(
-              '${rhythmState.bpm}',
-              key: ValueKey(rhythmState.bpm),
-              style: TextStyle(
-                fontSize: 96,
-                fontWeight: FontWeight.bold,
-                color: cs.primary,
-                letterSpacing: -4,
-              ),
+            Text(
+              l10n.bpmLabel,
+              style: const TextStyle(fontSize: 18, letterSpacing: 4),
             ),
-          ),
-          Text(
-            l10n.bpmLabel,
-            style: const TextStyle(fontSize: 18, letterSpacing: 4),
-          ),
-          const SizedBox(height: 16),
-          // BPM controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _BpmButton(
-                label: '−10',
-                semanticLabel: l10n.bpmDecrease10SemanticLabel,
-                onPressed: () =>
-                    ref.read(rhythmProvider.notifier).changeBpm(-10),
-              ),
-              const SizedBox(width: 8),
-              _BpmButton(
-                label: '−1',
-                semanticLabel: l10n.bpmDecrease1SemanticLabel,
-                onPressed: () =>
-                    ref.read(rhythmProvider.notifier).changeBpm(-1),
-              ),
-              const SizedBox(width: 24),
-              // Play / Stop button
-              AnimatedBuilder(
-                animation: _beatPulseAnim,
-                builder: (context, child) {
-                  final scale = rhythmState.isPlaying
-                      ? 1.0 + _beatPulseAnim.value * 0.08
-                      : 1.0;
-                  return Transform.scale(
-                    scale: scale,
-                    child: child,
-                  );
-                },
-                child: FloatingActionButton(
-                  heroTag: 'playStop',
-                  onPressed: ref.read(rhythmProvider.notifier).toggleMetronome,
-                  tooltip: rhythmState.isPlaying
-                      ? l10n.metronomeStopTooltip
-                      : l10n.metronomePlayTooltip,
-                  backgroundColor: rhythmState.isPlaying
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary,
-                  child: Icon(
-                    rhythmState.isPlaying ? Icons.stop : Icons.play_arrow,
-                    size: 36,
+            const SizedBox(height: 16),
+            // BPM controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _BpmButton(
+                  label: '−10',
+                  semanticLabel: l10n.bpmDecrease10SemanticLabel,
+                  onPressed: () =>
+                      ref.read(rhythmProvider.notifier).changeBpm(-10),
+                ),
+                const SizedBox(width: 8),
+                _BpmButton(
+                  label: '−1',
+                  semanticLabel: l10n.bpmDecrease1SemanticLabel,
+                  onPressed: () =>
+                      ref.read(rhythmProvider.notifier).changeBpm(-1),
+                ),
+                const SizedBox(width: 24),
+                // Play / Stop button
+                AnimatedBuilder(
+                  animation: _beatPulseAnim,
+                  builder: (context, child) {
+                    final scale = rhythmState.isPlaying
+                        ? 1.0 + _beatPulseAnim.value * 0.08
+                        : 1.0;
+                    return Transform.scale(
+                      scale: scale,
+                      child: child,
+                    );
+                  },
+                  child: FloatingActionButton(
+                    heroTag: 'playStop',
+                    onPressed: ref.read(rhythmProvider.notifier).toggleMetronome,
+                    tooltip: rhythmState.isPlaying
+                        ? l10n.metronomeStopTooltip
+                        : l10n.metronomePlayTooltip,
+                    backgroundColor: rhythmState.isPlaying
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      rhythmState.isPlaying ? Icons.stop : Icons.play_arrow,
+                      size: 36,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 24),
-              _BpmButton(
-                label: '+1',
-                semanticLabel: l10n.bpmIncrease1SemanticLabel,
-                onPressed: () =>
-                    ref.read(rhythmProvider.notifier).changeBpm(1),
-              ),
-              const SizedBox(width: 8),
-              _BpmButton(
-                label: '+10',
-                semanticLabel: l10n.bpmIncrease10SemanticLabel,
-                onPressed: () =>
-                    ref.read(rhythmProvider.notifier).changeBpm(10),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+                const SizedBox(width: 24),
+                _BpmButton(
+                  label: '+1',
+                  semanticLabel: l10n.bpmIncrease1SemanticLabel,
+                  onPressed: () =>
+                      ref.read(rhythmProvider.notifier).changeBpm(1),
+                ),
+                const SizedBox(width: 8),
+                _BpmButton(
+                  label: '+10',
+                  semanticLabel: l10n.bpmIncrease10SemanticLabel,
+                  onPressed: () =>
+                      ref.read(rhythmProvider.notifier).changeBpm(10),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             Card(
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(
@@ -264,11 +264,15 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
             );
             final recommendedPack = recommendMetronomeSoundPack(rhythmState.bpm);
             final sheetHeight = MediaQuery.of(context).size.height * 0.72;
-            final bottomPadding = MediaQuery.of(context).padding.bottom;
 
             return SafeArea(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, bottomPadding + 20),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  MediaQuery.of(context).padding.bottom + 20,
+                ),
                 child: SizedBox(
                   height: sheetHeight,
                   child: Column(
@@ -320,122 +324,126 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
                           itemCount: metronomeSoundPacks.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                          final pack = metronomeSoundPacks[index];
-                          final isInstalled = settings.installedMetronomeSoundPackIds
-                              .contains(pack.id);
-                          final isSelected =
-                              selectedPack.id == pack.id && isInstalled;
-                          final isRecommended = recommendedPack.id == pack.id;
-                          final isLocked =
-                              pack.premiumOnly && !settings.hasRewardedPremiumAccess;
+                            final pack = metronomeSoundPacks[index];
+                            final isInstalled = settings
+                                .installedMetronomeSoundPackIds
+                                .contains(pack.id);
+                            final isSelected =
+                                selectedPack.id == pack.id && isInstalled;
+                            final isRecommended = recommendedPack.id == pack.id;
+                            final isLocked = pack.premiumOnly &&
+                                !settings.hasRewardedPremiumAccess;
 
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      CircleAvatar(
-                                        backgroundColor: Theme.of(context)
-                                            .colorScheme
-                                            .secondaryContainer,
-                                        child: Icon(_iconForSoundPack(pack)),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              _soundPackName(l10n, pack),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(_soundPackDescription(l10n, pack)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      _StatusChip(
-                                        label: _soundPackTypeLabel(l10n, pack),
-                                      ),
-                                      _StatusChip(
-                                        label: _latencyLabel(l10n, pack),
-                                      ),
-                                      if (isRecommended)
-                                        _StatusChip(
-                                          label: l10n
-                                              .metronomeSoundLibraryRecommendedChip,
+                            return Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(
                                           backgroundColor: Theme.of(context)
                                               .colorScheme
-                                              .primaryContainer,
+                                              .secondaryContainer,
+                                          child: Icon(_iconForSoundPack(pack)),
                                         ),
-                                      if (pack.premiumOnly)
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _soundPackName(l10n, pack),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium,
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _soundPackDescription(l10n, pack),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
                                         _StatusChip(
-                                          label: l10n
-                                              .metronomeSoundLibraryPremiumChip,
-                                          backgroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .tertiaryContainer,
+                                          label: _soundPackTypeLabel(l10n, pack),
                                         ),
-                                      if (isInstalled)
                                         _StatusChip(
-                                          label: l10n
-                                              .metronomeSoundLibraryInstalledChip,
+                                          label: _latencyLabel(l10n, pack),
                                         ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: FilledButton.icon(
-                                      key: ValueKey(
-                                        'metronome-sound-action-${pack.id}',
-                                      ),
-                                      onPressed: () => _handleSoundPackAction(
-                                        pack: pack,
-                                        isInstalled: isInstalled,
-                                        isSelected: isSelected,
-                                        isLocked: isLocked,
-                                      ),
-                                      icon: Icon(
-                                        isSelected
-                                            ? Icons.check_circle
-                                            : isLocked
-                                                ? Icons.ondemand_video
-                                                : isInstalled
-                                                    ? Icons.graphic_eq
-                                                    : Icons.download,
-                                      ),
-                                      label: Text(
-                                        isSelected
-                                            ? l10n.metronomeSoundLibraryInUse
-                                            : isLocked
-                                                ? l10n.watchAdAndUnlock
-                                                : isInstalled
-                                                    ? l10n
-                                                        .metronomeSoundLibraryUse
-                                                    : l10n
-                                                        .metronomeSoundLibraryDownload,
+                                        if (isRecommended)
+                                          _StatusChip(
+                                            label: l10n
+                                                .metronomeSoundLibraryRecommendedChip,
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer,
+                                          ),
+                                        if (pack.premiumOnly)
+                                          _StatusChip(
+                                            label: l10n
+                                                .metronomeSoundLibraryPremiumChip,
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .tertiaryContainer,
+                                          ),
+                                        if (isInstalled)
+                                          _StatusChip(
+                                            label: l10n
+                                                .metronomeSoundLibraryInstalledChip,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: FilledButton.icon(
+                                        key: ValueKey(
+                                          'metronome-sound-action-${pack.id}',
+                                        ),
+                                        onPressed: () => _handleSoundPackAction(
+                                          pack: pack,
+                                          isInstalled: isInstalled,
+                                          isSelected: isSelected,
+                                          isLocked: isLocked,
+                                        ),
+                                        icon: Icon(
+                                          isSelected
+                                              ? Icons.check_circle
+                                              : isLocked
+                                                  ? Icons.ondemand_video
+                                                  : isInstalled
+                                                      ? Icons.graphic_eq
+                                                      : Icons.download,
+                                        ),
+                                        label: Text(
+                                          isSelected
+                                              ? l10n.metronomeSoundLibraryInUse
+                                              : isLocked
+                                                  ? l10n.watchAdAndUnlock
+                                                  : isInstalled
+                                                      ? l10n
+                                                          .metronomeSoundLibraryUse
+                                                      : l10n
+                                                          .metronomeSoundLibraryDownload,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
+                            );
                           },
                         ),
                       ),

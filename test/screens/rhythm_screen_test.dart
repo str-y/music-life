@@ -94,7 +94,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(MaterialApp)),
+      tester.element(find.byType(RhythmScreen)),
     )!;
 
     expect(
@@ -125,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(MaterialApp)),
+      tester.element(find.byType(RhythmScreen)),
     )!;
 
     await tester.tap(find.byKey(const ValueKey('metronome-sound-library-button')));

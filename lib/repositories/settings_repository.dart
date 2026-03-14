@@ -117,34 +117,35 @@ class AppSettings {
           dynamicThemeMode == other.dynamicThemeMode &&
           dynamicThemeIntensity == other.dynamicThemeIntensity &&
           dynamicThemeNote == other.dynamicThemeNote &&
-           dynamicThemeEnergy == other.dynamicThemeEnergy &&
-           cloudSyncEnabled == other.cloudSyncEnabled &&
-           lastCloudSyncAt == other.lastCloudSyncAt &&
-           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
-           listEquals(
-             installedMetronomeSoundPackIds,
-             other.installedMetronomeSoundPackIds,
-           ) &&
-           selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId;
+          dynamicThemeEnergy == other.dynamicThemeEnergy &&
+          cloudSyncEnabled == other.cloudSyncEnabled &&
+          lastCloudSyncAt == other.lastCloudSyncAt &&
+          rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
+          listEquals(
+            installedMetronomeSoundPackIds,
+            other.installedMetronomeSoundPackIds,
+          ) &&
+          selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId;
 
   @override
   int get hashCode =>
-       Object.hash(
-           darkMode,
-           useSystemTheme,
-           localeCode,
-           themeColorNote,
-           referencePitch,
-           tunerTransposition,
-           dynamicThemeMode,
-           dynamicThemeIntensity,
-           dynamicThemeNote,
-            dynamicThemeEnergy,
-            cloudSyncEnabled,
-            lastCloudSyncAt,
-            rewardedPremiumExpiresAt,
-            Object.hashAll(installedMetronomeSoundPackIds),
-            selectedMetronomeSoundPackId);
+      Object.hash(
+        darkMode,
+        useSystemTheme,
+        localeCode,
+        themeColorNote,
+        referencePitch,
+        tunerTransposition,
+        dynamicThemeMode,
+        dynamicThemeIntensity,
+        dynamicThemeNote,
+        dynamicThemeEnergy,
+        cloudSyncEnabled,
+        lastCloudSyncAt,
+        rewardedPremiumExpiresAt,
+        Object.hashAll(installedMetronomeSoundPackIds),
+        selectedMetronomeSoundPackId,
+      );
 
   static double _clampDynamicThemeIntensity(double intensity) {
     return intensity.clamp(0.0, 1.0).toDouble();

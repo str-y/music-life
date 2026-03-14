@@ -234,7 +234,7 @@ void main() {
 
     await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
           const Duration(hours: 24),
-          now: DateTime.utc(2026, 1, 1),
+          now: DateTime.utc(2030, 1, 1),
         );
     await container.read(appSettingsProvider.notifier).setCloudSyncEnabled(true);
 
