@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
+import '../metronome_sound_library.dart';
 import '../native_pitch_bridge.dart';
 import '../repositories/settings_repository.dart';
 
@@ -38,6 +39,35 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
         rewardedPremiumExpiresAt: grantedAt.add(duration),
         ),
       );
+  }
+
+  Future<void> installMetronomeSoundPack(String packId) async {
+    final pack = findMetronomeSoundPackById(packId);
+    if (pack == null || (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
+      return;
+    }
+    await update(
+      state.copyWith(
+        installedMetronomeSoundPackIds: <String>[
+          ...state.installedMetronomeSoundPackIds,
+          packId,
+        ],
+      ),
+      syncCloudBackup: false,
+    );
+  }
+
+  Future<void> selectMetronomeSoundPack(String packId) async {
+    final pack = findMetronomeSoundPackById(packId);
+    if (pack == null ||
+        !state.installedMetronomeSoundPackIds.contains(packId) ||
+        (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
+      return;
+    }
+    await update(
+      state.copyWith(selectedMetronomeSoundPackId: packId),
+      syncCloudBackup: false,
+    );
   }
 
   Future<DateTime?> setCloudSyncEnabled(bool enabled) async {
