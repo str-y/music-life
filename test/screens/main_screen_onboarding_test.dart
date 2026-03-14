@@ -205,6 +205,44 @@ void main() {
       );
     });
 
+    testWidgets('settings shows premium cloud sync upsell when premium is inactive',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Premium cloud sync'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-cloud-sync-premium-unlock')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('settings-cloud-sync-toggle')), findsNothing);
+    });
+
+    testWidgets('settings shows cloud sync controls when premium is active',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: <String, Object>{
+          _onboardingShownKey: true,
+          AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
+              DateTime.utc(2026, 1, 2).toIso8601String(),
+        },
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cloud sync & backup'), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-cloud-sync-toggle')), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-cloud-sync-now')), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-cloud-restore')), findsOneWidget);
+    });
+
     testWidgets('matches main screen golden baseline', (tester) async {
       await _pumpApp(
         tester,

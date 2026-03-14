@@ -26,6 +26,8 @@ void main() {
         AppConfig.defaultDynamicThemeIntensityStorageKey: 0.9,
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
+        AppConfig.defaultCloudSyncEnabledStorageKey: true,
+        AppConfig.defaultLastCloudSyncAtStorageKey: '2026-01-03T00:00:00.000Z',
         AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
             '2026-01-01T00:00:00.000Z',
       });
@@ -42,6 +44,11 @@ void main() {
       expect(settings.dynamicThemeIntensity, 0.9);
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
+      expect(settings.cloudSyncEnabled, isTrue);
+      expect(
+        settings.lastCloudSyncAt,
+        DateTime.parse('2026-01-03T00:00:00.000Z'),
+      );
       expect(
         settings.rewardedPremiumExpiresAt,
         DateTime.parse('2026-01-01T00:00:00.000Z'),
@@ -61,6 +68,8 @@ void main() {
         dynamicThemeIntensity: 0.4,
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
+        cloudSyncEnabled: true,
+        lastCloudSyncAt: DateTime.utc(2026, 1, 3, 4, 5, 6),
         rewardedPremiumExpiresAt: DateTime.utc(2026, 1, 2, 3, 4, 5),
       );
 
@@ -85,6 +94,11 @@ void main() {
       expect(
         prefs.getString(AppConfig.defaultTunerTranspositionStorageKey),
         'Eb',
+      );
+      expect(prefs.getBool(AppConfig.defaultCloudSyncEnabledStorageKey), isTrue);
+      expect(
+        prefs.getString(AppConfig.defaultLastCloudSyncAtStorageKey),
+        '2026-01-03T04:05:06.000Z',
       );
       expect(
         prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),

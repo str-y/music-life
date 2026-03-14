@@ -15,9 +15,17 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
-  Future<void> update(AppSettings updated) async {
+  Future<void> update(AppSettings updated, {bool syncCloudBackup = true}) async {
     state = updated;
     await _repo.save(updated);
+    if (!syncCloudBackup ||
+        !updated.cloudSyncEnabled ||
+        !updated.hasRewardedPremiumAccess) {
+      return;
+    }
+    final syncedAt = await ref.read(cloudSyncRepositoryProvider).syncNow();
+    state = updated.copyWith(lastCloudSyncAt: syncedAt);
+    await _repo.save(state);
   }
 
   Future<void> unlockRewardedPremiumFor(
@@ -28,8 +36,40 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     await update(
       state.copyWith(
         rewardedPremiumExpiresAt: grantedAt.add(duration),
-      ),
+        ),
+      );
+  }
+
+  Future<DateTime?> setCloudSyncEnabled(bool enabled) async {
+    await update(
+      enabled
+          ? state.copyWith(cloudSyncEnabled: true)
+          : state.copyWith(
+              cloudSyncEnabled: false,
+              clearLastCloudSyncAt: true,
+            ),
+      syncCloudBackup: enabled,
     );
+    return state.lastCloudSyncAt;
+  }
+
+  Future<bool> restoreLatestCloudBackup() async {
+    final syncedAt = await ref.read(cloudSyncRepositoryProvider).restoreLatestBackup();
+    if (syncedAt == null) return false;
+    await update(
+      state.copyWith(lastCloudSyncAt: syncedAt),
+      syncCloudBackup: false,
+    );
+    return true;
+  }
+
+  Future<DateTime> syncCloudBackupNow() async {
+    final syncedAt = await ref.read(cloudSyncRepositoryProvider).syncNow();
+    await update(
+      state.copyWith(lastCloudSyncAt: syncedAt),
+      syncCloudBackup: false,
+    );
+    return syncedAt;
   }
 
   void updateDynamicThemeFromPitch(PitchResult pitch) {

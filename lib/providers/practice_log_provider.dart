@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/app_settings_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../services/service_error_handler.dart';
 import 'dependency_providers.dart';
@@ -10,6 +11,13 @@ class PracticeLogNotifier
   Future<List<PracticeLogEntry>> build() => _load();
 
   RecordingRepository get _repo => ref.read(recordingRepositoryProvider);
+  Future<void> _syncCloudBackupIfEnabled() async {
+    final settings = ref.read(appSettingsProvider);
+    if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
+      return;
+    }
+    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
+  }
 
   Future<List<PracticeLogEntry>> _load() async {
     try {
@@ -42,6 +50,7 @@ class PracticeLogNotifier
     state = AsyncValue.data(updated);
     try {
       await _repo.savePracticeLogs(updated);
+      await _syncCloudBackupIfEnabled();
     } catch (e, st) {
       ServiceErrorHandler.report(
         'PracticeLogNotifier: failed to save practice log entry',

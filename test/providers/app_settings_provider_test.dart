@@ -4,6 +4,7 @@ import 'package:music_life/config/app_config.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/backup_repository.dart';
 import 'package:music_life/repositories/settings_repository.dart';
 import 'package:music_life/theme/dynamic_theme_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -170,4 +171,45 @@ void main() {
       '2026-01-02T00:00:00.000Z',
     );
   });
+
+  test('setCloudSyncEnabled syncs the current backup snapshot for premium users',
+      () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final backupRepository = _FakeBackupRepository();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        backupRepositoryProvider.overrideWithValue(backupRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
+          const Duration(hours: 24),
+          now: DateTime.utc(2026, 1, 1),
+        );
+    await container.read(appSettingsProvider.notifier).setCloudSyncEnabled(true);
+
+    final settings = container.read(appSettingsProvider);
+    expect(settings.cloudSyncEnabled, isTrue);
+    expect(settings.lastCloudSyncAt, isNotNull);
+    expect(
+      prefs.getString(AppConfig.defaultCloudBackupBundleStorageKey),
+      '{"version":1}',
+    );
+    expect(backupRepository.exportCallCount, greaterThanOrEqualTo(1));
+  });
+}
+
+class _FakeBackupRepository extends BackupRepository {
+  _FakeBackupRepository() : super();
+
+  int exportCallCount = 0;
+
+  @override
+  Future<String> exportJsonBundle() async {
+    exportCallCount += 1;
+    return '{"version":1}';
+  }
 }

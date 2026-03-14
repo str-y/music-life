@@ -199,6 +199,72 @@
       "path": {}
     }
   },
+  "cloudSyncTitle": "Cloud sync & backup",
+  "@cloudSyncTitle": {
+    "description": "Title for the premium cloud sync toggle in settings"
+  },
+  "cloudSyncDescription": "Keep practice logs, recording metadata, and settings synced in your premium backup snapshot.",
+  "@cloudSyncDescription": {
+    "description": "Subtitle describing what is included in cloud sync"
+  },
+  "cloudSyncNow": "Sync now",
+  "@cloudSyncNow": {
+    "description": "Action label for manually pushing the latest backup snapshot"
+  },
+  "cloudRestoreLatest": "Restore latest cloud backup",
+  "@cloudRestoreLatest": {
+    "description": "Action label for restoring the latest cloud backup snapshot"
+  },
+  "cloudRestoreDescription": "Restore the latest synced snapshot when switching devices or recovering data.",
+  "@cloudRestoreDescription": {
+    "description": "Subtitle for restoring the latest cloud backup"
+  },
+  "cloudSyncPremiumTitle": "Premium cloud sync",
+  "@cloudSyncPremiumTitle": {
+    "description": "Title shown when cloud sync is locked behind premium"
+  },
+  "cloudSyncPremiumDescription": "Watch a rewarded ad to unlock cloud sync, unlimited backup snapshots, and seamless device changes for {hours} hours.",
+  "@cloudSyncPremiumDescription": {
+    "description": "Description for the premium cloud sync upsell",
+    "placeholders": {
+      "hours": { "type": "int" }
+    }
+  },
+  "cloudSyncNeverSynced": "No cloud backup yet.",
+  "@cloudSyncNeverSynced": {
+    "description": "Status text shown before the first cloud sync"
+  },
+  "cloudSyncLastSynced": "Last synced: {date}",
+  "@cloudSyncLastSynced": {
+    "description": "Status text showing the last successful cloud sync date",
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "cloudSyncEnabledMessage": "Cloud sync enabled.",
+  "@cloudSyncEnabledMessage": {
+    "description": "Snackbar shown when cloud sync is enabled"
+  },
+  "cloudSyncDisabledMessage": "Cloud sync disabled.",
+  "@cloudSyncDisabledMessage": {
+    "description": "Snackbar shown when cloud sync is disabled"
+  },
+  "cloudSyncCompleted": "Cloud backup synced.",
+  "@cloudSyncCompleted": {
+    "description": "Snackbar shown when a cloud sync completes successfully"
+  },
+  "cloudBackupRestored": "Latest cloud backup restored.",
+  "@cloudBackupRestored": {
+    "description": "Snackbar shown when the latest cloud backup is restored"
+  },
+  "cloudBackupNotFound": "No cloud backup is available yet.",
+  "@cloudBackupNotFound": {
+    "description": "Snackbar shown when there is no cloud backup to restore"
+  },
+  "cloudSyncFailed": "Cloud sync failed.",
+  "@cloudSyncFailed": {
+    "description": "Generic error message shown when cloud sync or restore fails"
+  },
 
   "developerSettings": "Developer Settings",
   "@developerSettings": {
