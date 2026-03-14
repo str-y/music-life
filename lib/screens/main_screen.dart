@@ -18,6 +18,7 @@ const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 const String _onboardingShownKey = 'onboarding_shown_v1';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
+const List<String> _supportedLanguageCodes = <String>['en', 'ja'];
 const List<String> _themeColorNoteOptions = <String>[
   'C',
   'C#',
@@ -615,6 +616,38 @@ class _SettingsModalState extends State<_SettingsModal> {
           ),
           Text(l10n.settingsTitle, style: textTheme.titleLarge),
           const SizedBox(height: 24),
+          Text(l10n.languageSection, style: textTheme.titleSmall),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            key: const ValueKey('settings-language-selector'),
+            value: _local.localeCode ?? '',
+            decoration: InputDecoration(
+              labelText: l10n.languageLabel,
+            ),
+            items: <DropdownMenuItem<String>>[
+              DropdownMenuItem<String>(
+                value: '',
+                child: Text(l10n.systemDefaultLanguage),
+              ),
+              ..._supportedLanguageCodes.map(
+                (languageCode) => DropdownMenuItem<String>(
+                  value: languageCode,
+                  child: Text(
+                    switch (languageCode) {
+                      'ja' => l10n.languageJapanese,
+                      _ => l10n.languageEnglish,
+                    },
+                  ),
+                ),
+              ),
+            ],
+            onChanged: (value) => _emit(
+              value == null || value.isEmpty
+                  ? _local.copyWith(clearLocaleCode: true)
+                  : _local.copyWith(localeCode: value),
+            ),
+          ),
+          const Divider(height: 32),
           Text(l10n.themeSection, style: textTheme.titleSmall),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

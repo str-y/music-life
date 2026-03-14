@@ -12,6 +12,7 @@ void main() {
     SharedPreferences.setMockInitialValues({
       AppConfig.defaultDarkModeStorageKey: true,
       AppConfig.defaultUseSystemThemeStorageKey: false,
+      AppConfig.defaultLocaleStorageKey: 'ja',
       AppConfig.defaultThemeColorNoteStorageKey: 'G',
       AppConfig.defaultReferencePitchStorageKey: 442.0,
     });
@@ -30,6 +31,7 @@ void main() {
       const AppSettings(
         darkMode: true,
         useSystemTheme: false,
+        localeCode: 'ja',
         themeColorNote: 'G',
         referencePitch: 442.0,
       ),
@@ -49,6 +51,7 @@ void main() {
     const updated = AppSettings(
       darkMode: true,
       useSystemTheme: false,
+      localeCode: 'ja',
       themeColorNote: 'A#',
       referencePitch: 444.0,
     );
@@ -57,6 +60,7 @@ void main() {
     expect(container.read(appSettingsProvider), updated);
     expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
     expect(prefs.getBool(AppConfig.defaultUseSystemThemeStorageKey), isFalse);
+    expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
     expect(prefs.getString(AppConfig.defaultThemeColorNoteStorageKey), 'A#');
     expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
   });

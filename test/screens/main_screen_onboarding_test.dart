@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -8,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
 const String _onboardingShownKey = 'onboarding_shown_v1';
-
 Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
@@ -75,6 +75,33 @@ void main() {
           hint: localizations.practiceLogSubtitle,
         ),
       );
+    });
+
+    testWidgets('language selector updates app locale and persists choice',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('settings-language-selector')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('System default'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('日本語').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('設定'), findsOneWidget);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
     });
 
     testWidgets('matches main screen golden baseline', (tester) async {
