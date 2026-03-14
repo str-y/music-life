@@ -259,6 +259,47 @@ void main() {
       expect(WaveformPainter.pathCacheSize, 0);
       expect(WaveformPainter.pictureCacheSize, 0);
     });
+
+    testWidgets('reuses waveform caches for equivalent waveform data',
+        (tester) async {
+      WaveformPainter.clearCaches();
+
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox(
+            width: 240,
+            child: WaveformView(
+              data: [0.2, 0.8, 0.4],
+              durationSeconds: 30,
+              isPlaying: false,
+              color: Colors.blue,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(WaveformPainter.pathCacheSize, 1);
+      expect(WaveformPainter.pictureCacheSize, 1);
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 240,
+            child: WaveformView(
+              data: List<double>.from(const [0.2, 0.8, 0.4]),
+              durationSeconds: 30,
+              isPlaying: false,
+              color: Colors.blue,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(WaveformPainter.pathCacheSize, 1);
+      expect(WaveformPainter.pictureCacheSize, 1);
+    });
   });
 
   group('RecordingTile share', () {
@@ -311,5 +352,30 @@ void main() {
         'Take__01___Intro_20240601_0830.wav',
       );
     });
+  });
+
+  testWidgets('loads recording tiles in batches while scrolling', (tester) async {
+    final recordings = List.generate(
+      45,
+      (index) => RecordingEntry(
+        id: '$index',
+        title: 'Take ${index.toString().padLeft(2, '0')}',
+        recordedAt: DateTime(2024, 5, 1).add(Duration(minutes: index)),
+        durationSeconds: 30,
+        waveformData: const [0.1, 0.2, 0.3],
+      ),
+    );
+
+    await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
+    await tester.pumpAndSettle();
+
+    final initialListView = tester.widget<ListView>(find.byType(ListView));
+    expect(initialListView.semanticChildCount, 40);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -5000));
+    await tester.pumpAndSettle();
+
+    final pagedListView = tester.widget<ListView>(find.byType(ListView));
+    expect(pagedListView.semanticChildCount, 45);
   });
 }

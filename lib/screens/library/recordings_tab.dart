@@ -32,12 +32,19 @@ class RecordingsTab extends ConsumerStatefulWidget {
 }
 
 class _RecordingsTabState extends ConsumerState<RecordingsTab> {
+  static const int _pageSize = 40;
+  static const double _loadMoreThreshold = 320;
+
   late List<RecordingEntry> _sorted;
+  late final ScrollController _scrollController;
+  int _visibleCount = 0;
 
   @override
   void initState() {
     super.initState();
     _sorted = _prepareSorted(widget.recordings);
+    _visibleCount = _initialVisibleCountFor(_sorted.length);
+    _scrollController = ScrollController()..addListener(_handleScroll);
   }
 
   @override
@@ -45,13 +52,41 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
     super.didUpdateWidget(oldWidget);
     if (widget.recordings != oldWidget.recordings) {
       _sorted = _prepareSorted(widget.recordings);
+      _visibleCount = _initialVisibleCountFor(_sorted.length);
     }
   }
 
   @override
   void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
     WaveformPainter.clearCaches();
     super.dispose();
+  }
+
+  int _initialVisibleCountFor(int totalCount) =>
+      totalCount <= _pageSize ? totalCount : _pageSize;
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients || _visibleCount >= _sorted.length) {
+      return;
+    }
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - _loadMoreThreshold) {
+      return;
+    }
+    final nextVisibleCount =
+        (_visibleCount + _pageSize).clamp(0, _sorted.length).toInt();
+    if (nextVisibleCount == _visibleCount) {
+      return;
+    }
+    setState(() {
+      _visibleCount = nextVisibleCount;
+    });
+    AppLogger.debug(
+      'RecordingsTab: expanded visible recordings to $_visibleCount/${_sorted.length}',
+    );
   }
 
   List<RecordingEntry> _prepareSorted(List<RecordingEntry> recordings) {
@@ -90,9 +125,11 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
       );
     }
 
+    final visibleCount = _visibleCount.clamp(0, _sorted.length).toInt();
     return ListView.separated(
+      controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _sorted.length,
+      itemCount: visibleCount,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = _sorted[index];

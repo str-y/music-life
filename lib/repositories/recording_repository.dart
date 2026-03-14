@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -12,6 +13,7 @@ import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 import '../config/app_config.dart';
 import '../data/app_database.dart';
 import '../services/service_error_handler.dart';
+import '../utils/app_logger.dart';
 
 // ---------------------------------------------------------------------------
 // Waveform binary encoding helpers
@@ -142,7 +144,10 @@ class RecordingRepository {
   // Accounts for per-row SQLite metadata, page alignment, and row headers when
   // estimating scratch space from serialized payload sizes alone.
   static const int _estimatedRowOverheadBytes = 256;
+  static const int _maxWaveformCacheEntries = 256;
   static final Uint8List _diskSpaceCheckChunk = Uint8List(_diskSpaceCheckChunkBytes);
+  static final LinkedHashMap<String, List<double>> _waveformCache =
+      LinkedHashMap<String, List<double>>();
 
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
   RecordingRepository(
@@ -191,6 +196,28 @@ class RecordingRepository {
   final _EnsureMigrationDiskSpace _ensureMigrationDiskSpace;
   final _PersistBool _persistBool;
   final _RemoveValue _removeValue;
+
+  static List<double> _decodeWaveform(
+    String recordingId,
+    Uint8List blob, {
+    void Function(bool hit)? onCacheAccess,
+  }) {
+    final cached = _waveformCache.remove(recordingId);
+    if (cached != null) {
+      _waveformCache[recordingId] = cached;
+      onCacheAccess?.call(true);
+      return cached;
+    }
+
+    if (_waveformCache.length >= _maxWaveformCacheEntries) {
+      _waveformCache.remove(_waveformCache.keys.first);
+    }
+
+    final waveform = List<double>.unmodifiable(_blobToWaveform(blob));
+    _waveformCache[recordingId] = waveform;
+    onCacheAccess?.call(false);
+    return waveform;
+  }
 
   String get _migrationInProgressKey =>
       '${_config.recordingsMigratedStorageKey}_in_progress';
@@ -443,22 +470,44 @@ class RecordingRepository {
   }
 
   Future<List<RecordingEntry>> loadRecordings() async {
+    final stopwatch = Stopwatch()..start();
     await _migrateIfNeeded();
     final rows = await _queryAllRecordings();
-    return rows
+    var cacheHits = 0;
+    var cacheMisses = 0;
+    final recordings = rows
         .map((row) => RecordingEntry(
               id: row['id'] as String,
               title: row['title'] as String,
               recordedAt: DateTime.parse(row['recorded_at'] as String),
               durationSeconds: row['duration_seconds'] as int,
-              waveformData:
-                  _blobToWaveform(row['waveform_data'] as Uint8List),
+              waveformData: _decodeWaveform(
+                row['id'] as String,
+                row['waveform_data'] as Uint8List,
+                onCacheAccess: (hit) {
+                  if (hit) {
+                    cacheHits += 1;
+                  } else {
+                    cacheMisses += 1;
+                  }
+                },
+              ),
               audioFilePath: row['audio_file_path'] as String?,
             ))
         .toList();
+    stopwatch.stop();
+    AppLogger.debug(
+      'RecordingRepository: loaded ${recordings.length} recordings in '
+      '${stopwatch.elapsedMilliseconds}ms '
+      '(waveform cache hits: $cacheHits, misses: $cacheMisses, '
+      'cache size: ${_waveformCache.length}, '
+      'rss: ${_formatMemoryUsage(ProcessInfo.currentRss)})',
+    );
+    return recordings;
   }
 
   Future<void> saveRecordings(List<RecordingEntry> recordings) async {
+    _waveformCache.clear();
     await AppDatabase.instance.replaceAllRecordings(
       recordings
           .map((e) => {
@@ -500,5 +549,14 @@ class RecordingRepository {
   @visibleForTesting
   static void resetMigrationStateForTesting() {
     _migrationCompleter = null;
+    _waveformCache.clear();
+  }
+
+  @visibleForTesting
+  static int get waveformCacheSize => _waveformCache.length;
+
+  static String _formatMemoryUsage(int bytes) {
+    final megabytes = bytes / (1024 * 1024);
+    return '${megabytes.toStringAsFixed(1)}MB';
   }
 }

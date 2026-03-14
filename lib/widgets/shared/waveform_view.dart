@@ -132,8 +132,7 @@ class WaveformPainter extends CustomPainter {
 
     final centerY = size.height / 2;
     final breathScale = 1.0 + breathPhase * _breathScaleFactor;
-    // Cache is per recording waveform list instance from repository data.
-    final dataHash = identityHashCode(data);
+    final dataHash = Object.hashAll(data);
     final cacheKey =
         '$dataHash:${size.width.toStringAsFixed(2)}:${size.height.toStringAsFixed(2)}';
     var basePath = _pathCache.remove(cacheKey);

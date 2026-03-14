@@ -312,6 +312,34 @@ void main() {
         isTrue,
       );
     });
+
+    test('reuses decoded waveform data across repeated loads', () async {
+      final recording = RecordingEntry(
+        id: 'cached-waveform',
+        title: 'Cached waveform',
+        recordedAt: DateTime(2024, 7, 8, 9, 10),
+        durationSeconds: 30,
+        waveformData: const [0.1, 0.4, 0.7],
+      );
+      currentRecordingRows = [_recordingRow(recording)];
+
+      final repository = createRepository();
+
+      final firstLoad = await repository.loadRecordings();
+      final secondLoad = await repository.loadRecordings();
+
+      expect(firstLoad, hasLength(1));
+      expect(secondLoad, hasLength(1));
+      expect(identical(firstLoad.single.waveformData, secondLoad.single.waveformData),
+          isTrue);
+      expect(RecordingRepository.waveformCacheSize, 1);
+      expect(
+        AppLogger.bufferedLogs.any(
+          (line) => line.contains('waveform cache hits: 1'),
+        ),
+        isTrue,
+      );
+    });
   });
 }
 
