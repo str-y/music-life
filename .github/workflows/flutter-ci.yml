@@ -28,7 +28,7 @@ jobs:
         run: flutter analyze
 
       - name: Test with coverage
-        run: flutter test --coverage --no-pub
+        run: flutter test --coverage --no-pub --dart-define=RUN_SCREEN_GOLDENS=true
 
       - name: Summarize coverage
         run: |

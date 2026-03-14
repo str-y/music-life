@@ -7,6 +7,7 @@ import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/chord_history_repository.dart';
 import 'package:music_life/screens/chord_analyser_screen.dart';
+import 'golden_test_utils.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
@@ -54,6 +55,8 @@ Widget _wrap(
   Widget child, {
   List<dynamic> overrides = const [],
   ChordHistoryRepository? chordHistoryRepository,
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
 }) {
   final repository = chordHistoryRepository ?? _InMemoryChordHistoryRepository();
   return ProviderScope(
@@ -61,9 +64,9 @@ Widget _wrap(
       chordHistoryRepositoryProvider.overrideWithValue(repository),
       ...overrides,
     ],
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
       home: Scaffold(body: child),
     ),
   );
@@ -106,32 +109,38 @@ void main() {
     });
   });
 
-  testWidgets('matches chord analyser screen golden', (tester) async {
-    final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
-    when(() => bridge.chordStream)
-        .thenAnswer((_) => const Stream<String>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+  for (final variant in screenGoldenVariants) {
+    testWidgets('matches chord analyser screen golden (${variant.name})',
+        (tester) async {
+      await prepareGoldenSurface(tester);
+      final bridge = _MockNativePitchBridge();
+      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(() => bridge.chordStream)
+          .thenAnswer((_) => const Stream<String>.empty());
+      when(() => bridge.dispose()).thenReturn(null);
 
-    await tester.pumpWidget(
-      _wrap(
-        const ChordAnalyserScreen(useMicPermissionGate: false),
-        overrides: [
-          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
-        ],
-      ),
-    );
+      await tester.pumpWidget(
+        _wrap(
+          const ChordAnalyserScreen(useMicPermissionGate: false),
+          locale: variant.locale,
+          themeMode: variant.themeMode,
+          overrides: [
+            pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+          ],
+        ),
+      );
 
-    // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
-    // First pump lets async initialization complete, second pump captures a fixed frame.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+      // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
+      // First pump lets async initialization complete, second pump captures a fixed frame.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    await expectLater(
-      find.byType(ChordAnalyserScreen),
-      matchesGoldenFile('goldens/chord_analyser_screen.png'),
-    );
-  });
+      await expectScreenGolden(
+        find.byType(ChordAnalyserScreen),
+        variant.goldenPath('chord_analyser_screen'),
+      );
+    });
+  }
 
   testWidgets('disposing ChordAnalyserScreen does not leak animation tickers',
       (tester) async {

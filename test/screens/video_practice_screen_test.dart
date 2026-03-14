@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/video_practice_screen.dart';
 import 'package:music_life/services/ad_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'golden_test_utils.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -22,12 +23,14 @@ class _MockAdService extends Mock implements IAdService {}
 Widget _wrap(
   Widget child, {
   List<Override> overrides = const [],
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
     overrides: overrides,
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
       home: child,
     ),
   );
@@ -47,6 +50,40 @@ Future<List<Override>> _settingsOverridesWithPrefs({
 
 void main() {
   group('VideoPracticeScreen – premium paywall', () {
+    for (final variant in screenGoldenVariants) {
+      testWidgets('matches premium paywall golden (${variant.name})',
+          (tester) async {
+        await prepareGoldenSurface(tester);
+        final overrides = await _settingsOverridesWithPrefs(
+          initialValues: {
+            AppConfig.defaultUseSystemThemeStorageKey: false,
+            AppConfig.defaultDarkModeStorageKey:
+                variant.themeMode == ThemeMode.dark,
+            AppConfig.defaultLocaleStorageKey: variant.locale.languageCode,
+          },
+        );
+        final adService = _MockAdService();
+
+        await tester.pumpWidget(
+          _wrap(
+            const VideoPracticeScreen(),
+            locale: variant.locale,
+            themeMode: variant.themeMode,
+            overrides: [
+              ...overrides,
+              adServiceProvider.overrideWithValue(adService),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        await expectScreenGolden(
+          find.byType(VideoPracticeScreen),
+          variant.goldenPath('video_practice_screen'),
+        );
+      });
+    }
+
     testWidgets('shows paywall when premium is not active', (tester) async {
       final overrides = await _settingsOverridesWithPrefs();
       final adService = _MockAdService();
