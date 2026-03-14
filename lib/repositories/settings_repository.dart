@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../metronome_sound_library.dart';
 import '../theme/dynamic_theme_mode.dart';
 
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
@@ -20,6 +22,8 @@ class AppSettings {
   final bool cloudSyncEnabled;
   final DateTime? lastCloudSyncAt;
   final DateTime? rewardedPremiumExpiresAt;
+  final List<String> installedMetronomeSoundPackIds;
+  final String selectedMetronomeSoundPackId;
 
   const AppSettings({
     this.darkMode = false,
@@ -35,6 +39,10 @@ class AppSettings {
     this.cloudSyncEnabled = false,
     this.lastCloudSyncAt,
     this.rewardedPremiumExpiresAt,
+    this.installedMetronomeSoundPackIds = const <String>[
+      defaultMetronomeSoundPackId,
+    ],
+    this.selectedMetronomeSoundPackId = defaultMetronomeSoundPackId,
   });
 
   AppSettings copyWith({
@@ -51,6 +59,8 @@ class AppSettings {
     bool? cloudSyncEnabled,
     DateTime? lastCloudSyncAt,
     DateTime? rewardedPremiumExpiresAt,
+    List<String>? installedMetronomeSoundPackIds,
+    String? selectedMetronomeSoundPackId,
     bool clearLastCloudSyncAt = false,
     bool clearRewardedPremiumExpiresAt = false,
     bool clearLocaleCode = false,
@@ -79,6 +89,15 @@ class AppSettings {
       rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
           ? null
           : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
+      installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
+        installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
+      ),
+      selectedMetronomeSoundPackId: normalizeSelectedMetronomeSoundPackId(
+        selectedMetronomeSoundPackId ?? this.selectedMetronomeSoundPackId,
+        normalizeInstalledMetronomeSoundPackIds(
+          installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
+        ),
+      ),
     );
   }
 
@@ -98,10 +117,15 @@ class AppSettings {
           dynamicThemeMode == other.dynamicThemeMode &&
           dynamicThemeIntensity == other.dynamicThemeIntensity &&
           dynamicThemeNote == other.dynamicThemeNote &&
-          dynamicThemeEnergy == other.dynamicThemeEnergy &&
-          cloudSyncEnabled == other.cloudSyncEnabled &&
-          lastCloudSyncAt == other.lastCloudSyncAt &&
-          rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt;
+           dynamicThemeEnergy == other.dynamicThemeEnergy &&
+           cloudSyncEnabled == other.cloudSyncEnabled &&
+           lastCloudSyncAt == other.lastCloudSyncAt &&
+           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
+           listEquals(
+             installedMetronomeSoundPackIds,
+             other.installedMetronomeSoundPackIds,
+           ) &&
+           selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId;
 
   @override
   int get hashCode =>
@@ -115,10 +139,12 @@ class AppSettings {
            dynamicThemeMode,
            dynamicThemeIntensity,
            dynamicThemeNote,
-           dynamicThemeEnergy,
-           cloudSyncEnabled,
-           lastCloudSyncAt,
-           rewardedPremiumExpiresAt);
+            dynamicThemeEnergy,
+            cloudSyncEnabled,
+            lastCloudSyncAt,
+            rewardedPremiumExpiresAt,
+            Object.hashAll(installedMetronomeSoundPackIds),
+            selectedMetronomeSoundPackId);
 
   static double _clampDynamicThemeIntensity(double intensity) {
     return intensity.clamp(0.0, 1.0).toDouble();
@@ -164,6 +190,15 @@ class SettingsRepository {
       ),
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
+      ),
+      installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
+        _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
+      ),
+      selectedMetronomeSoundPackId: normalizeSelectedMetronomeSoundPackId(
+        _prefs.getString(_config.selectedMetronomeSoundPackStorageKey),
+        normalizeInstalledMetronomeSoundPackIds(
+          _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
+        ),
       ),
     );
   }
@@ -227,6 +262,21 @@ class SettingsRepository {
         settings.rewardedPremiumExpiresAt!.toIso8601String(),
       );
     }
+    await _prefs.setStringList(
+      _config.metronomeSoundPacksStorageKey,
+      normalizeInstalledMetronomeSoundPackIds(
+        settings.installedMetronomeSoundPackIds,
+      ),
+    );
+    await _prefs.setString(
+      _config.selectedMetronomeSoundPackStorageKey,
+      normalizeSelectedMetronomeSoundPackId(
+        settings.selectedMetronomeSoundPackId,
+        normalizeInstalledMetronomeSoundPackIds(
+          settings.installedMetronomeSoundPackIds,
+        ),
+      ),
+    );
   }
 
   DateTime? _decodeDateTime(String? value) {

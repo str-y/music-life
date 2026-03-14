@@ -35,6 +35,9 @@ class AppConfig {
     this.cloudBackupBundleStorageKey = defaultCloudBackupBundleStorageKey,
     this.rewardedPremiumExpiresAtStorageKey =
         defaultRewardedPremiumExpiresAtStorageKey,
+    this.metronomeSoundPacksStorageKey = defaultMetronomeSoundPacksStorageKey,
+    this.selectedMetronomeSoundPackStorageKey =
+        defaultSelectedMetronomeSoundPackStorageKey,
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
     this.defaultDynamicThemeMode = defaultChillDynamicThemeMode,
@@ -84,6 +87,10 @@ class AppConfig {
   static const String defaultCloudBackupBundleStorageKey = 'cloudBackupBundle';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
+  static const String defaultMetronomeSoundPacksStorageKey =
+      'metronomeSoundPacks';
+  static const String defaultSelectedMetronomeSoundPackStorageKey =
+      'selectedMetronomeSoundPack';
   static const String _defaultTunerTransposition = 'C';
   static const String defaultChillDynamicThemeMode = 'chill';
 
@@ -118,6 +125,8 @@ class AppConfig {
   final String lastCloudSyncAtStorageKey;
   final String cloudBackupBundleStorageKey;
   final String rewardedPremiumExpiresAtStorageKey;
+  final String metronomeSoundPacksStorageKey;
+  final String selectedMetronomeSoundPackStorageKey;
 
   final bool defaultDarkMode;
   final bool defaultUseSystemTheme;
