@@ -661,43 +661,72 @@ class _PlaybackControls extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.compositionBpmLabel(bpm),
-                  style: Theme.of(context).textTheme.bodySmall,
+      child: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.compositionBpmLabel(bpm),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(1),
+                    child: Semantics(
+                      container: true,
+                      slider: true,
+                      label: l10n.bpmLabel,
+                      value: l10n.compositionBpmLabel(bpm),
+                      increasedValue: bpm < 200
+                          ? l10n.compositionBpmLabel(bpm + 1)
+                          : null,
+                      decreasedValue: bpm > 40
+                          ? l10n.compositionBpmLabel(bpm - 1)
+                          : null,
+                      onIncrease: bpm < 200
+                          ? () => onBpmChanged(bpm + 1)
+                          : null,
+                      onDecrease: bpm > 40
+                          ? () => onBpmChanged(bpm - 1)
+                          : null,
+                      child: ExcludeSemantics(
+                        child: Slider(
+                          min: 40,
+                          max: 200,
+                          divisions: 160,
+                          value: bpm.toDouble(),
+                          label: '$bpm',
+                          onChanged: (v) => onBpmChanged(v.round()),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(2),
+              child: FilledButton.icon(
+                icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
+                label: Text(
+                  isPlaying ? l10n.compositionStop : l10n.compositionPlay,
                 ),
-                Slider(
-                  min: 40,
-                  max: 200,
-                  divisions: 160,
-                  value: bpm.toDouble(),
-                  label: '$bpm',
-                  onChanged: (v) => onBpmChanged(v.round()),
+                onPressed: canPlay ? (isPlaying ? onStop : onPlay) : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor:
+                      isPlaying ? colorScheme.error : null,
+                  foregroundColor:
+                      isPlaying ? colorScheme.onError : null,
                 ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          FilledButton.icon(
-            icon: Icon(isPlaying ? Icons.stop : Icons.play_arrow),
-            label: Text(
-              isPlaying ? l10n.compositionStop : l10n.compositionPlay,
-            ),
-            onPressed: canPlay ? (isPlaying ? onStop : onPlay) : null,
-            style: FilledButton.styleFrom(
-              backgroundColor:
-                  isPlaying ? colorScheme.error : null,
-              foregroundColor:
-                  isPlaying ? colorScheme.onError : null,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

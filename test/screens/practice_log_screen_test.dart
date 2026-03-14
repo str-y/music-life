@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
 import 'package:music_life/utils/practice_log_utils.dart';
@@ -10,6 +13,17 @@ Widget _wrap(Widget child) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
+  );
+}
+
+Widget _wrapScreen(Widget child, {List<Override> overrides = const []}) {
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    ),
   );
 }
 
@@ -108,4 +122,52 @@ void main() {
       expect(ratio['Other'], 40);
     });
   });
+
+  group('PracticeLogScreen accessibility', () {
+    testWidgets(
+        'month navigation buttons and analytics bars expose semantics labels',
+        (tester) async {
+      final now = DateTime.now();
+      final logs = [
+        PracticeLogEntry(
+          date: now,
+          durationMinutes: 30,
+          memo: 'Guitar: scales',
+        ),
+        PracticeLogEntry(
+          date: now.subtract(const Duration(days: 4)),
+          durationMinutes: 20,
+          memo: 'Piano: arpeggio',
+        ),
+      ];
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+
+      await tester.pumpWidget(
+        _wrapScreen(
+          const PracticeLogScreen(),
+          overrides: [
+            recordingRepositoryProvider.overrideWithValue(repo),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(PracticeLogScreen)),
+      )!;
+      final weeklyTrend = buildWeeklyPracticeTrend(logs);
+
+      expect(find.bySemanticsLabel(l10n.previousMonth), findsOneWidget);
+      expect(find.bySemanticsLabel(l10n.nextMonth), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          '${weeklyTrend.last.label}, ${l10n.durationMinutes(weeklyTrend.last.minutes)}',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
 }
+
+class _MockRecordingRepository extends Mock implements RecordingRepository {}

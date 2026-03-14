@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,6 +250,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Dm7/A'), findsOneWidget);
+    });
+  });
+
+  group('CompositionHelperScreen – accessibility', () {
+    testWidgets('BPM slider exposes semantic value and adjustment actions',
+        (tester) async {
+      final mockRepo = _MockCompositionRepository();
+      when(() => mockRepo.load()).thenAnswer((_) => Future.value([]));
+      final semantics = SemanticsTester(tester);
+      addTearDown(semantics.dispose);
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          compositionRepositoryProvider.overrideWithValue(mockRepo),
+        ],
+        child: _wrap(const CompositionHelperScreen()),
+      ));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(CompositionHelperScreen)),
+      )!;
+
+      expect(
+        semantics,
+        includesNodeWith(
+          label: l10n.bpmLabel,
+          value: l10n.compositionBpmLabel(80),
+          actions: <SemanticsAction>[
+            SemanticsAction.decrease,
+            SemanticsAction.increase,
+          ],
+        ),
+      );
     });
   });
 }
