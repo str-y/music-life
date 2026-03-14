@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -136,6 +138,7 @@ class _CameraViewState extends ConsumerState<_CameraView> {
       _isInitializing = true;
       _errorMessage = null;
     });
+    CameraController? controller;
     try {
       final cameras = await availableCameras();
       if (!mounted) return;
@@ -147,7 +150,7 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         });
         return;
       }
-      final controller = CameraController(
+      controller = CameraController(
         cameras.first,
         ResolutionPreset.high,
         enableAudio: true,
@@ -162,6 +165,7 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         _isInitializing = false;
       });
     } catch (e, st) {
+      unawaited(controller?.dispose());
       AppLogger.reportError(
         'VideoPracticeScreen: failed to initialize camera',
         error: e,
@@ -215,7 +219,7 @@ class _CameraViewState extends ConsumerState<_CameraView> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    unawaited(_controller?.dispose());
     super.dispose();
   }
 

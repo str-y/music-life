@@ -135,6 +135,7 @@ class RecordingRepository {
     if (_migrationCompleter != null) return _migrationCompleter!.future;
 
     _migrationCompleter = Completer<void>();
+    _migrationCompleter!.future.catchError((_, __) {});
     try {
       if (_prefs.getBool(_config.recordingsMigratedStorageKey) == true) {
         _migrationCompleter!.complete();

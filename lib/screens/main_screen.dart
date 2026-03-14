@@ -43,6 +43,8 @@ class MainScreen extends ConsumerStatefulWidget {
 class _MainScreenState extends ConsumerState<MainScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entranceCtrl;
+  late final CurvedAnimation _entranceCurve;
+  late final CurvedAnimation _entranceFadeCurve;
   final BackupRepository _backupRepository = const BackupRepository();
 
   @override
@@ -52,6 +54,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     )..forward();
+    _entranceCurve = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOutCubic,
+    );
+    _entranceFadeCurve = CurvedAnimation(
+      parent: _entranceCtrl,
+      curve: Curves.easeOut,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Pre-load interstitial ad
@@ -63,6 +73,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   void dispose() {
+    _entranceCurve.dispose();
+    _entranceFadeCurve.dispose();
     _entranceCtrl.dispose();
     super.dispose();
   }
@@ -240,10 +252,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final settings = ref.watch(appSettingsProvider);
     final libraryState = ref.watch(libraryProvider);
     final practiceSummary = computePracticeSummary(libraryState.logs);
-    final entranceCurve = CurvedAnimation(
-      parent: _entranceCtrl,
-      curve: Curves.easeOutCubic,
-    );
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.appTitle),
@@ -256,15 +264,12 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ],
       ),
       body: FadeTransition(
-        opacity: CurvedAnimation(
-          parent: _entranceCtrl,
-          curve: Curves.easeOut,
-        ),
+        opacity: _entranceFadeCurve,
         child: SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(0, 0.06),
             end: Offset.zero,
-          ).animate(entranceCurve),
+          ).animate(_entranceCurve),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -350,7 +355,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.tunerTitle,
                     subtitle: l10n.tunerSubtitle,
                     delay: 0.0,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () => _showAdAndPush(const TunerRoute().location),
                   ),
                   _FeatureTile(
@@ -358,7 +363,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.practiceLogTitle,
                     subtitle: l10n.practiceLogSubtitle,
                     delay: 0.08,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () =>
                         _showAdAndPush(const PracticeLogRoute().location),
                   ),
@@ -367,7 +372,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.libraryTitle,
                     subtitle: l10n.librarySubtitle,
                     delay: 0.16,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () => _showAdAndPush(const LibraryRoute().location),
                   ),
                   _FeatureTile(
@@ -375,7 +380,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.rhythmTitle,
                     subtitle: l10n.rhythmSubtitle,
                     delay: 0.24,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () => _showAdAndPush(const RhythmRoute().location),
                   ),
                   _FeatureTile(
@@ -383,7 +388,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.chordAnalyserTitle,
                     subtitle: l10n.chordAnalyserSubtitle,
                     delay: 0.32,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () =>
                         _showAdAndPush(const ChordAnalyserRoute().location),
                   ),
@@ -392,7 +397,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     title: l10n.compositionHelperTitle,
                     subtitle: l10n.compositionHelperSubtitle,
                     delay: 0.4,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () =>
                         _showAdAndPush(const CompositionHelperRoute().location),
                   ),
@@ -402,7 +407,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.videoPracticeSubtitle,
                     isPremium: !settings.hasRewardedPremiumAccess,
                     delay: 0.48,
-                    animation: entranceCurve,
+                    animation: _entranceCurve,
                     onTap: () =>
                         _showAdAndPush(const VideoPracticeRoute().location),
                   ),

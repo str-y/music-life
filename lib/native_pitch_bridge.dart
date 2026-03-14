@@ -524,6 +524,14 @@ void _audioProcessingIsolate(IsolateSetup setup) {
       }
       processFrame(buffer.asFloat32List(0, msg.sampleCount));
     } else if (msg is Float32List) {
+      if (msg.length > setup.frameSize) {
+        setup.resultPort.send(IsolateManagerError(
+          phase: 'validate-raw-frame',
+          message: 'Raw frame length (${msg.length}) exceeds frameSize (${setup.frameSize}).',
+          stack: StackTrace.current.toString(),
+        ));
+        return;
+      }
       processFrame(msg);
     }
   });
@@ -703,10 +711,15 @@ class NativePitchBridge implements Finalizable {
 
   void processAudioFrame(Float32List samples) {
     if (_disposed) return;
-    assert(
-      samples.length <= _frameSize,
-      'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
-    );
+    if (samples.length > _frameSize) {
+      _onError?.call(
+        StateError(
+          'samples.length (${samples.length}) exceeds frameSize ($_frameSize).',
+        ),
+        StackTrace.current,
+      );
+      return;
+    }
     _isolateManager?.send(TransferableFloatFrame(
       TransferableTypedData.fromList([samples]),
       samples.length,

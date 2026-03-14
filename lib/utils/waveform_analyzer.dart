@@ -51,7 +51,7 @@ class WaveformAnalyzer {
     // Compute RMS for each bucket.
     final buckets = List.generate(barCount, (i) {
       final start = i * bucketSize;
-      final end = math.min(start + bucketSize, _samples.length);
+      final end = (i == barCount - 1) ? _samples.length : start + bucketSize;
       double sumSq = 0.0;
       for (int j = start; j < end; j++) {
         sumSq += _samples[j] * _samples[j];

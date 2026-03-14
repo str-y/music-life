@@ -111,6 +111,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         ),
       );
     });
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
@@ -120,6 +121,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       await repository.addEntry(
         ChordHistoryEntry(chord: entry.chord, time: entry.time),
       );
+      if (!mounted) return;
       await _loadHistory();
     } catch (error, stackTrace) {
       AppLogger.reportError(

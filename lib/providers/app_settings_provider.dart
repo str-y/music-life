@@ -35,7 +35,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
     final energy = pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy;
     state = state.copyWith(
       dynamicThemeNote: pitch.noteName,
-      dynamicThemeEnergy: energy < 0 ? 0.0 : (energy > 1 ? 1.0 : energy),
+      dynamicThemeEnergy: energy.clamp(0.0, 1.0),
     );
   }
 }

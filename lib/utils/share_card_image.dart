@@ -80,7 +80,12 @@ Future<XFile> generateShareCardImage({
   footerPainter.paint(canvas, Offset(130, height - 160));
 
   final image = await recorder.endRecording().toImage(width, height);
-  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  final ui.ByteData? bytes;
+  try {
+    bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  } finally {
+    image.dispose();
+  }
   if (bytes == null) {
     throw Exception('Failed to encode share card image');
   }
