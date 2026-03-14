@@ -107,7 +107,8 @@ void main() {
       when(() => recorder.start(any(), path: any(named: 'path'))).thenAnswer((
         invocation,
       ) async {
-        final path = invocation.namedArguments[#path]! as String;
+        final path =
+            invocation.namedArguments[const Symbol('path')]! as String;
         await File(path).writeAsBytes(<int>[1, 2, 3]);
       });
 
@@ -146,7 +147,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(expectedError), findsOneWidget);
-      expect(await tempDir.list().isEmpty, isTrue);
+      expect((await tempDir.list().toList()).isEmpty, isTrue);
     });
   });
 }

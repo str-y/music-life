@@ -46,6 +46,7 @@ class _DefaultRecordingStorageGateway implements RecordingStorageGateway {
 
   static const int _probeChunkBytes = _bytesPerMegabyte;
   static final Uint8List _probeChunk = Uint8List(_probeChunkBytes);
+  static final Random _probeRandom = Random();
 
   @override
   Future<String> getRecordingsDirectoryPath() async {
@@ -62,7 +63,8 @@ class _DefaultRecordingStorageGateway implements RecordingStorageGateway {
     final probeFile = File(
       p.join(
         directoryPath,
-        '.recording_space_check_${DateTime.now().microsecondsSinceEpoch}',
+        '.recording_space_check_'
+        '${DateTime.now().microsecondsSinceEpoch}_${_probeRandom.nextInt(1 << 32)}',
       ),
     );
 
