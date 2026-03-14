@@ -2,10 +2,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 
+const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
+
 /// Immutable application settings persisted in local storage.
 class AppSettings {
   final bool darkMode;
   final bool useSystemTheme;
+  final String? localeCode;
   final String? themeColorNote;
   final double referencePitch;
   final String tunerTransposition;
@@ -16,6 +19,7 @@ class AppSettings {
   const AppSettings({
     this.darkMode = false,
     this.useSystemTheme = true,
+    this.localeCode,
     this.themeColorNote,
     this.referencePitch = 440.0,
     this.tunerTransposition = 'C',
@@ -27,6 +31,7 @@ class AppSettings {
   AppSettings copyWith({
     bool? darkMode,
     bool? useSystemTheme,
+    String? localeCode,
     String? themeColorNote,
     double? referencePitch,
     String? tunerTransposition,
@@ -34,12 +39,14 @@ class AppSettings {
     double? dynamicThemeEnergy,
     DateTime? rewardedPremiumExpiresAt,
     bool clearRewardedPremiumExpiresAt = false,
+    bool clearLocaleCode = false,
     bool clearThemeColorNote = false,
     bool clearDynamicThemeNote = false,
   }) {
     return AppSettings(
       darkMode: darkMode ?? this.darkMode,
       useSystemTheme: useSystemTheme ?? this.useSystemTheme,
+      localeCode: clearLocaleCode ? null : (localeCode ?? this.localeCode),
       themeColorNote:
           clearThemeColorNote ? null : (themeColorNote ?? this.themeColorNote),
       referencePitch: referencePitch ?? this.referencePitch,
@@ -63,6 +70,7 @@ class AppSettings {
       other is AppSettings &&
           darkMode == other.darkMode &&
           useSystemTheme == other.useSystemTheme &&
+          localeCode == other.localeCode &&
           themeColorNote == other.themeColorNote &&
           referencePitch == other.referencePitch &&
           tunerTransposition == other.tunerTransposition &&
@@ -75,6 +83,7 @@ class AppSettings {
       Object.hash(
           darkMode,
           useSystemTheme,
+          localeCode,
           themeColorNote,
           referencePitch,
           tunerTransposition,
@@ -98,6 +107,9 @@ class SettingsRepository {
           _prefs.getBool(_config.darkModeStorageKey) ?? _config.defaultDarkMode,
       useSystemTheme: _prefs.getBool(_config.useSystemThemeStorageKey) ??
           _config.defaultUseSystemTheme,
+      localeCode: _decodeLocaleCode(
+        _prefs.getString(_config.localeStorageKey),
+      ),
       themeColorNote: _prefs.getString(_config.themeColorNoteStorageKey),
       referencePitch: _prefs.getDouble(_config.referencePitchStorageKey) ??
           _config.defaultReferencePitch,
@@ -117,6 +129,14 @@ class SettingsRepository {
       _config.useSystemThemeStorageKey,
       settings.useSystemTheme,
     );
+    if (settings.localeCode == null || settings.localeCode!.isEmpty) {
+      await _prefs.remove(_config.localeStorageKey);
+    } else {
+      await _prefs.setString(
+        _config.localeStorageKey,
+        settings.localeCode!,
+      );
+    }
     if (settings.themeColorNote == null || settings.themeColorNote!.isEmpty) {
       await _prefs.remove(_config.themeColorNoteStorageKey);
     } else {
@@ -146,5 +166,10 @@ class SettingsRepository {
   DateTime? _decodeDateTime(String? value) {
     if (value == null || value.isEmpty) return null;
     return DateTime.tryParse(value);
+  }
+
+  String? _decodeLocaleCode(String? value) {
+    if (value == null || value.isEmpty) return null;
+    return _supportedLocaleCodes.contains(value) ? value : null;
   }
 }

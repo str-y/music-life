@@ -16,6 +16,31 @@
     "description": "Title of the settings modal"
   },
 
+  "languageSection": "Language",
+  "@languageSection": {
+    "description": "Section header for app language settings"
+  },
+
+  "languageLabel": "App language",
+  "@languageLabel": {
+    "description": "Label for selecting the app language"
+  },
+
+  "systemDefaultLanguage": "System default",
+  "@systemDefaultLanguage": {
+    "description": "Option label for following the system language"
+  },
+
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "Option label for English language selection"
+  },
+
+  "languageJapanese": "日本語",
+  "@languageJapanese": {
+    "description": "Option label for Japanese language selection"
+  },
+
   "openSettings": "Open Settings",
   "@openSettings": {
     "description": "Button label to open app settings"

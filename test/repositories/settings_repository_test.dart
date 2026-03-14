@@ -19,6 +19,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         AppConfig.defaultDarkModeStorageKey: true,
         AppConfig.defaultUseSystemThemeStorageKey: false,
+        AppConfig.defaultLocaleStorageKey: 'ja',
         AppConfig.defaultThemeColorNoteStorageKey: 'F#',
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
@@ -32,6 +33,7 @@ void main() {
 
       expect(settings.darkMode, isTrue);
       expect(settings.useSystemTheme, isFalse);
+      expect(settings.localeCode, 'ja');
       expect(settings.themeColorNote, 'F#');
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
@@ -48,6 +50,7 @@ void main() {
       final updated = AppSettings(
         darkMode: true,
         useSystemTheme: false,
+        localeCode: 'ja',
         themeColorNote: 'A',
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
@@ -58,6 +61,7 @@ void main() {
 
       expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
       expect(prefs.getBool(AppConfig.defaultUseSystemThemeStorageKey), isFalse);
+      expect(prefs.getString(AppConfig.defaultLocaleStorageKey), 'ja');
       expect(prefs.getString(AppConfig.defaultThemeColorNoteStorageKey), 'A');
       expect(
         prefs.getDouble(AppConfig.defaultReferencePitchStorageKey),
@@ -71,6 +75,18 @@ void main() {
         prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
         '2026-01-02T03:04:05.000Z',
       );
+    });
+
+    test('load ignores unsupported persisted locale values', () async {
+      SharedPreferences.setMockInitialValues({
+        AppConfig.defaultLocaleStorageKey: 'fr',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SettingsRepository(prefs);
+
+      final settings = repository.load();
+
+      expect(settings.localeCode, isNull);
     });
   });
 }
