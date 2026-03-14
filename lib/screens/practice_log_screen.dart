@@ -13,6 +13,7 @@ import '../utils/app_logger.dart';
 import '../utils/practice_log_export.dart';
 import '../utils/practice_log_utils.dart';
 import '../utils/share_card_image.dart';
+import '../widgets/shared/loading_state_widget.dart';
 
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
@@ -310,7 +311,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingStateWidget()
           : TabBarView(
               controller: _tabController,
               children: [

@@ -15,6 +15,9 @@ import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../services/permission_service.dart';
 import '../utils/app_logger.dart';
+import '../widgets/shared/loading_state_widget.dart';
+import '../widgets/shared/status_message_view.dart';
+import '../widgets/shared/waveform_view.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
 
@@ -134,36 +137,21 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               ),
       ),
       body: state.loading
-          ? Center(
-              child: CircularProgressIndicator(
-                semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
-              ),
+          ? LoadingStateWidget(
+              semanticsLabel: AppLocalizations.of(context)!.loadingLibrary,
             )
           : state.hasError
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        AppLocalizations.of(context)!.loadDataError,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => ref.read(libraryProvider.notifier).reload(),
-                        icon: const Icon(Icons.refresh),
-                        label: Text(AppLocalizations.of(context)!.retry),
-                      ),
-                    ],
+              ? StatusMessageView(
+                  icon: Icons.error_outline,
+                  iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                  message: AppLocalizations.of(context)!.loadDataError,
+                  messageStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  action: ElevatedButton.icon(
+                    onPressed: () => ref.read(libraryProvider.notifier).reload(),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(AppLocalizations.of(context)!.retry),
                   ),
                 )
               : isWideLayout

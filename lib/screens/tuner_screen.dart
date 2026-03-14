@@ -10,6 +10,7 @@ import '../native_pitch_bridge.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../utils/tuner_transposition.dart';
+import '../widgets/shared/loading_state_widget.dart';
 import '../widgets/listening_indicator.dart';
 import '../widgets/mic_permission_denied_view.dart';
 import '../widgets/mic_permission_gate.dart';
@@ -114,7 +115,7 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
       ),
     );
 
-    if (state.loading) return const Center(child: CircularProgressIndicator());
+    if (state.loading) return const LoadingStateWidget();
 
     if (!state.bridgeActive) {
       return MicPermissionDeniedView(

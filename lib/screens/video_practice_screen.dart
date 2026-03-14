@@ -11,6 +11,8 @@ import '../providers/tuner_provider.dart';
 import '../services/ad_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/tuner_transposition.dart';
+import '../widgets/shared/loading_state_widget.dart';
+import '../widgets/shared/status_message_view.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 
@@ -228,42 +230,26 @@ class _CameraViewState extends ConsumerState<_CameraView> {
     final l10n = AppLocalizations.of(context)!;
 
     if (_isInitializing) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingStateWidget();
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.videocam_off_outlined,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _initCamera,
-                icon: const Icon(Icons.refresh),
-                label: Text(l10n.retry),
-              ),
-            ],
-          ),
+      return StatusMessageView(
+        icon: Icons.videocam_off_outlined,
+        iconColor: Theme.of(context).colorScheme.error,
+        message: _errorMessage!,
+        messageStyle: Theme.of(context).textTheme.bodyLarge,
+        action: OutlinedButton.icon(
+          onPressed: _initCamera,
+          icon: const Icon(Icons.refresh),
+          label: Text(l10n.retry),
         ),
       );
     }
 
     final controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingStateWidget();
     }
 
     return Stack(
