@@ -936,6 +936,10 @@ class _StreakSummaryMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final celebrationGlowColor =
+        Color.lerp(cs.tertiary, cs.primary, 0.3) ?? cs.tertiary;
+    final celebrationSparkColor =
+        Color.lerp(cs.tertiary, cs.secondary, 0.4) ?? cs.secondary;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -958,8 +962,10 @@ class _StreakSummaryMetric extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          Colors.orange.withOpacity(0.2 + value * 0.18),
-                          Colors.transparent,
+                          celebrationGlowColor.withValues(
+                            alpha: 0.2 + value * 0.18,
+                          ),
+                          celebrationGlowColor.withValues(alpha: 0),
                         ],
                       ),
                     ),
@@ -967,7 +973,7 @@ class _StreakSummaryMetric extends StatelessWidget {
                 if (streakDays > 0)
                   _CelebrationDot(
                     offset: Offset(-10 - value * 8, -8 - value * 10),
-                    color: Colors.orangeAccent,
+                    color: celebrationSparkColor,
                     opacity: sparkOpacity,
                     size: 5,
                   ),
@@ -1040,6 +1046,8 @@ class _GoalAchievementBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final celebrationAccent =
+        Color.lerp(cs.tertiary, cs.secondary, 0.35) ?? cs.tertiary;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: const Duration(milliseconds: 700),
@@ -1084,7 +1092,7 @@ class _GoalAchievementBadge extends StatelessWidget {
               ),
               _CelebrationDot(
                 offset: Offset(12 + value * 10, -12 - value * 10),
-                color: Colors.orangeAccent,
+                color: celebrationAccent,
                 opacity: confettiOpacity * 0.8,
                 size: 4,
               ),

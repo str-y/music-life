@@ -60,11 +60,22 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
   late final GoRouter _router;
 
   ThemeData _buildTheme(Color seedColor, {required Brightness brightness}) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: brightness,
+      contrastLevel: _themeContrastLevel,
+    );
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
-        brightness: brightness,
-        contrastLevel: _themeContrastLevel,
+      colorScheme: colorScheme,
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: colorScheme.surfaceTint,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surface,
+        modalBackgroundColor: colorScheme.surface,
+        surfaceTintColor: colorScheme.surfaceTint,
+        dragHandleColor: colorScheme.outlineVariant,
       ),
       materialTapTargetSize: MaterialTapTargetSize.padded,
       iconButtonTheme: IconButtonThemeData(
@@ -115,6 +126,8 @@ class _MusicLifeAppState extends ConsumerState<MusicLifeApp> {
       themeMode: settings.useSystemTheme
           ? ThemeMode.system
           : (settings.darkMode ? ThemeMode.dark : ThemeMode.light),
+      themeAnimationDuration: const Duration(milliseconds: 250),
+      themeAnimationCurve: Curves.easeOutCubic,
       routerConfig: _router,
     );
   }
