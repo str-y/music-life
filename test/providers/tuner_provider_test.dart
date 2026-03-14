@@ -20,6 +20,11 @@ void main() {
       const state = TunerState();
       expect(state.bridgeActive, isFalse);
     });
+
+    test('spectrumBins is empty by default', () {
+      const state = TunerState();
+      expect(state.spectrumBins, isEmpty);
+    });
   });
 
   // ── TunerState.copyWith ────────────────────────────────────────────────────
@@ -57,6 +62,12 @@ void main() {
       expect(copy.loading, equals(state.loading));
       expect(copy.bridgeActive, equals(state.bridgeActive));
       expect(copy.latest, equals(state.latest));
+      expect(copy.spectrumBins, equals(state.spectrumBins));
+    });
+
+    test('copyWith with spectrum bins updates analysis payload', () {
+      final next = initial.copyWith(spectrumBins: const [0.2, 0.6]);
+      expect(next.spectrumBins, [0.2, 0.6]);
     });
 
     test('copyWith(clearLatest: true) clears an existing latest', () {

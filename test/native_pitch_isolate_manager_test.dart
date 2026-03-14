@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/native_pitch_bridge.dart';
@@ -31,6 +32,15 @@ void _successfulIsolate(IsolateSetup setup) {
         centsOffset: 0.0,
         midiNote: 69,
       ).encode());
+    } else if (msg == 'emit-spectrum') {
+      setup.resultPort.send(
+        TransferableTunerAnalysisFrame(
+          TransferableTypedData.fromList([
+            Float32List.fromList(const [0.1, 0.4, 0.8]),
+          ]),
+          3,
+        ),
+      );
     }
   });
 }
@@ -126,6 +136,41 @@ void main() {
       final payload = NativePitchResultMessage.decode(messages.single);
       expect(payload.noteName, 'A4');
       expect(payload.frequency, 440.0);
+
+      final shutdown = manager.prepareForDisposal();
+      shutdown.isolate?.kill(priority: Isolate.immediate);
+      shutdown.exitPort?.close();
+    });
+
+    test('forwards transferable tuner analysis frames', () async {
+      final messages = <dynamic>[];
+      final firstMessage = Completer<void>();
+      final manager = NativePitchIsolateManager(
+        handle: nullptr,
+        buffer: Pointer<Float>.fromAddress(0),
+        frameSize: 0,
+        entryPoint: _successfulIsolate,
+        onMessage: (message) {
+          messages.add(message);
+          if (!firstMessage.isCompleted) {
+            firstMessage.complete();
+          }
+        },
+        onError: (error, _) => fail('unexpected error: $error'),
+      );
+
+      final started = await manager.start();
+      expect(started, isTrue);
+
+      manager.send('emit-spectrum');
+      await firstMessage.future.timeout(const Duration(seconds: 1));
+      expect(messages, hasLength(1));
+      final payload = messages.single as TransferableTunerAnalysisFrame;
+      final bins = payload.materialize().bins;
+      expect(bins, hasLength(3));
+      expect(bins[0], closeTo(0.1, 1e-6));
+      expect(bins[1], closeTo(0.4, 1e-6));
+      expect(bins[2], closeTo(0.8, 1e-6));
 
       final shutdown = manager.prepareForDisposal();
       shutdown.isolate?.kill(priority: Isolate.immediate);

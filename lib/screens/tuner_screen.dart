@@ -126,6 +126,7 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
     return RepaintBoundary(
       child: _TunerBody(
         latest: state.latest,
+        spectrumBins: state.spectrumBins,
         pulseCtrl: _pulseCtrl,
         transposition: transposition,
         dynamicThemeEnergy: dynamicThemeEnergy,
@@ -146,6 +147,7 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
 class _TunerBody extends StatelessWidget {
   const _TunerBody({
     required this.latest,
+    required this.spectrumBins,
     required this.pulseCtrl,
     required this.transposition,
     required this.dynamicThemeEnergy,
@@ -154,6 +156,7 @@ class _TunerBody extends StatelessWidget {
   });
 
   final PitchResult? latest;
+  final List<double> spectrumBins;
   final AnimationController pulseCtrl;
   final String transposition;
   final double dynamicThemeEnergy;
@@ -294,6 +297,7 @@ class _TunerBody extends StatelessWidget {
                 animation: pulseCtrl,
                 builder: (_, __) => _TunerWaveform(
                   hasReading: latest != null,
+                  spectrumBins: spectrumBins,
                   cents: cents,
                   phase: pulseCtrl.value,
                   color: latest != null ? _centColor(context, cents) : cs.primary,
@@ -384,12 +388,14 @@ class _TunerBody extends StatelessWidget {
 class _TunerWaveform extends StatelessWidget {
   const _TunerWaveform({
     required this.hasReading,
+    required this.spectrumBins,
     required this.cents,
     required this.phase,
     required this.color,
   });
 
   final bool hasReading;
+  final List<double> spectrumBins;
   final double cents;
   final double phase;
   final Color color;
@@ -403,6 +409,7 @@ class _TunerWaveform extends StatelessWidget {
         child: CustomPaint(
           painter: _TunerWavePainter(
             hasReading: hasReading,
+            spectrumBins: spectrumBins,
             cents: cents,
             phase: phase,
             color: color,
@@ -423,6 +430,7 @@ class _TunerWavePainter extends CustomPainter {
 
   const _TunerWavePainter({
     required this.hasReading,
+    required this.spectrumBins,
     required this.cents,
     required this.phase,
     required this.color,
@@ -430,6 +438,7 @@ class _TunerWavePainter extends CustomPainter {
   });
 
   final bool hasReading;
+  final List<double> spectrumBins;
   final double cents;
   final double phase;
   final Color color;
@@ -444,18 +453,40 @@ class _TunerWavePainter extends CustomPainter {
       ..strokeWidth = 2
       ..color = hasReading ? color : trackColor;
     final path = Path();
-    final amp = hasReading
-        ? (_baseAmplitude +
-            (cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
-                _amplitudeScale)
-        : _idleAmplitude;
-    for (double x = 0; x <= size.width; x += 2) {
-      final t = x / size.width;
-      final y = centerY + math.sin((t * _waveCycles + phase) * 2 * math.pi) * amp;
-      if (x == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
+    if (spectrumBins.isNotEmpty) {
+      final availableHeight = (size.height / 2) - 2;
+      final amplitudeScale = 0.65 +
+          ((cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
+              0.35)
+              .toDouble();
+      final step = spectrumBins.length == 1
+          ? 0.0
+          : size.width / (spectrumBins.length - 1);
+      for (var i = 0; i < spectrumBins.length; i++) {
+        final x = i * step;
+        final magnitude = spectrumBins[i].clamp(0.0, 1.0).toDouble();
+        final y = centerY - (magnitude * availableHeight * amplitudeScale);
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+    } else {
+      final amp = hasReading
+          ? (_baseAmplitude +
+              (cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
+                  _amplitudeScale)
+          : _idleAmplitude;
+      for (double x = 0; x <= size.width; x += 2) {
+        final t = x / size.width;
+        final y =
+            centerY + math.sin((t * _waveCycles + phase) * 2 * math.pi) * amp;
+        if (x == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
       }
     }
     canvas.drawPath(path, basePaint);
@@ -464,6 +495,7 @@ class _TunerWavePainter extends CustomPainter {
   @override
   bool shouldRepaint(_TunerWavePainter oldDelegate) =>
       oldDelegate.hasReading != hasReading ||
+      oldDelegate.spectrumBins != spectrumBins ||
       oldDelegate.cents != cents ||
       oldDelegate.phase != phase ||
       oldDelegate.color != color ||

@@ -60,6 +60,8 @@ void main() {
     when(() => bridge.startCapture()).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.tunerAnalysisStream)
+        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.pumpWidget(
@@ -90,6 +92,8 @@ void main() {
     when(() => bridge.startCapture()).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.tunerAnalysisStream)
+        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.pumpWidget(
@@ -110,6 +114,8 @@ void main() {
     when(() => bridge.startCapture()).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.tunerAnalysisStream)
+        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.binding.setSurfaceSize(const Size(1200, 900));
@@ -135,6 +141,8 @@ void main() {
     when(() => bridge.startCapture()).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.tunerAnalysisStream)
+        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.pumpWidget(

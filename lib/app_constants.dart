@@ -32,6 +32,9 @@ abstract final class AppConstants {
   /// (orange). Notes beyond this are shown in the error colour.
   static const double tunerWarningThresholdCents = 15.0;
 
+  /// Number of spectrum bins rendered in the tuner visualiser.
+  static const int tunerSpectrumBinCount = 24;
+
   // ── Rhythm / metronome ────────────────────────────────────────────────────
 
   /// Minimum BPM the metronome will allow.
