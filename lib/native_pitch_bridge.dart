@@ -441,28 +441,29 @@ class NativePitchIsolateManager {
           _pendingHeartbeatClock = null;
           final heartbeatLatencyMicros =
               msg.receivedAtMicros - msg.pingSentAtMicros;
-          final roundTripMicros =
-              _nowMicros().differenceMicros(msg.pingSentAtMicros);
+          final nowMicros = _nowMicros();
+          final roundTripMicros = nowMicros - msg.pingSentAtMicros;
           final nextSamples = _metrics.heartbeatSamples + 1;
+          final previousAverageRoundTripMicros =
+              _metrics.averageHeartbeatRoundTrip.inMicroseconds;
           final averageRoundTripMicros =
-              ((_metrics.averageHeartbeatRoundTrip.inMicroseconds *
-                              _metrics.heartbeatSamples) +
-                          roundTripMicros) ~/
-                  nextSamples;
+              previousAverageRoundTripMicros +
+                  ((roundTripMicros - previousAverageRoundTripMicros) ~/
+                      nextSamples);
           _publishMetrics(
             _metrics.copyWith(
               lastHeartbeatLatency:
-                  Duration(microseconds: heartbeatLatencyMicros < 0 ? 0 : heartbeatLatencyMicros),
+                  _clampDurationToZero(heartbeatLatencyMicros),
               lastHeartbeatRoundTrip:
-                  Duration(microseconds: roundTripMicros < 0 ? 0 : roundTripMicros),
+                  _clampDurationToZero(roundTripMicros),
               averageHeartbeatRoundTrip:
-                  Duration(microseconds: averageRoundTripMicros < 0 ? 0 : averageRoundTripMicros),
+                  _clampDurationToZero(averageRoundTripMicros),
               maxHeartbeatRoundTrip: roundTripMicros >
                       _metrics.maxHeartbeatRoundTrip.inMicroseconds
                   ? Duration(microseconds: roundTripMicros)
                   : _metrics.maxHeartbeatRoundTrip,
               heartbeatSamples: nextSamples,
-              lastUpdatedAtMicros: _nowMicros().value,
+              lastUpdatedAtMicros: nowMicros,
             ),
           );
         }
@@ -542,7 +543,7 @@ class NativePitchIsolateManager {
       _pendingHeartbeatToken = token;
       _pendingHeartbeatClock = Stopwatch()..start();
       _audioSendPort?.send(
-        IsolateHeartbeatPing(token, _nowMicros().value),
+        IsolateHeartbeatPing(token, _nowMicros()),
       );
     });
   }
@@ -596,8 +597,8 @@ class NativePitchIsolateManager {
     onMetrics?.call(metrics);
   }
 
-  _MicrosecondClock _nowMicros() {
-    return _MicrosecondClock(DateTime.now().microsecondsSinceEpoch);
+  int _nowMicros() {
+    return DateTime.now().microsecondsSinceEpoch;
   }
 
   void _closePorts() {
@@ -642,13 +643,21 @@ void _audioProcessingIsolate(IsolateSetup setup) {
   int maxFrameProcessingMicros = 0;
   int lastChunkSampleCount = 0;
   int bufferBacklogEvents = 0;
+  // Two queued frames allows for normal buffering while still flagging when
+  // processing begins to fall behind real-time capture.
+  const int bufferBacklogThresholdMultiplier = 2;
 
   void publishMetrics() {
     final bufferedSamples = sampleBuf.length;
+    final frameSize = setup.frameSize;
+    final hasValidFrameSize = frameSize > 0;
     final bufferUtilization =
-        setup.frameSize <= 0 ? 0.0 : bufferedSamples / setup.frameSize;
+        hasValidFrameSize ? bufferedSamples / frameSize : 0.0;
     final peakBufferUtilization =
-        setup.frameSize <= 0 ? 0.0 : peakBufferedSamples / setup.frameSize;
+        hasValidFrameSize ? peakBufferedSamples / frameSize : 0.0;
+    final averageFrameProcessingTime = framesProcessed == 0
+        ? Duration.zero
+        : Duration(microseconds: totalFrameProcessingMicros ~/ framesProcessed);
     setup.resultPort.send(
       NativeIsolateMetrics(
         bufferedSamples: bufferedSamples,
@@ -658,9 +667,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
         framesProcessed: framesProcessed,
         lastFrameProcessingTime:
             Duration(microseconds: lastFrameProcessingMicros),
-        averageFrameProcessingTime: framesProcessed == 0
-            ? Duration.zero
-            : Duration(microseconds: totalFrameProcessingMicros ~/ framesProcessed),
+        averageFrameProcessingTime: averageFrameProcessingTime,
         maxFrameProcessingTime: Duration(microseconds: maxFrameProcessingMicros),
         lastChunkSampleCount: lastChunkSampleCount,
         bufferBacklogEvents: bufferBacklogEvents,
@@ -720,16 +727,15 @@ void _audioProcessingIsolate(IsolateSetup setup) {
     if (sampleBuf.length > peakBufferedSamples) {
       peakBufferedSamples = sampleBuf.length;
     }
-    if (setup.frameSize > 0 && sampleBuf.length > setup.frameSize * 2) {
+    if (setup.frameSize > 0 &&
+        sampleBuf.length >
+            setup.frameSize * bufferBacklogThresholdMultiplier) {
       bufferBacklogEvents++;
     }
     while (sampleBuf.length >= setup.frameSize) {
       final frame = Float32List(setup.frameSize);
       if (!sampleBuf.readInto(frame)) break;
       processFrame(frame);
-    }
-    if (sampleBuf.length > peakBufferedSamples) {
-      peakBufferedSamples = sampleBuf.length;
     }
     publishMetrics();
   }
@@ -750,7 +756,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
         token: msg.token,
         pingSentAtMicros: msg.sentAtMicros,
         receivedAtMicros: nowMicros,
-        sentAtMicros: DateTime.now().microsecondsSinceEpoch,
+        sentAtMicros: nowMicros,
       ));
     } else if (msg is TransferablePcmChunk) {
       processPcmChunk(msg.data.materialize().asUint8List());
@@ -1096,10 +1102,6 @@ class NativePitchBridge implements Finalizable {
   }
 }
 
-final class _MicrosecondClock {
-  const _MicrosecondClock(this.value);
-
-  final int value;
-
-  int differenceMicros(int startMicros) => value - startMicros;
+Duration _clampDurationToZero(int microseconds) {
+  return Duration(microseconds: microseconds < 0 ? 0 : microseconds);
 }

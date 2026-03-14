@@ -57,7 +57,7 @@ void _missingHandshakeAckIsolate(IsolateSetup setup) {
 
 void _startupErrorIsolate(IsolateSetup setup) {
   setup.resultPort.send(const IsolateManagerError(
-    code: 'test-startup',
+    code: 'startup-failure',
     phase: 'test-startup',
     message: 'simulated startup failure',
     stack: 'test-stack',
@@ -168,7 +168,7 @@ void main() {
       expect(started, isFalse);
       expect(reportedError, isA<NativeIsolateFailure>());
       final failure = reportedError as NativeIsolateFailure;
-      expect(failure.code, 'test-startup');
+      expect(failure.code, 'startup-failure');
       expect(failure.phase, 'test-startup');
       expect(failure.message, 'simulated startup failure');
       manager.disposeImmediately();
