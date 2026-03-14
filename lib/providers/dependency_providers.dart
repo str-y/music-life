@@ -7,6 +7,7 @@ import '../repositories/chord_history_repository.dart';
 import '../repositories/composition_repository.dart';
 import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
+import '../services/permission_service.dart';
 
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
@@ -37,6 +38,10 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final prefs = ref.read(sharedPreferencesProvider);
   final config = ref.read(appConfigProvider);
   return SettingsRepository(prefs, config: config);
+});
+
+final permissionServiceProvider = Provider<PermissionService>((ref) {
+  return defaultPermissionService;
 });
 
 final chordHistoryRepositoryProvider = Provider<ChordHistoryRepository>((ref) {
