@@ -11,6 +11,7 @@ import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ai_practice_insights_service.dart';
 import '../services/permission_service.dart';
+import '../services/recording_storage_service.dart';
 
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
@@ -60,6 +61,10 @@ final cloudSyncRepositoryProvider = Provider<CloudSyncRepository>((ref) {
 
 final permissionServiceProvider = Provider<PermissionService>((ref) {
   return defaultPermissionService;
+});
+
+final recordingStorageServiceProvider = Provider<RecordingStorageService>((ref) {
+  return defaultRecordingStorageService;
 });
 
 final aiPracticeInsightsServiceProvider =

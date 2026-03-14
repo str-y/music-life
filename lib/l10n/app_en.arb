@@ -1075,6 +1075,32 @@
   "@micPermissionNeeded": {
     "description": "Message shown in the recording dialog when microphone permission is not granted"
   },
+  "recordingStorageEstimateWarning": "Before starting a recording, make sure at least about {megabytes} MB of writable storage is available.",
+  "@recordingStorageEstimateWarning": {
+    "description": "Inline warning shown before recording starts with the estimated minimum writable storage needed",
+    "placeholders": {
+      "megabytes": {
+        "type": "int"
+      }
+    }
+  },
+  "recordingStorageCheckFailed": "Could not verify about {megabytes} MB of writable storage for recording. Free up space and try again.",
+  "@recordingStorageCheckFailed": {
+    "description": "Snackbar message shown when recording storage availability cannot be verified before recording starts",
+    "placeholders": {
+      "megabytes": {
+        "type": "int"
+      }
+    }
+  },
+  "recordingStartFailed": "Could not start recording. Please try again.",
+  "@recordingStartFailed": {
+    "description": "Snackbar message shown when audio recording fails to start"
+  },
+  "recordingSaveFailed": "Could not save recording.",
+  "@recordingSaveFailed": {
+    "description": "Snackbar message shown when persisting a recorded entry fails"
+  },
   "shareRecording": "Share",
   "@shareRecording": {
     "description": "Tooltip for sharing a recording"
