@@ -30,6 +30,9 @@ class AppConfig {
     this.dynamicThemeIntensityStorageKey = defaultDynamicThemeIntensityStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
+    this.cloudSyncEnabledStorageKey = defaultCloudSyncEnabledStorageKey,
+    this.lastCloudSyncAtStorageKey = defaultLastCloudSyncAtStorageKey,
+    this.cloudBackupBundleStorageKey = defaultCloudBackupBundleStorageKey,
     this.rewardedPremiumExpiresAtStorageKey =
         defaultRewardedPremiumExpiresAtStorageKey,
     this.defaultDarkMode = false,
@@ -76,6 +79,9 @@ class AppConfig {
       'dynamicThemeIntensity';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
+  static const String defaultCloudSyncEnabledStorageKey = 'cloudSyncEnabled';
+  static const String defaultLastCloudSyncAtStorageKey = 'lastCloudSyncAt';
+  static const String defaultCloudBackupBundleStorageKey = 'cloudBackupBundle';
   static const String defaultRewardedPremiumExpiresAtStorageKey =
       'rewardedPremiumExpiresAt';
   static const String _defaultTunerTransposition = 'C';
@@ -108,6 +114,9 @@ class AppConfig {
   final String dynamicThemeIntensityStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
+  final String cloudSyncEnabledStorageKey;
+  final String lastCloudSyncAtStorageKey;
+  final String cloudBackupBundleStorageKey;
   final String rewardedPremiumExpiresAtStorageKey;
 
   final bool defaultDarkMode;

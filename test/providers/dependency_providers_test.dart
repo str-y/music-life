@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/backup_repository.dart';
 import 'package:music_life/repositories/chord_history_repository.dart';
+import 'package:music_life/repositories/cloud_sync_repository.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/repositories/settings_repository.dart';
@@ -43,6 +45,14 @@ void main() {
     expect(
       container.read(settingsRepositoryProvider),
       isA<SettingsRepository>(),
+    );
+    expect(
+      container.read(backupRepositoryProvider),
+      isA<BackupRepository>(),
+    );
+    expect(
+      container.read(cloudSyncRepositoryProvider),
+      isA<CloudSyncRepository>(),
     );
     expect(
       container.read(chordHistoryRepositoryProvider),

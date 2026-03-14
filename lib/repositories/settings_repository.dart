@@ -17,6 +17,8 @@ class AppSettings {
   final double dynamicThemeIntensity;
   final String? dynamicThemeNote;
   final double dynamicThemeEnergy;
+  final bool cloudSyncEnabled;
+  final DateTime? lastCloudSyncAt;
   final DateTime? rewardedPremiumExpiresAt;
 
   const AppSettings({
@@ -30,6 +32,8 @@ class AppSettings {
     this.dynamicThemeIntensity = 0.7,
     this.dynamicThemeNote,
     this.dynamicThemeEnergy = 0.0,
+    this.cloudSyncEnabled = false,
+    this.lastCloudSyncAt,
     this.rewardedPremiumExpiresAt,
   });
 
@@ -44,7 +48,10 @@ class AppSettings {
     double? dynamicThemeIntensity,
     String? dynamicThemeNote,
     double? dynamicThemeEnergy,
+    bool? cloudSyncEnabled,
+    DateTime? lastCloudSyncAt,
     DateTime? rewardedPremiumExpiresAt,
+    bool clearLastCloudSyncAt = false,
     bool clearRewardedPremiumExpiresAt = false,
     bool clearLocaleCode = false,
     bool clearThemeColorNote = false,
@@ -66,6 +73,9 @@ class AppSettings {
           ? null
           : (dynamicThemeNote ?? this.dynamicThemeNote),
       dynamicThemeEnergy: dynamicThemeEnergy ?? this.dynamicThemeEnergy,
+      cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
+      lastCloudSyncAt:
+          clearLastCloudSyncAt ? null : (lastCloudSyncAt ?? this.lastCloudSyncAt),
       rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
           ? null
           : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
@@ -89,22 +99,26 @@ class AppSettings {
           dynamicThemeIntensity == other.dynamicThemeIntensity &&
           dynamicThemeNote == other.dynamicThemeNote &&
           dynamicThemeEnergy == other.dynamicThemeEnergy &&
+          cloudSyncEnabled == other.cloudSyncEnabled &&
+          lastCloudSyncAt == other.lastCloudSyncAt &&
           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt;
 
   @override
   int get hashCode =>
-      Object.hash(
-          darkMode,
-          useSystemTheme,
-          localeCode,
-          themeColorNote,
-          referencePitch,
-          tunerTransposition,
-          dynamicThemeMode,
-          dynamicThemeIntensity,
-          dynamicThemeNote,
-          dynamicThemeEnergy,
-          rewardedPremiumExpiresAt);
+       Object.hash(
+           darkMode,
+           useSystemTheme,
+           localeCode,
+           themeColorNote,
+           referencePitch,
+           tunerTransposition,
+           dynamicThemeMode,
+           dynamicThemeIntensity,
+           dynamicThemeNote,
+           dynamicThemeEnergy,
+           cloudSyncEnabled,
+           lastCloudSyncAt,
+           rewardedPremiumExpiresAt);
 
   static double _clampDynamicThemeIntensity(double intensity) {
     return intensity.clamp(0.0, 1.0).toDouble();
@@ -142,6 +156,11 @@ class SettingsRepository {
       dynamicThemeIntensity: AppSettings._clampDynamicThemeIntensity(
         _prefs.getDouble(_config.dynamicThemeIntensityStorageKey) ??
             _config.defaultDynamicThemeIntensity,
+      ),
+      cloudSyncEnabled:
+          _prefs.getBool(_config.cloudSyncEnabledStorageKey) ?? false,
+      lastCloudSyncAt: _decodeDateTime(
+        _prefs.getString(_config.lastCloudSyncAtStorageKey),
       ),
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
@@ -188,6 +207,18 @@ class SettingsRepository {
       _config.dynamicThemeIntensityStorageKey,
       AppSettings._clampDynamicThemeIntensity(settings.dynamicThemeIntensity),
     );
+    await _prefs.setBool(
+      _config.cloudSyncEnabledStorageKey,
+      settings.cloudSyncEnabled,
+    );
+    if (settings.lastCloudSyncAt == null) {
+      await _prefs.remove(_config.lastCloudSyncAtStorageKey);
+    } else {
+      await _prefs.setString(
+        _config.lastCloudSyncAtStorageKey,
+        settings.lastCloudSyncAt!.toIso8601String(),
+      );
+    }
     if (settings.rewardedPremiumExpiresAt == null) {
       await _prefs.remove(_config.rewardedPremiumExpiresAtStorageKey);
     } else {

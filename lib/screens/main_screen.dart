@@ -8,7 +8,6 @@ import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/dependency_providers.dart';
 import '../providers/library_provider.dart';
-import '../repositories/backup_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../router/routes.dart';
 import '../services/ad_service.dart';
@@ -63,7 +62,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
   late final AnimationController _entranceCtrl;
   late final CurvedAnimation _entranceCurve;
   late final CurvedAnimation _entranceFadeCurve;
-  final BackupRepository _backupRepository = const BackupRepository();
 
   @override
   void initState() {
@@ -135,6 +133,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
         onUnlockPremiumWithRewardedAd: () => _unlockPremiumWithRewardedAd(context),
         onExportBackup: () => _exportBackupData(context),
         onImportBackup: () => _importBackupData(context),
+        onSetCloudSyncEnabled: (enabled) => _setCloudSyncEnabled(context, enabled),
+        onSyncCloudBackupNow: () => _syncCloudBackupNow(context),
+        onRestoreCloudBackup: () => _restoreCloudBackup(context),
         onRequestReview: () => _requestStoreReview(context),
       ),
     );
@@ -168,7 +169,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Future<void> _exportBackupData(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final path = await _backupRepository.exportWithFilePicker();
+      final path = await ref.read(backupRepositoryProvider).exportWithFilePicker();
       if (!context.mounted || path == null) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.backupExported(path))),
@@ -195,7 +196,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Future<void> _importBackupData(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final path = await _backupRepository.importWithFilePicker();
+      final path = await ref.read(backupRepositoryProvider).importWithFilePicker();
       if (!context.mounted || path == null) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.backupImported(path))),
@@ -213,6 +214,106 @@ class _MainScreenState extends ConsumerState<MainScreen>
         context: context,
         message: 'Failed to import backup',
         userMessage: l10n.backupImportFailed,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  Future<DateTime?> _setCloudSyncEnabled(BuildContext context, bool enabled) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final syncedAt = await ref
+          .read(appSettingsProvider.notifier)
+          .setCloudSyncEnabled(enabled);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled ? l10n.cloudSyncEnabledMessage : l10n.cloudSyncDisabledMessage,
+          ),
+        ),
+      );
+      return syncedAt;
+    } catch (e, stackTrace) {
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to update cloud sync preference',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to update cloud sync preference',
+        userMessage: l10n.cloudSyncFailed,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
+
+  Future<DateTime?> _syncCloudBackupNow(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final syncedAt =
+          await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.cloudSyncCompleted)),
+      );
+      return syncedAt;
+    } catch (e, stackTrace) {
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to sync cloud backup',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to sync cloud backup',
+        userMessage: l10n.cloudSyncFailed,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    return null;
+  }
+
+  Future<void> _restoreCloudBackup(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final restored =
+          await ref.read(appSettingsProvider.notifier).restoreLatestCloudBackup();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            restored ? l10n.cloudBackupRestored : l10n.cloudBackupNotFound,
+          ),
+        ),
+      );
+      if (restored) {
+        ref.invalidate(libraryProvider);
+      }
+    } catch (e, stackTrace) {
+      if (!context.mounted) {
+        ServiceErrorHandler.report(
+          'Failed to restore cloud backup',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      ServiceErrorHandler.reportAndNotify(
+        context: context,
+        message: 'Failed to restore cloud backup',
+        userMessage: l10n.cloudSyncFailed,
         error: e,
         stackTrace: stackTrace,
       );
@@ -895,6 +996,9 @@ class _SettingsModal extends StatefulWidget {
   final Future<void> Function() onUnlockPremiumWithRewardedAd;
   final Future<void> Function() onExportBackup;
   final Future<void> Function() onImportBackup;
+  final Future<DateTime?> Function(bool enabled) onSetCloudSyncEnabled;
+  final Future<DateTime?> Function() onSyncCloudBackupNow;
+  final Future<void> Function() onRestoreCloudBackup;
   final Future<void> Function() onRequestReview;
 
   const _SettingsModal({
@@ -904,6 +1008,9 @@ class _SettingsModal extends StatefulWidget {
     required this.onUnlockPremiumWithRewardedAd,
     required this.onExportBackup,
     required this.onImportBackup,
+    required this.onSetCloudSyncEnabled,
+    required this.onSyncCloudBackupNow,
+    required this.onRestoreCloudBackup,
     required this.onRequestReview,
   });
 
@@ -1135,6 +1242,82 @@ class _SettingsModalState extends State<_SettingsModal> {
             const SizedBox(height: 8),
             const Divider(height: 32),
             Text(l10n.backupAndRestore, style: textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (widget.isRewardedPremiumUnlocked) ...[
+              SwitchListTile(
+                key: const ValueKey('settings-cloud-sync-toggle'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.cloudSyncTitle),
+                subtitle: Text(
+                  _local.lastCloudSyncAt == null
+                      ? l10n.cloudSyncNeverSynced
+                      : l10n.cloudSyncLastSynced(
+                          MaterialLocalizations.of(context).formatMediumDate(
+                            _local.lastCloudSyncAt!.toLocal(),
+                          ),
+                        ),
+                ),
+                value: _local.cloudSyncEnabled,
+                onChanged: (value) async {
+                  setState(() {
+                    _local = value
+                        ? _local.copyWith(cloudSyncEnabled: true)
+                        : _local.copyWith(
+                            cloudSyncEnabled: false,
+                            clearLastCloudSyncAt: true,
+                          );
+                  });
+                  final syncedAt = await widget.onSetCloudSyncEnabled(value);
+                  if (!mounted) return;
+                  setState(() {
+                    _local = value
+                        ? _local.copyWith(lastCloudSyncAt: syncedAt)
+                        : _local.copyWith(clearLastCloudSyncAt: true);
+                  });
+                },
+              ),
+              ListTile(
+                key: const ValueKey('settings-cloud-sync-now'),
+                contentPadding: EdgeInsets.zero,
+                enabled: _local.cloudSyncEnabled,
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: Text(l10n.cloudSyncNow),
+                subtitle: Text(l10n.cloudSyncDescription),
+                onTap: _local.cloudSyncEnabled
+                    ? () async {
+                        final syncedAt = await widget.onSyncCloudBackupNow();
+                        if (syncedAt == null || !mounted) return;
+                        setState(() {
+                          _local = _local.copyWith(
+                            lastCloudSyncAt: syncedAt,
+                          );
+                        });
+                      }
+                    : null,
+              ),
+              ListTile(
+                key: const ValueKey('settings-cloud-restore'),
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.cloud_download_outlined),
+                title: Text(l10n.cloudRestoreLatest),
+                subtitle: Text(l10n.cloudRestoreDescription),
+                onTap: widget.onRestoreCloudBackup,
+              ),
+            ] else ...[
+              Text(l10n.cloudSyncPremiumTitle, style: textTheme.titleSmall),
+              const SizedBox(height: 8),
+              Text(
+                l10n.cloudSyncPremiumDescription(_rewardedPremiumDuration.inHours),
+                style: textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              FilledButton.icon(
+                key: const ValueKey('settings-cloud-sync-premium-unlock'),
+                onPressed: widget.onUnlockPremiumWithRewardedAd,
+                icon: const Icon(Icons.cloud_sync_outlined),
+                label: Text(l10n.watchAdAndUnlock),
+              ),
+            ],
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.download_outlined),
@@ -1173,6 +1356,7 @@ class _SettingsModalState extends State<_SettingsModal> {
                   }
                 }
               },
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star_rate_outlined),
