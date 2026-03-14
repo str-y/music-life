@@ -14,7 +14,7 @@ const String _onboardingShownKey = 'onboarding_completed_v2';
 Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
-  PermissionService permissionService = defaultPermissionService,
+  PermissionService testPermissionService = defaultPermissionService,
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
   final prefs = await SharedPreferences.getInstance();
@@ -22,7 +22,7 @@ Future<void> _pumpApp(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
-        permissionServiceProvider.overrideWithValue(permissionService),
+        permissionServiceProvider.overrideWithValue(testPermissionService),
       ],
       child: const MusicLifeApp(),
     ),
@@ -71,7 +71,7 @@ void main() {
     testWidgets('permission step requests microphone access and shows success',
         (tester) async {
       final permissionService = _FakePermissionService([PermissionStatus.granted]);
-      await _pumpApp(tester, permissionService: permissionService);
+      await _pumpApp(tester, testPermissionService: permissionService);
 
       await tester.tap(find.byKey(const ValueKey('onboarding-next')));
       await tester.pumpAndSettle();
