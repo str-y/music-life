@@ -1,3 +1,5 @@
+library native_pitch_bridge;
+
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
@@ -1396,3 +1398,7 @@ void _fftInPlace(Float32List real, Float32List imag) {
     }
   }
 }
+part 'native_pitch_models.dart';
+part 'native_pitch_ffi.dart';
+part 'native_pitch_isolate.dart';
+part 'native_pitch_manager.dart';
