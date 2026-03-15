@@ -133,7 +133,8 @@ void main() {
       );
     });
 
-    test('concurrent loads keep querying current rows when migration write fails',
+    test(
+        'concurrent loads during migration write failure use existing database rows and retry successfully',
         () async {
       final repository = CompositionRepository(
         prefs,
