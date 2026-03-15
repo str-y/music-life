@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../app_constants.dart';
 import '../native_pitch_bridge.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/app_settings_controllers.dart';
 import '../providers/dependency_providers.dart';
 import '../repositories/chord_history_repository.dart';
 import '../utils/app_logger.dart';
@@ -103,7 +104,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _bridge = bridge;
     _subscription = bridge.chordStream.listen((chord) {
       if (!mounted) return;
-      ref.read(appSettingsProvider.notifier).updateDynamicThemeFromChord(chord);
+      ref.read(dynamicThemeControllerProvider).updateFromChord(chord);
       if (!_listeningCtrl.isAnimating) {
         _listeningCtrl.repeat(reverse: true);
       }

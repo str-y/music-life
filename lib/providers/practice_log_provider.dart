@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/app_settings_controllers.dart';
 import '../providers/app_settings_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../services/service_error_handler.dart';
@@ -16,7 +17,7 @@ class PracticeLogNotifier
     if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
       return;
     }
-    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
+    await ref.read(cloudSyncControllerProvider).syncNow();
   }
 
   Future<List<PracticeLogEntry>> _load() async {

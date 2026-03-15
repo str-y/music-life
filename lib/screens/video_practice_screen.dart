@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../app_constants.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/app_settings_controllers.dart';
 import '../providers/dependency_providers.dart';
 import '../providers/tuner_provider.dart';
 import '../services/ad_service.dart';
@@ -85,7 +86,7 @@ class VideoPracticeScreen extends ConsumerWidget {
       return;
     }
     await ref
-        .read(appSettingsProvider.notifier)
+        .read(premiumSettingsControllerProvider)
         .unlockRewardedPremiumFor(_rewardedPremiumDuration);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -600,7 +601,7 @@ class PremiumVideoExportPanel extends ConsumerWidget {
           sourceVideoPath: recordingPath,
           settings: settings,
         );
-    final notifier = ref.read(appSettingsProvider.notifier);
+    final notifier = ref.read(premiumSettingsControllerProvider);
 
     return SafeArea(
       child: Padding(
@@ -646,7 +647,7 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                                     label: Text(_skinLabel(l10n, skin)),
                                     selected: settings.skin == skin,
                                     onSelected: (_) => unawaited(
-                                      notifier.updatePremiumVideoExportSettings(
+                                      notifier.updateVideoExportSettings(
                                         skin: skin,
                                       ),
                                     ),
@@ -666,9 +667,9 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                                       'premium-export-color-${_colorKey(colorValue)}',
                                     ),
                                     onTap: () => unawaited(
-                                      notifier.updatePremiumVideoExportSettings(
-                                        waveformColorValue: colorValue,
-                                      ),
+                                        notifier.updateVideoExportSettings(
+                                          waveformColorValue: colorValue,
+                                        ),
                                     ),
                                     child: Container(
                                       width: 36,
@@ -702,7 +703,7 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                                     label: Text(_effectLabel(l10n, effect)),
                                     selected: settings.effect == effect,
                                     onSelected: (_) => unawaited(
-                                      notifier.updatePremiumVideoExportSettings(
+                                      notifier.updateVideoExportSettings(
                                         effect: effect,
                                       ),
                                     ),
@@ -731,7 +732,7 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                                   : l10n.videoPracticeExportLogoHidden,
                             ),
                             onChanged: (value) => unawaited(
-                              notifier.updatePremiumVideoExportSettings(
+                              notifier.updateVideoExportSettings(
                                 showLogo: value,
                               ),
                             ),
@@ -747,7 +748,7 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                                     label: Text(_qualityLabel(l10n, quality)),
                                     selected: settings.quality == quality,
                                     onSelected: (_) => unawaited(
-                                      notifier.updatePremiumVideoExportSettings(
+                                      notifier.updateVideoExportSettings(
                                         quality: quality,
                                       ),
                                     ),

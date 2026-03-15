@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_settings_controllers.dart';
 import 'app_settings_provider.dart';
 import 'dependency_providers.dart';
 import '../repositories/recording_repository.dart';
@@ -106,7 +107,7 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
     if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
       return;
     }
-    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
+    await ref.read(cloudSyncControllerProvider).syncNow();
   }
 
   Future<LibraryState> _load() async {
