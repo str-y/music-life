@@ -7,6 +7,7 @@ import '../repositories/backup_repository.dart';
 import '../repositories/chord_history_repository.dart';
 import '../repositories/cloud_sync_repository.dart';
 import '../repositories/composition_repository.dart';
+import '../repositories/metronome_settings_repository.dart';
 import '../repositories/recording_repository.dart';
 import '../repositories/settings_repository.dart';
 import '../services/ai_practice_insights_service.dart';
@@ -44,6 +45,13 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   final config = ref.read(appConfigProvider);
   return SettingsRepository(prefs, config: config);
 });
+
+final metronomeSettingsRepositoryProvider =
+    Provider<MetronomeSettingsRepository>((ref) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final config = ref.read(appConfigProvider);
+      return MetronomeSettingsRepository(prefs, config: config);
+    });
 
 final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   return const BackupRepository();

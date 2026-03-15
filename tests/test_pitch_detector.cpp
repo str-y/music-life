@@ -140,6 +140,38 @@ static bool test_yin_silence_returns_no_pitch() {
     return true;
 }
 
+static bool test_yin_low_amplitude_returns_no_pitch() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 440.0f, SR);
+    for (float& sample : buf) {
+        sample *= 1.0e-5f;
+    }
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(detected < 0.0f);
+    ASSERT_TRUE(yin.probability() == 0.0f);
+    return true;
+}
+
+static bool test_yin_nan_input_returns_no_pitch() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME, std::numeric_limits<float>::quiet_NaN());
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(detected < 0.0f);
+    ASSERT_TRUE(yin.probability() == 0.0f);
+    return true;
+}
+
 static bool test_yin_workspace_no_reallocation() {
     // When the workspace is pre-allocated with the correct capacity,
     // Yin::detect must not trigger a heap reallocation (i.e. the
@@ -642,3 +674,45 @@ ML_REGISTER_TEST(PitchDetectorFfiTest, ApiIsNoexcept, test_ffi_api_is_noexcept);
 #undef ML_REGISTER_TEST
 #undef ML_ASSERT_NEAR
 #undef ML_ASSERT_TRUE
+int main() {
+    run_test("yin: detects A4 sine",                test_yin_sine_a4);
+    run_test("yin: detects low-E guitar (82 Hz)",   test_yin_sine_e2);
+    run_test("yin: detects C5 (523 Hz)",            test_yin_sine_c5);
+    run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
+    run_test("yin: low amplitude returns -1",       test_yin_low_amplitude_returns_no_pitch);
+    run_test("yin: NaN input returns -1",           test_yin_nan_input_returns_no_pitch);
+    run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
+    run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
+    run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
+    run_test("yin: stable on SIMD-aligned frame",   test_yin_simd_aligned_frame_repeatability);
+    run_test("yin: supports backend override",       test_yin_manual_backend_selection);
+    run_test("pd:  A4 MIDI=69 note_name=A4",        test_pd_a4_midi_and_note_name);
+    run_test("pd:  C4 (middle C)",                  test_pd_c4_note);
+    run_test("pd:  silence is not pitched",         test_pd_silence_not_pitched);
+    run_test("pd:  NaN input is not pitched",       test_pd_nan_input_not_pitched);
+    run_test("pd:  incremental block feeding",      test_pd_incremental_blocks);
+    run_test("pd:  reset clears state",             test_pd_reset_clears_state);
+    run_test("pd:  throws on bad sample_rate",      test_pd_invalid_sample_rate_throws);
+    run_test("pd:  throws on bad frame_size",       test_pd_invalid_frame_size_throws);
+    run_test("pd:  supports A4=432 reference",      test_pd_reference_pitch_a4_432);
+    run_test("pd:  accepts reference pitch boundaries", test_pd_reference_pitch_boundaries);
+    run_test("ffi: A4 process bridge",              test_ffi_process_a4);
+    run_test("ffi: set reference pitch",            test_ffi_set_reference_pitch);
+    run_test("ffi: process null handle is safe",    test_ffi_process_null_handle);
+    run_test("ffi: process null samples is safe",   test_ffi_process_null_samples);
+    run_test("ffi: process zero num_samples safe",  test_ffi_process_zero_num_samples);
+    run_test("pd:  hop-size skips redundant processing", test_pd_hop_size_skips_processing);
+    run_test("pd:  preserves hop remainder across calls", test_pd_preserves_hop_remainder_between_calls);
+    run_test("ffi: create invalid sample_rate returns null", test_ffi_create_invalid_sample_rate_returns_null);
+    run_test("ffi: create invalid frame_size returns null",  test_ffi_create_invalid_frame_size_returns_null);
+    run_test("ffi: set_reference_pitch out-of-range returns 0", test_ffi_set_reference_pitch_invalid_returns_zero);
+    run_test("ffi: create invalid threshold returns null", test_ffi_create_invalid_threshold_returns_null);
+    run_test("ffi: process excessive num_samples safe", test_ffi_process_excessive_num_samples_returns_zero);
+    run_test("ffi: log callback receives error logs", test_ffi_log_callback_receives_error_logs);
+    run_test("ffi: log callback supports trace level", test_ffi_log_callback_supports_trace_level);
+    run_test("ffi: C API functions are noexcept", test_ffi_api_is_noexcept);
+
+
+    std::printf("\n%d passed, %d failed\n", g_passed, g_failed);
+    return g_failed == 0 ? 0 : 1;
+}
