@@ -521,9 +521,17 @@
     "description": "Label for the logs tab in the Library screen"
   },
 
-  "noRecordings": "No recordings",
+  "noRecordings": "Your recording library is ready",
   "@noRecordings": {
     "description": "Empty state message in the recordings list"
+  },
+  "recordingsEmptyHint": "Capture your first take to save ideas, replay sessions, and track your progress over time.",
+  "@recordingsEmptyHint": {
+    "description": "Supporting copy shown in the recordings empty state"
+  },
+  "startFirstRecording": "Start your first recording",
+  "@startFirstRecording": {
+    "description": "Primary CTA shown in the recordings empty state"
   },
 
   "play": "Play",
@@ -862,9 +870,17 @@
     "description": "Section header for the detected note history timeline"
   },
 
-  "noChordHistory": "No history yet",
+  "noChordHistory": "Your note history will appear here",
   "@noChordHistory": {
     "description": "Empty state message in the chord history list"
+  },
+  "chordHistoryEmptyHint": "Play a note or chord to build a timeline of recent detections you can quickly review.",
+  "@chordHistoryEmptyHint": {
+    "description": "Supporting copy shown in the chord history empty state"
+  },
+  "listenForFirstChord": "Listen for your first chord",
+  "@listenForFirstChord": {
+    "description": "Primary CTA shown in the chord history empty state"
   },
 
   "clearFilter": "Clear filters",

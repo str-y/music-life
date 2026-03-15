@@ -109,18 +109,25 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
   Widget build(BuildContext context) {
     final playback = ref.watch(recordingPlaybackProvider);
     final playbackNotifier = ref.read(recordingPlaybackProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
     if (_sorted.isEmpty) {
       return StatusMessageView(
-        icon: Icons.library_music_outlined,
-        iconSize: 64,
-        iconColor: Theme.of(context).colorScheme.primary,
+        illustration: StatusMessageIllustration(
+          primaryIcon: Icons.mic_rounded,
+          accentIcon: Icons.graphic_eq_rounded,
+          colorScheme: Theme.of(context).colorScheme,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        message: AppLocalizations.of(context)!.noRecordings,
+        message: l10n.noRecordings,
         messageStyle: Theme.of(context).textTheme.titleMedium,
+        details: l10n.recordingsEmptyHint,
+        detailsStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
         action: FilledButton.icon(
           onPressed: widget.onCreateRecording,
           icon: const Icon(Icons.mic),
-          label: Text(AppLocalizations.of(context)!.newRecording),
+          label: Text(l10n.startFirstRecording),
         ),
       );
     }
