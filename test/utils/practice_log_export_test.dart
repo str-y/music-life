@@ -4,6 +4,28 @@ import 'package:music_life/utils/practice_log_export.dart';
 
 void main() {
   group('buildPracticeLogCsv', () {
+    test('outputs multiple selected rows in a single CSV file', () {
+      final csv = buildPracticeLogCsv([
+        PracticeLogEntry(
+          date: DateTime(2026, 2, 2),
+          durationMinutes: 45,
+          memo: 'Warmups',
+        ),
+        PracticeLogEntry(
+          date: DateTime(2026, 2, 1),
+          durationMinutes: 30,
+          memo: 'Scales',
+        ),
+      ]);
+
+      expect(
+        csv,
+        'date,duration_minutes,memo\n'
+        '2026/02/02,45,Warmups\n'
+        '2026/02/01,30,Scales\n',
+      );
+    });
+
     test('outputs header and rows', () {
       final csv = buildPracticeLogCsv([
         PracticeLogEntry(

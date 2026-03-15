@@ -289,6 +289,99 @@ void main() {
       expect(find.text(retry), findsOneWidget);
     });
   });
+
+  group('PracticeLogScreen batch export selection', () {
+    testWidgets('record list allows selecting multiple entries for CSV export',
+        (tester) async {
+      final now = DateTime(2026, 2, 14);
+      final logs = [
+        PracticeLogEntry(
+          date: now,
+          durationMinutes: 30,
+          memo: 'Guitar: scales',
+        ),
+        PracticeLogEntry(
+          date: now.subtract(const Duration(days: 1)),
+          durationMinutes: 20,
+          memo: 'Piano: arpeggio',
+        ),
+      ];
+      final repo = _MockRecordingRepository();
+      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+
+      await tester.pumpWidget(
+        _wrapScreen(
+          PracticeLogScreen(now: () => now),
+          overrides: [
+            recordingRepositoryProvider.overrideWithValue(repo),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(PracticeLogScreen)),
+      )!;
+
+      await tester.tap(find.text(l10n.recordListTab));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('practice-log-export-selected-csv')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('practice-log-clear-selection')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('practice-log-entry-toggle-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('practice-log-entry-toggle-1')));
+      await tester.pump();
+
+      expect(
+        tester.widget<Checkbox>(
+          find.byKey(const ValueKey('practice-log-entry-toggle-0')),
+        ).value,
+        isTrue,
+      );
+      expect(
+        tester.widget<Checkbox>(
+          find.byKey(const ValueKey('practice-log-entry-toggle-1')),
+        ).value,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey('practice-log-export-selected-csv')),
+            )
+            .tooltip,
+        '${l10n.exportCsv} (2)',
+      );
+
+      await tester.tap(find.byKey(const ValueKey('practice-log-clear-selection')));
+      await tester.pump();
+
+      expect(
+        tester.widget<Checkbox>(
+          find.byKey(const ValueKey('practice-log-entry-toggle-0')),
+        ).value,
+        isFalse,
+      );
+      expect(
+        tester.widget<Checkbox>(
+          find.byKey(const ValueKey('practice-log-entry-toggle-1')),
+        ).value,
+        isFalse,
+      );
+      expect(
+        find.byKey(const ValueKey('practice-log-export-selected-csv')),
+        findsNothing,
+      );
+    });
+  });
 }
 
 class _MockRecordingRepository extends Mock implements RecordingRepository {}
