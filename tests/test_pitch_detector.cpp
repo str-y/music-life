@@ -1,10 +1,9 @@
 /**
  * Unit tests for the music-life pitch detection module.
  *
- * Tests are written with a minimal, zero-dependency harness so they build
- * anywhere (iOS simulator, Android NDK, Linux CI).  Each test function
- * returns true on pass, false on fail.  The driver at the bottom collects
- * results and exits with a non-zero status if any test failed.
+ * Test coverage is implemented as small bool-returning helpers so the same
+ * assertions can be wrapped by Google Test and discovered individually by
+ * CTest/CI.
  */
 
 #include "pitch_detector.h"
@@ -21,15 +20,19 @@
 #include <type_traits>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 using music_life::PitchDetector;
 using music_life::Yin;
 
 // ---------------------------------------------------------------------------
-// Minimal test harness
+// Google Test-backed helper assertions
 // ---------------------------------------------------------------------------
+//
+// The individual test bodies remain bool-returning helpers so the migration can
+// preserve the original fail-fast behavior with minimal churn while still
+// registering each case as a first-class Google Test.
 
-static int g_passed = 0;
-static int g_failed = 0;
 static int g_last_log_level = -1;
 static std::string g_last_log_message;
 
@@ -38,23 +41,26 @@ static void test_log_callback(int level, const char* message) {
     g_last_log_message = message ? message : "";
 }
 
-#define ASSERT_TRUE(expr) \
+#define ML_ASSERT_TRUE(expr) \
     do { \
         if (!(expr)) { \
-            std::fprintf(stderr, "  FAIL  %s:%d  %s\n", __FILE__, __LINE__, #expr); \
+            ADD_FAILURE_AT(__FILE__, __LINE__) << "Expected true: " #expr; \
             return false; \
         } \
     } while (false)
 
-#define ASSERT_NEAR(a, b, tol) \
-    ASSERT_TRUE(std::abs((a) - (b)) <= (tol))
-
-static bool run_test(const char* name, bool (*fn)()) {
-    bool ok = fn();
-    std::printf("[%s] %s\n", ok ? "PASS" : "FAIL", name);
-    ok ? ++g_passed : ++g_failed;
-    return ok;
-}
+#define ML_ASSERT_NEAR(a, b, tol) \
+    do { \
+        const auto ml_actual = (a); \
+        const auto ml_expected = (b); \
+        const auto ml_tolerance = (tol); \
+        if (std::abs(ml_actual - ml_expected) > ml_tolerance) { \
+            ADD_FAILURE_AT(__FILE__, __LINE__) \
+                << "Expected |" #a " - " #b "| <= " #tol \
+                << ", actual values were " << ml_actual << " and " << ml_expected; \
+            return false; \
+        } \
+    } while (false)
 
 // ---------------------------------------------------------------------------
 // Signal generators
@@ -85,7 +91,7 @@ static bool test_yin_sine_a4() {
 
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
-    ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
+    ML_ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
 
@@ -101,7 +107,7 @@ static bool test_yin_sine_e2() {
 
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
-    ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
+    ML_ASSERT_NEAR(detected, EXPECTED_HZ, 2.0f);
     return true;
 }
 
@@ -117,7 +123,7 @@ static bool test_yin_sine_c5() {
 
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
-    ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
+    ML_ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
     return true;
 }
 
@@ -130,7 +136,7 @@ static bool test_yin_silence_returns_no_pitch() {
 
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
-    ASSERT_TRUE(detected < 0.0f);
+    ML_ASSERT_TRUE(detected < 0.0f);
     return true;
 }
 
@@ -181,7 +187,7 @@ static bool test_yin_workspace_no_reallocation() {
     yin.detect(buf.data(), workspace);
     const float* ptr_after = workspace.data();
 
-    ASSERT_TRUE(ptr_before == ptr_after);
+    ML_ASSERT_TRUE(ptr_before == ptr_after);
     return true;
 }
 
@@ -194,7 +200,7 @@ static bool test_yin_workspace_size_is_not_changed() {
     std::vector<float> workspace(FRAME);
 
     yin.detect(buf.data(), workspace);
-    ASSERT_TRUE(workspace.size() == static_cast<size_t>(FRAME));
+    ML_ASSERT_TRUE(workspace.size() == static_cast<size_t>(FRAME));
     return true;
 }
 
@@ -210,7 +216,7 @@ static bool test_yin_non_simd_multiple_frame_size() {
 
     std::vector<float> workspace(FRAME / 2);
     float detected = yin.detect(buf.data(), workspace);
-    ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
+    ML_ASSERT_NEAR(detected, EXPECTED_HZ, 3.0f);
     return true;
 }
 
@@ -227,9 +233,9 @@ static bool test_yin_simd_aligned_frame_repeatability() {
     std::vector<float> workspace(FRAME / 2);
     const float first = yin.detect(buf.data(), workspace);
     const float second = yin.detect(buf.data(), workspace);
-    ASSERT_NEAR(first, EXPECTED_HZ, 2.0f);
-    ASSERT_NEAR(second, EXPECTED_HZ, 2.0f);
-    ASSERT_NEAR(first, second, 0.01f);
+    ML_ASSERT_NEAR(first, EXPECTED_HZ, 2.0f);
+    ML_ASSERT_NEAR(second, EXPECTED_HZ, 2.0f);
+    ML_ASSERT_NEAR(first, second, 0.01f);
     return true;
 }
 
@@ -244,7 +250,7 @@ static bool test_yin_manual_backend_selection() {
     } else {
         unsetenv("ML_FFT_BACKEND");
     }
-    ASSERT_TRUE(ok);
+    ML_ASSERT_TRUE(ok);
     return true;
 }
 
@@ -261,11 +267,11 @@ static bool test_pd_a4_midi_and_note_name() {
     make_sine(buf, 440.0f, SR);
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(r.pitched);
-    ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
-    ASSERT_TRUE(r.midi_note == 69);        // A4
-    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
-    ASSERT_NEAR(r.cents_offset, 0.0f, 5.0f);
+    ML_ASSERT_TRUE(r.pitched);
+    ML_ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
+    ML_ASSERT_TRUE(r.midi_note == 69);        // A4
+    ML_ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
+    ML_ASSERT_NEAR(r.cents_offset, 0.0f, 5.0f);
     return true;
 }
 
@@ -279,9 +285,9 @@ static bool test_pd_c4_note() {
     make_sine(buf, 261.63f, SR);
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(r.pitched);
-    ASSERT_TRUE(r.midi_note == 60);        // C4
-    ASSERT_TRUE(std::strcmp(r.note_name, "C4") == 0);
+    ML_ASSERT_TRUE(r.pitched);
+    ML_ASSERT_TRUE(r.midi_note == 60);        // C4
+    ML_ASSERT_TRUE(std::strcmp(r.note_name, "C4") == 0);
     return true;
 }
 
@@ -293,7 +299,7 @@ static bool test_pd_silence_not_pitched() {
     std::vector<float> buf(FRAME, 0.0f);
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(!r.pitched);
+    ML_ASSERT_TRUE(!r.pitched);
     return true;
 }
 
@@ -305,8 +311,8 @@ static bool test_pd_nan_input_not_pitched() {
     std::vector<float> buf(FRAME, std::numeric_limits<float>::quiet_NaN());
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(!r.pitched);
-    ASSERT_TRUE(r.frequency == 0.0f);
+    ML_ASSERT_TRUE(!r.pitched);
+    ML_ASSERT_TRUE(r.frequency == 0.0f);
     return true;
 }
 
@@ -329,8 +335,8 @@ static bool test_pd_incremental_blocks() {
         offset += chunk;
     }
     // After a full frame has been fed, detection must have fired
-    ASSERT_TRUE(r.pitched);
-    ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
+    ML_ASSERT_TRUE(r.pitched);
+    ML_ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
     return true;
 }
 
@@ -346,7 +352,7 @@ static bool test_pd_reset_clears_state() {
     pd.reset();
     // After reset, only half a frame provided → no detection yet
     PitchDetector::Result r = pd.process(buf.data(), FRAME / 2);
-    ASSERT_TRUE(!r.pitched);
+    ML_ASSERT_TRUE(!r.pitched);
     return true;
 }
 
@@ -357,7 +363,7 @@ static bool test_pd_invalid_sample_rate_throws() {
     } catch (const std::invalid_argument&) {
         threw = true;
     }
-    ASSERT_TRUE(threw);
+    ML_ASSERT_TRUE(threw);
     return true;
 }
 
@@ -368,7 +374,7 @@ static bool test_pd_invalid_frame_size_throws() {
     } catch (const std::invalid_argument&) {
         threw = true;
     }
-    ASSERT_TRUE(threw);
+    ML_ASSERT_TRUE(threw);
     return true;
 }
 
@@ -377,16 +383,16 @@ static bool test_ffi_process_a4() {
     const int FRAME = 2048;
 
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(SR, FRAME, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(handle != nullptr);
 
     std::vector<float> buf(FRAME);
     make_sine(buf, 440.0f, SR);
 
     MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), FRAME);
-    ASSERT_TRUE(r.pitched == 1);
-    ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
-    ASSERT_TRUE(r.midi_note == 69);
-    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
+    ML_ASSERT_TRUE(r.pitched == 1);
+    ML_ASSERT_NEAR(r.frequency, 440.0f, 2.0f);
+    ML_ASSERT_TRUE(r.midi_note == 69);
+    ML_ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
 
     ml_pitch_detector_destroy(handle);
     return true;
@@ -401,9 +407,9 @@ static bool test_pd_reference_pitch_a4_432() {
     make_sine(buf, 432.0f, SR);
 
     PitchDetector::Result r = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(r.pitched);
-    ASSERT_TRUE(r.midi_note == 69);       // A4 relative to A4=432
-    ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
+    ML_ASSERT_TRUE(r.pitched);
+    ML_ASSERT_TRUE(r.midi_note == 69);       // A4 relative to A4=432
+    ML_ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
     return true;
 }
 
@@ -422,8 +428,8 @@ static bool test_pd_reference_pitch_boundaries() {
     } catch (const std::invalid_argument&) {
         accepted_high_boundary = false;
     }
-    ASSERT_TRUE(accepted_low_boundary);
-    ASSERT_TRUE(accepted_high_boundary);
+    ML_ASSERT_TRUE(accepted_low_boundary);
+    ML_ASSERT_TRUE(accepted_high_boundary);
     return true;
 }
 
@@ -432,16 +438,16 @@ static bool test_ffi_set_reference_pitch() {
     const int FRAME = 2048;
 
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(SR, FRAME, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
-    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 432.0f) == 1);
+    ML_ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 432.0f) == 1);
 
     std::vector<float> buf(FRAME);
     make_sine(buf, 432.0f, SR);
     MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), FRAME);
-    ASSERT_TRUE(r.pitched == 1);
-    ASSERT_TRUE(r.midi_note == 69);
-    ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
-    ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
+    ML_ASSERT_TRUE(r.pitched == 1);
+    ML_ASSERT_TRUE(r.midi_note == 69);
+    ML_ASSERT_NEAR(r.cents_offset, 0.0f, 0.1f);
+    ML_ASSERT_TRUE(std::strcmp(r.note_name, "A4") == 0);
 
     ml_pitch_detector_destroy(handle);
     return true;
@@ -459,14 +465,14 @@ static bool test_pd_hop_size_skips_processing() {
 
     // First full frame → detection fires
     PitchDetector::Result r1 = pd.process(buf.data(), FRAME);
-    ASSERT_TRUE(r1.pitched);
+    ML_ASSERT_TRUE(r1.pitched);
 
     // Feed silence just below the hop threshold (1023 < 1024)
     std::vector<float> silence(FRAME / 2 - 1, 0.0f);
     PitchDetector::Result r2 = pd.process(silence.data(), FRAME / 2 - 1);
     // YIN must NOT have re-run; stale result is returned unchanged
-    ASSERT_TRUE(r2.pitched);
-    ASSERT_NEAR(r2.frequency, r1.frequency, 0.01f);
+    ML_ASSERT_TRUE(r2.pitched);
+    ML_ASSERT_NEAR(r2.frequency, r1.frequency, 0.01f);
     return true;
 }
 
@@ -483,7 +489,7 @@ static bool test_pd_preserves_hop_remainder_between_calls() {
     make_sine(tone, 440.0f, SR);
 
     PitchDetector::Result first = pd.process(tone.data(), FRAME);
-    ASSERT_TRUE(first.pitched);
+    ML_ASSERT_TRUE(first.pitched);
 
     std::vector<float> silence_a(HOP + 100, 0.0f);
     std::vector<float> silence_b(HOP - 100, 0.0f);
@@ -491,8 +497,8 @@ static bool test_pd_preserves_hop_remainder_between_calls() {
     (void)pd.process(silence_a.data(), static_cast<int>(silence_a.size()));
     PitchDetector::Result second = pd.process(silence_b.data(), static_cast<int>(silence_b.size()));
 
-    ASSERT_TRUE(!second.pitched);
-    ASSERT_TRUE(second.frequency == 0.0f);
+    ML_ASSERT_TRUE(!second.pitched);
+    ML_ASSERT_TRUE(second.frequency == 0.0f);
     return true;
 }
 
@@ -501,9 +507,9 @@ static bool test_ffi_process_null_handle() {
     // the handle is null.
     std::vector<float> buf(2048, 0.0f);
     MLPitchResult r = ml_pitch_detector_process(nullptr, buf.data(), static_cast<int>(buf.size()));
-    ASSERT_TRUE(r.pitched == 0);
-    ASSERT_TRUE(r.frequency == 0.0f);
-    ASSERT_TRUE(r.midi_note == 0);
+    ML_ASSERT_TRUE(r.pitched == 0);
+    ML_ASSERT_TRUE(r.frequency == 0.0f);
+    ML_ASSERT_TRUE(r.midi_note == 0);
     return true;
 }
 
@@ -511,10 +517,10 @@ static bool test_ffi_process_null_samples() {
     // ml_pitch_detector_process must return a zeroed result (not crash) when
     // the sample pointer is null.
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(handle != nullptr);
     MLPitchResult r = ml_pitch_detector_process(handle, nullptr, 2048);
-    ASSERT_TRUE(r.pitched == 0);
-    ASSERT_TRUE(r.frequency == 0.0f);
+    ML_ASSERT_TRUE(r.pitched == 0);
+    ML_ASSERT_TRUE(r.frequency == 0.0f);
     ml_pitch_detector_destroy(handle);
     return true;
 }
@@ -523,11 +529,11 @@ static bool test_ffi_process_zero_num_samples() {
     // ml_pitch_detector_process must return a zeroed result (not crash) when
     // num_samples is zero.
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(handle != nullptr);
     std::vector<float> buf(2048, 0.0f);
     MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), 0);
-    ASSERT_TRUE(r.pitched == 0);
-    ASSERT_TRUE(r.frequency == 0.0f);
+    ML_ASSERT_TRUE(r.pitched == 0);
+    ML_ASSERT_TRUE(r.frequency == 0.0f);
     ml_pitch_detector_destroy(handle);
     return true;
 }
@@ -536,7 +542,7 @@ static bool test_ffi_create_invalid_sample_rate_returns_null() {
     // ml_pitch_detector_create must return nullptr (and log to stderr) when
     // an invalid sample_rate causes the PitchDetector constructor to throw.
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(0, 2048, 0.10f);
-    ASSERT_TRUE(handle == nullptr);
+    ML_ASSERT_TRUE(handle == nullptr);
     return true;
 }
 
@@ -544,7 +550,7 @@ static bool test_ffi_create_invalid_frame_size_returns_null() {
     // ml_pitch_detector_create must return nullptr (and log to stderr) when
     // an invalid frame_size causes the PitchDetector constructor to throw.
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 1, 0.10f);
-    ASSERT_TRUE(handle == nullptr);
+    ML_ASSERT_TRUE(handle == nullptr);
     return true;
 }
 
@@ -552,27 +558,27 @@ static bool test_ffi_set_reference_pitch_invalid_returns_zero() {
     // ml_pitch_detector_set_reference_pitch must return 0 (and log to stderr)
     // when the value is outside the valid [430, 450] Hz range.
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
-    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 440.0f) == 1); // valid: within range
-    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 400.0f) == 0); // invalid: too low
-    ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 500.0f) == 0); // invalid: too high
+    ML_ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 440.0f) == 1); // valid: within range
+    ML_ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 400.0f) == 0); // invalid: too low
+    ML_ASSERT_TRUE(ml_pitch_detector_set_reference_pitch(handle, 500.0f) == 0); // invalid: too high
     ml_pitch_detector_destroy(handle);
     return true;
 }
 
 static bool test_ffi_create_invalid_threshold_returns_null() {
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, -0.10f);
-    ASSERT_TRUE(handle == nullptr);
+    ML_ASSERT_TRUE(handle == nullptr);
     return true;
 }
 
 static bool test_ffi_process_excessive_num_samples_returns_zero() {
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(handle != nullptr);
     std::vector<float> buf(5000, 0.0f);
     MLPitchResult r = ml_pitch_detector_process(handle, buf.data(), static_cast<int>(buf.size()));
-    ASSERT_TRUE(r.pitched == 0);
-    ASSERT_TRUE(r.frequency == 0.0f);
+    ML_ASSERT_TRUE(r.pitched == 0);
+    ML_ASSERT_TRUE(r.frequency == 0.0f);
     ml_pitch_detector_destroy(handle);
     return true;
 }
@@ -583,9 +589,9 @@ static bool test_ffi_log_callback_receives_error_logs() {
     g_last_log_message.clear();
 
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(0, 2048, 0.10f);
-    ASSERT_TRUE(handle == nullptr);
-    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_ERROR);
-    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_create") != std::string::npos);
+    ML_ASSERT_TRUE(handle == nullptr);
+    ML_ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_ERROR);
+    ML_ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_create") != std::string::npos);
     ml_pitch_detector_set_log_callback(nullptr);
     return true;
 }
@@ -596,12 +602,12 @@ static bool test_ffi_log_callback_supports_trace_level() {
     g_last_log_message.clear();
 
     MLPitchDetectorHandle* handle = ml_pitch_detector_create(44100, 2048, 0.10f);
-    ASSERT_TRUE(handle != nullptr);
+    ML_ASSERT_TRUE(handle != nullptr);
     g_last_log_level = -1;
     g_last_log_message.clear();
     ml_pitch_detector_reset(handle);
-    ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_TRACE);
-    ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_reset") != std::string::npos);
+    ML_ASSERT_TRUE(g_last_log_level == ML_LOG_LEVEL_TRACE);
+    ML_ASSERT_TRUE(g_last_log_message.find("ml_pitch_detector_reset") != std::string::npos);
     ml_pitch_detector_destroy(handle);
     ml_pitch_detector_set_log_callback(nullptr);
     return true;
@@ -620,9 +626,54 @@ static bool test_ffi_api_is_noexcept() {
 }
 
 // ---------------------------------------------------------------------------
-// Driver
+// Google Test registration
 // ---------------------------------------------------------------------------
 
+#define ML_REGISTER_TEST(suite_name, test_name, fn) \
+    TEST(suite_name, test_name) { \
+        ASSERT_TRUE(fn()); \
+    }
+
+ML_REGISTER_TEST(YinTest, DetectsA4Sine, test_yin_sine_a4);
+ML_REGISTER_TEST(YinTest, DetectsLowEGuitar, test_yin_sine_e2);
+ML_REGISTER_TEST(YinTest, DetectsC5Sine, test_yin_sine_c5);
+ML_REGISTER_TEST(YinTest, SilenceReturnsNoPitch, test_yin_silence_returns_no_pitch);
+ML_REGISTER_TEST(YinTest, WorkspaceDoesNotReallocate, test_yin_workspace_no_reallocation);
+ML_REGISTER_TEST(YinTest, WorkspaceSizeIsNotChanged, test_yin_workspace_size_is_not_changed);
+ML_REGISTER_TEST(YinTest, HandlesNonSimdMultipleFrameSize, test_yin_non_simd_multiple_frame_size);
+ML_REGISTER_TEST(YinTest, StableOnSimdAlignedFrame, test_yin_simd_aligned_frame_repeatability);
+ML_REGISTER_TEST(YinTest, SupportsBackendOverride, test_yin_manual_backend_selection);
+
+ML_REGISTER_TEST(PitchDetectorTest, DetectsA4MidiAndNoteName, test_pd_a4_midi_and_note_name);
+ML_REGISTER_TEST(PitchDetectorTest, DetectsC4, test_pd_c4_note);
+ML_REGISTER_TEST(PitchDetectorTest, SilenceIsNotPitched, test_pd_silence_not_pitched);
+ML_REGISTER_TEST(PitchDetectorTest, NanInputIsNotPitched, test_pd_nan_input_not_pitched);
+ML_REGISTER_TEST(PitchDetectorTest, SupportsIncrementalBlocks, test_pd_incremental_blocks);
+ML_REGISTER_TEST(PitchDetectorTest, ResetClearsState, test_pd_reset_clears_state);
+ML_REGISTER_TEST(PitchDetectorTest, InvalidSampleRateThrows, test_pd_invalid_sample_rate_throws);
+ML_REGISTER_TEST(PitchDetectorTest, InvalidFrameSizeThrows, test_pd_invalid_frame_size_throws);
+ML_REGISTER_TEST(PitchDetectorTest, SupportsReferencePitchA4432, test_pd_reference_pitch_a4_432);
+ML_REGISTER_TEST(PitchDetectorTest, AcceptsReferencePitchBoundaries, test_pd_reference_pitch_boundaries);
+ML_REGISTER_TEST(PitchDetectorTest, HopSizeSkipsRedundantProcessing, test_pd_hop_size_skips_processing);
+ML_REGISTER_TEST(PitchDetectorTest, PreservesHopRemainderAcrossCalls, test_pd_preserves_hop_remainder_between_calls);
+
+ML_REGISTER_TEST(PitchDetectorFfiTest, ProcessesA4Bridge, test_ffi_process_a4);
+ML_REGISTER_TEST(PitchDetectorFfiTest, SetsReferencePitch, test_ffi_set_reference_pitch);
+ML_REGISTER_TEST(PitchDetectorFfiTest, ProcessNullHandleIsSafe, test_ffi_process_null_handle);
+ML_REGISTER_TEST(PitchDetectorFfiTest, ProcessNullSamplesIsSafe, test_ffi_process_null_samples);
+ML_REGISTER_TEST(PitchDetectorFfiTest, ProcessZeroNumSamplesIsSafe, test_ffi_process_zero_num_samples);
+ML_REGISTER_TEST(PitchDetectorFfiTest, CreateInvalidSampleRateReturnsNull, test_ffi_create_invalid_sample_rate_returns_null);
+ML_REGISTER_TEST(PitchDetectorFfiTest, CreateInvalidFrameSizeReturnsNull, test_ffi_create_invalid_frame_size_returns_null);
+ML_REGISTER_TEST(PitchDetectorFfiTest, SetReferencePitchOutOfRangeReturnsZero, test_ffi_set_reference_pitch_invalid_returns_zero);
+ML_REGISTER_TEST(PitchDetectorFfiTest, CreateInvalidThresholdReturnsNull, test_ffi_create_invalid_threshold_returns_null);
+ML_REGISTER_TEST(PitchDetectorFfiTest, ProcessExcessiveNumSamplesIsSafe, test_ffi_process_excessive_num_samples_returns_zero);
+ML_REGISTER_TEST(PitchDetectorFfiTest, LogCallbackReceivesErrorLogs, test_ffi_log_callback_receives_error_logs);
+ML_REGISTER_TEST(PitchDetectorFfiTest, LogCallbackSupportsTraceLevel, test_ffi_log_callback_supports_trace_level);
+ML_REGISTER_TEST(PitchDetectorFfiTest, ApiIsNoexcept, test_ffi_api_is_noexcept);
+
+#undef ML_REGISTER_TEST
+#undef ML_ASSERT_NEAR
+#undef ML_ASSERT_TRUE
 int main() {
     run_test("yin: detects A4 sine",                test_yin_sine_a4);
     run_test("yin: detects low-E guitar (82 Hz)",   test_yin_sine_e2);

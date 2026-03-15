@@ -84,11 +84,24 @@ endif()
 # -----------------------------------------------------------------------
 include(CTest)
 if(BUILD_TESTING)
+    find_package(GTest QUIET)
+    if(NOT GTest_FOUND)
+        include(FetchContent)
+        set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+        set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0
+        )
+        FetchContent_MakeAvailable(googletest)
+    endif()
+    include(GoogleTest)
     add_executable(test_pitch_detection
         tests/test_pitch_detector.cpp
     )
-    target_link_libraries(test_pitch_detection PRIVATE pitch_detection)
-    add_test(NAME pitch_detection_tests COMMAND test_pitch_detection)
+    target_link_libraries(test_pitch_detection PRIVATE pitch_detection GTest::gtest_main)
+    gtest_discover_tests(test_pitch_detection)
 endif()
 
 # -----------------------------------------------------------------------
