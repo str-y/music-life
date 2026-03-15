@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app_settings_provider.dart';
+import 'app_settings_controllers.dart';
 import 'dependency_providers.dart';
 import '../repositories/recording_repository.dart';
 import '../services/service_error_handler.dart';
@@ -101,13 +101,8 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
   Future<LibraryState> build() => _load();
 
   RecordingRepository get _repo => ref.read(recordingRepositoryProvider);
-  Future<void> _syncCloudBackupIfEnabled() async {
-    final settings = ref.read(appSettingsProvider);
-    if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
-      return;
-    }
-    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
-  }
+  Future<void> _syncCloudBackupIfEnabled() =>
+      ref.read(cloudSyncControllerProvider).syncBackupIfEligible();
 
   Future<LibraryState> _load() async {
     try {

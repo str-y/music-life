@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/providers/practice_log_provider.dart';
 import 'package:music_life/repositories/cloud_sync_repository.dart';
@@ -212,11 +212,13 @@ void main() {
         ],
       );
       addTearDown(container.dispose);
-      await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
+      await container
+          .read(premiumSettingsControllerProvider)
+          .unlockRewardedPremiumFor(
             const Duration(hours: 24),
             now: DateTime.utc(2030, 1, 1),
           );
-      await container.read(appSettingsProvider.notifier).setCloudSyncEnabled(true);
+      await container.read(cloudSyncControllerProvider).setEnabled(true);
       await container.read(practiceLogProvider.future);
 
       await expectLater(
