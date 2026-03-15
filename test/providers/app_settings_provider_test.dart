@@ -19,6 +19,7 @@ void main() {
       AppConfig.defaultLocaleStorageKey: 'ja',
       AppConfig.defaultThemeColorNoteStorageKey: 'G',
       AppConfig.defaultReferencePitchStorageKey: 442.0,
+      AppConfig.defaultHapticFeedbackEnabledStorageKey: false,
     });
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -40,6 +41,7 @@ void main() {
         dynamicThemeMode: DynamicThemeMode.chill,
         dynamicThemeIntensity: 0.7,
         referencePitch: 442.0,
+        hapticFeedbackEnabled: false,
         installedMetronomeSoundPackIds: <String>[defaultMetronomeSoundPackId],
         selectedMetronomeSoundPackId: defaultMetronomeSoundPackId,
       ),
@@ -64,6 +66,7 @@ void main() {
       dynamicThemeMode: DynamicThemeMode.intense,
       dynamicThemeIntensity: 0.25,
       referencePitch: 444.0,
+      hapticFeedbackEnabled: false,
     );
     await container.read(appSettingsProvider.notifier).update(updated);
 
@@ -81,6 +84,10 @@ void main() {
       0.25,
     );
     expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
+    expect(
+      prefs.getBool(AppConfig.defaultHapticFeedbackEnabledStorageKey),
+      isFalse,
+    );
   });
 
   test('installMetronomeSoundPack persists a newly downloaded pack', () async {

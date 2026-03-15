@@ -72,6 +72,7 @@ class AppSettings {
   final String? themeColorNote;
   final double referencePitch;
   final String tunerTransposition;
+  final bool hapticFeedbackEnabled;
   final DynamicThemeMode dynamicThemeMode;
   final double dynamicThemeIntensity;
   final String? dynamicThemeNote;
@@ -98,6 +99,7 @@ class AppSettings {
     this.themeColorNote,
     this.referencePitch = 440.0,
     this.tunerTransposition = 'C',
+    this.hapticFeedbackEnabled = true,
     this.dynamicThemeMode = DynamicThemeMode.chill,
     this.dynamicThemeIntensity = 0.7,
     this.dynamicThemeNote,
@@ -127,6 +129,7 @@ class AppSettings {
     String? themeColorNote,
     double? referencePitch,
     String? tunerTransposition,
+    bool? hapticFeedbackEnabled,
     DynamicThemeMode? dynamicThemeMode,
     double? dynamicThemeIntensity,
     String? dynamicThemeNote,
@@ -159,6 +162,8 @@ class AppSettings {
           clearThemeColorNote ? null : (themeColorNote ?? this.themeColorNote),
       referencePitch: referencePitch ?? this.referencePitch,
       tunerTransposition: tunerTransposition ?? this.tunerTransposition,
+      hapticFeedbackEnabled:
+          hapticFeedbackEnabled ?? this.hapticFeedbackEnabled,
       dynamicThemeMode: dynamicThemeMode ?? this.dynamicThemeMode,
       dynamicThemeIntensity: _clampDynamicThemeIntensity(
         dynamicThemeIntensity ?? this.dynamicThemeIntensity,
@@ -229,6 +234,7 @@ class AppSettings {
           themeColorNote == other.themeColorNote &&
           referencePitch == other.referencePitch &&
           tunerTransposition == other.tunerTransposition &&
+          hapticFeedbackEnabled == other.hapticFeedbackEnabled &&
           dynamicThemeMode == other.dynamicThemeMode &&
           dynamicThemeIntensity == other.dynamicThemeIntensity &&
           dynamicThemeNote == other.dynamicThemeNote &&
@@ -261,6 +267,7 @@ class AppSettings {
         themeColorNote,
         referencePitch,
         tunerTransposition,
+        hapticFeedbackEnabled,
         dynamicThemeMode,
         dynamicThemeIntensity,
         dynamicThemeNote,
@@ -310,6 +317,9 @@ class SettingsRepository {
       tunerTransposition:
           _prefs.getString(_config.tunerTranspositionStorageKey) ??
               _config.defaultTunerTransposition,
+      hapticFeedbackEnabled:
+          _prefs.getBool(_config.hapticFeedbackEnabledStorageKey) ??
+              _config.defaultHapticFeedbackEnabled,
       dynamicThemeMode: DynamicThemeMode.fromStorage(
         _prefs.getString(_config.dynamicThemeModeStorageKey) ??
             _config.defaultDynamicThemeMode,
@@ -401,6 +411,10 @@ class SettingsRepository {
     await _prefs.setString(
       _config.tunerTranspositionStorageKey,
       settings.tunerTransposition,
+    );
+    await _prefs.setBool(
+      _config.hapticFeedbackEnabledStorageKey,
+      settings.hapticFeedbackEnabled,
     );
     await _prefs.setInt(
       _config.metronomeBpmStorageKey,
