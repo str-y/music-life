@@ -378,8 +378,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.descendant(of: previewCard, matching: find.text('music-life')),
-          findsNothing);
+      expect(
+        find.descendant(of: previewCard, matching: find.text('music-life')),
+        findsNothing,
+      );
     });
   });
 }

@@ -38,6 +38,13 @@ const List<double> _exportPreviewWaveform = <double>[
   0.26,
   0.18,
 ];
+const List<int> _exportPresetColors = <int>[
+  0xFF7C4DFF,
+  0xFF00E5FF,
+  0xFFFFB300,
+  0xFFFF4081,
+];
+const double _previewChipBorderRadius = 999;
 
 /// Screen that lets premium users record a video of their performance while
 /// real-time pitch detection is overlaid on the camera preview.
@@ -652,16 +659,11 @@ class PremiumVideoExportPanel extends ConsumerWidget {
                           Wrap(
                             spacing: 12,
                             runSpacing: 12,
-                            children: const <int>[
-                              0xFF7C4DFF,
-                              0xFF00E5FF,
-                              0xFFFFB300,
-                              0xFFFF4081,
-                            ]
+                            children: _exportPresetColors
                                 .map(
                                   (colorValue) => GestureDetector(
                                     key: Key(
-                                      'premium-export-color-$colorValue',
+                                      'premium-export-color-${_colorKey(colorValue)}',
                                     ),
                                     onTap: () => unawaited(
                                       notifier.updatePremiumVideoExportSettings(
@@ -974,7 +976,7 @@ class _PreviewChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.16),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(_previewChipBorderRadius),
         border: Border.all(color: Colors.white.withOpacity(0.14)),
       ),
       child: Text(
@@ -1056,6 +1058,10 @@ Color _effectAccentColor(PremiumVideoExportSettings settings) {
     PremiumVideoExportEffect.shimmer =>
       Color.alphaBlend(const Color(0x55FFF8E1), settings.waveformColor),
   };
+}
+
+String _colorKey(int colorValue) {
+  return (colorValue & 0x00FFFFFF).toRadixString(16).padLeft(6, '0');
 }
 
 String _skinLabel(AppLocalizations l10n, PremiumVideoExportSkin skin) {
