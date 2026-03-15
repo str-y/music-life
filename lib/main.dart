@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,35 +18,62 @@ import 'utils/app_logger.dart';
 
 const double _themeContrastLevel = 0.5;
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  const config = AppConfig();
-  AppLogger.minimumLevel = config.effectiveLogLevel;
-  try {
-    await MobileAds.instance.initialize();
-    await JustAudioBackground.init(
-      androidNotificationChannelId: config.audioNotificationChannelId,
-      androidNotificationChannelName: config.audioNotificationChannelName,
-      androidNotificationOngoing: true,
-    );
-  } catch (e, stackTrace) {
-    AppLogger.reportError(
-      'Failed to initialize background audio',
-      error: e,
-      stackTrace: stackTrace,
-    );
-  }
-  final prefs = await SharedPreferences.getInstance();
-  AppDatabase.configureSharedPreferencesLoader(() async => prefs);
-  await AppDatabase.instance.ensureHealthy();
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-      child: const MusicLifeApp(),
-    ),
+typedef AppErrorReporter =
+    void Function(
+      String message, {
+      required Object error,
+      required StackTrace stackTrace,
+    });
+
+Future<void> runWithAppErrorLogging(
+  Future<void> Function() body, {
+  AppErrorReporter errorReporter = AppLogger.reportError,
+}) async {
+  final result = runZonedGuarded<Future<void>>(
+    body,
+    (error, stackTrace) {
+      errorReporter(
+        'Unhandled asynchronous exception',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    },
   );
+
+  await (result ?? Future<void>.value());
+}
+
+Future<void> main() async {
+  await runWithAppErrorLogging(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    const config = AppConfig();
+    AppLogger.minimumLevel = config.effectiveLogLevel;
+    try {
+      await MobileAds.instance.initialize();
+      await JustAudioBackground.init(
+        androidNotificationChannelId: config.audioNotificationChannelId,
+        androidNotificationChannelName: config.audioNotificationChannelName,
+        androidNotificationOngoing: true,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.reportError(
+        'Failed to initialize background audio',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+    final prefs = await SharedPreferences.getInstance();
+    AppDatabase.configureSharedPreferencesLoader(() async => prefs);
+    await AppDatabase.instance.ensureHealthy();
+    runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const MusicLifeApp(),
+      ),
+    );
+  });
 }
 
 class MusicLifeApp extends ConsumerStatefulWidget {
