@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app_settings_provider.dart';
 import 'dependency_providers.dart';
+import 'metronome_settings_provider.dart';
 import '../metronome_sound_library.dart';
 import '../models/premium_video_export.dart';
 import '../native_pitch_bridge.dart';
+import '../repositories/metronome_settings_repository.dart';
 import '../repositories/settings_repository.dart';
 
 const double _maxCentsOffsetForThemeEnergy = 50.0;
@@ -40,25 +42,28 @@ class MetronomeSettingsController {
 
   final Ref _ref;
 
-  AppSettings get _settings => _ref.read(appSettingsProvider);
+  MetronomeSettings get _settings => _ref.read(metronomeSettingsProvider);
+  MetronomeSettingsNotifier get _notifier =>
+      _ref.read(metronomeSettingsProvider.notifier);
+  bool get _hasRewardedPremiumAccess =>
+      _ref.read(appSettingsProvider).hasRewardedPremiumAccess;
 
   Future<void> updateMetronomeSettings({
     required int bpm,
     required int timeSignatureNumerator,
     required int timeSignatureDenominator,
   }) {
-    return _ref.read(appSettingsControllerProvider).update(
-          _settings.copyWith(
-            metronomeBpm: bpm,
-            metronomeTimeSignatureNumerator: timeSignatureNumerator,
-            metronomeTimeSignatureDenominator: timeSignatureDenominator,
-          ),
-          syncCloudBackup: false,
-        );
+    return _notifier.save(
+      _settings.copyWith(
+        bpm: bpm,
+        timeSignatureNumerator: timeSignatureNumerator,
+        timeSignatureDenominator: timeSignatureDenominator,
+      ),
+    );
   }
 
   Future<void> savePreset(MetronomePreset preset) {
-    final updatedPresets = [..._settings.metronomePresets];
+    final updatedPresets = [..._settings.presets];
     final existingIndex = updatedPresets.indexWhere(
       (candidate) => candidate.name == preset.name,
     );
@@ -67,40 +72,32 @@ class MetronomeSettingsController {
     } else {
       updatedPresets.add(preset);
     }
-    return _ref.read(appSettingsControllerProvider).update(
-          _settings.copyWith(metronomePresets: updatedPresets),
-          syncCloudBackup: false,
-        );
+    return _notifier.save(_settings.copyWith(presets: updatedPresets));
   }
 
   Future<void> installSoundPack(String packId) async {
     final pack = findMetronomeSoundPackById(packId);
-    if (pack == null ||
-        (pack.premiumOnly && !_settings.hasRewardedPremiumAccess)) {
+    if (pack == null || (pack.premiumOnly && !_hasRewardedPremiumAccess)) {
       return;
     }
-    await _ref.read(appSettingsControllerProvider).update(
-          _settings.copyWith(
-            installedMetronomeSoundPackIds: <String>[
-              ..._settings.installedMetronomeSoundPackIds,
-              packId,
-            ],
-          ),
-          syncCloudBackup: false,
-        );
+    await _notifier.save(
+      _settings.copyWith(
+        installedSoundPackIds: <String>[
+          ..._settings.installedSoundPackIds,
+          packId,
+        ],
+      ),
+    );
   }
 
   Future<void> selectSoundPack(String packId) async {
     final pack = findMetronomeSoundPackById(packId);
     if (pack == null ||
-        !_settings.installedMetronomeSoundPackIds.contains(packId) ||
-        (pack.premiumOnly && !_settings.hasRewardedPremiumAccess)) {
+        !_settings.installedSoundPackIds.contains(packId) ||
+        (pack.premiumOnly && !_hasRewardedPremiumAccess)) {
       return;
     }
-    await _ref.read(appSettingsControllerProvider).update(
-          _settings.copyWith(selectedMetronomeSoundPackId: packId),
-          syncCloudBackup: false,
-        );
+    await _notifier.save(_settings.copyWith(selectedSoundPackId: packId));
   }
 }
 

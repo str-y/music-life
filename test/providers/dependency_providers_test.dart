@@ -6,6 +6,7 @@ import 'package:music_life/repositories/backup_repository.dart';
 import 'package:music_life/repositories/chord_history_repository.dart';
 import 'package:music_life/repositories/cloud_sync_repository.dart';
 import 'package:music_life/repositories/composition_repository.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/repositories/settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +46,10 @@ void main() {
     expect(
       container.read(settingsRepositoryProvider),
       isA<SettingsRepository>(),
+    );
+    expect(
+      container.read(metronomeSettingsRepositoryProvider),
+      isA<MetronomeSettingsRepository>(),
     );
     expect(
       container.read(backupRepositoryProvider),
