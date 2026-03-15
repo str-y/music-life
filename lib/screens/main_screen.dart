@@ -19,6 +19,7 @@ import '../widgets/banner_ad_widget.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
+const String _repositoryUrl = 'https://github.com/str-y/music-life';
 const String _onboardingShownKey = 'onboarding_completed_v2';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 const int _dailyGoalMinutes = 30;
@@ -1299,6 +1300,28 @@ class _SettingsModalState extends State<_SettingsModal> {
     widget.onChanged(updated);
   }
 
+  Future<void> _openExternalUri(
+    BuildContext context,
+    Uri uri, {
+    required String errorMessage,
+  }) async {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
+  Uri _buildIssueUri({
+    required String title,
+    required String body,
+  }) {
+    return Uri.parse(
+      '$_repositoryUrl/issues/new?title=${Uri.encodeQueryComponent(title)}&body=${Uri.encodeQueryComponent(body)}',
+    );
+  }
+
   Future<void> _showRecentLogs(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final recentLogs = AppLogger.recentBufferedLogs(limit: 50);
@@ -1614,6 +1637,75 @@ class _SettingsModalState extends State<_SettingsModal> {
             ),
             const SizedBox(height: 8),
             const Divider(height: 32),
+            Text(l10n.helpAndFeedback, style: textTheme.titleSmall),
+            ListTile(
+              key: const ValueKey('settings-report-bug'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.bug_report_outlined),
+              title: Text(l10n.reportBug),
+              subtitle: Text(l10n.reportBugDescription),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _openExternalUri(
+                context,
+                _buildIssueUri(
+                  title: '[Bug] ',
+                  body:
+                      '### What happened?\n\n'
+                      'Describe the problem.\n\n'
+                      '### Steps to reproduce\n'
+                      '1. \n'
+                      '2. \n'
+                      '3. \n\n'
+                      '### Expected behavior\n\n'
+                      'What did you expect to happen?',
+                ),
+                errorMessage: l10n.helpAndFeedbackOpenError,
+              ),
+            ),
+            ListTile(
+              key: const ValueKey('settings-suggest-feature'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.lightbulb_outline),
+              title: Text(l10n.suggestFeature),
+              subtitle: Text(l10n.suggestFeatureDescription),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _openExternalUri(
+                context,
+                _buildIssueUri(
+                  title: '[Feature] ',
+                  body:
+                      '### What would you like to see?\n\n'
+                      'Describe the feature idea.\n\n'
+                      '### Why would it help?\n\n'
+                      'Explain the problem it solves or workflow it improves.',
+                ),
+                errorMessage: l10n.helpAndFeedbackOpenError,
+              ),
+            ),
+            ListTile(
+              key: const ValueKey('settings-contact-support'),
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.support_agent_outlined),
+              title: Text(l10n.contactSupport),
+              subtitle: Text(l10n.contactSupportDescription),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => _openExternalUri(
+                context,
+                _buildIssueUri(
+                  title: '[Support] ',
+                  body:
+                      '### How can we help?\n\n'
+                      'Share your question or support request.\n\n'
+                      '### App or device details (optional)\n\n'
+                      '- Device: \n'
+                      '- OS version: \n'
+                      '- App version: ',
+                ),
+                errorMessage: l10n.helpAndFeedbackOpenError,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 32),
             Text(l10n.developerSettings, style: textTheme.titleSmall),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -1628,16 +1720,11 @@ class _SettingsModalState extends State<_SettingsModal> {
               leading: const Icon(Icons.privacy_tip_outlined),
               title: Text(l10n.privacyPolicy),
               trailing: const Icon(Icons.open_in_new),
-              onTap: () async {
-                final uri = Uri.parse(_privacyPolicyUrl);
-                if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.privacyPolicyOpenError)),
-                    );
-                  }
-                }
-              },
+              onTap: () => _openExternalUri(
+                context,
+                Uri.parse(_privacyPolicyUrl),
+                errorMessage: l10n.privacyPolicyOpenError,
+              ),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,

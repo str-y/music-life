@@ -203,6 +203,42 @@ void main() {
       expect(find.textContaining('Settings log entry'), findsOneWidget);
     });
 
+    testWidgets('settings includes help and feedback actions', (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Help & Feedback'), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-report-bug')), findsOneWidget);
+      expect(find.text('Report a bug'), findsOneWidget);
+      expect(
+        find.text('Open a GitHub issue to share a problem you found.'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('settings-suggest-feature')),
+        findsOneWidget,
+      );
+      expect(find.text('Suggest a feature'), findsOneWidget);
+      expect(
+        find.text('Share an idea that could make Music Life better.'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('settings-contact-support')),
+        findsOneWidget,
+      );
+      expect(find.text('Contact support'), findsOneWidget);
+      expect(
+        find.text('Ask a question or get help from the project maintainers.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('dynamic theme controls persist mode and intensity',
         (tester) async {
       await _pumpApp(
