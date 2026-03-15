@@ -10,11 +10,10 @@ import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
-import '../config/app_config.dart';
-import '../data/app_database.dart';
-import '../services/service_error_handler.dart';
-import '../utils/app_logger.dart';
-
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/data/app_database.dart';
+import 'package:music_life/services/service_error_handler.dart';
+import 'package:music_life/utils/app_logger.dart';
 // ---------------------------------------------------------------------------
 // Waveform binary encoding helpers
 // ---------------------------------------------------------------------------

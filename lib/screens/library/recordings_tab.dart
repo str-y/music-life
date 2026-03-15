@@ -6,13 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../providers/recording_playback_provider.dart';
-import '../../repositories/recording_repository.dart';
-import '../../utils/app_logger.dart';
-import '../../widgets/shared/status_message_view.dart';
-import '../../widgets/shared/waveform_view.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/recording_playback_provider.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
+import 'package:music_life/widgets/shared/waveform_view.dart';
 // ---------------------------------------------------------------------------
 // Recordings tab
 // ---------------------------------------------------------------------------

@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../models/premium_video_export.dart';
-
+import 'package:music_life/models/premium_video_export.dart';
 typedef PremiumVideoProcessRunner =
     Future<ProcessResult> Function(String executable, List<String> arguments);
 

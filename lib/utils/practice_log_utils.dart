@@ -1,5 +1,4 @@
-import '../repositories/recording_repository.dart';
-
+import 'package:music_life/repositories/recording_repository.dart';
 /// A single data point for practice trend charts.
 class PracticeTrendPoint {
   const PracticeTrendPoint({

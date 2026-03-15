@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../providers/library_provider.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/library_provider.dart';
 // ---------------------------------------------------------------------------
 // Log (Calendar) tab
 // ---------------------------------------------------------------------------

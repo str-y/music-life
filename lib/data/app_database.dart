@@ -12,8 +12,7 @@ import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
-import '../utils/app_logger.dart';
-
+import 'package:music_life/utils/app_logger.dart';
 /// Singleton Drift database used throughout the app.
 ///
 /// Tables:
@@ -51,7 +50,7 @@ class AppDatabase {
       _completer = completer;
       _open().then(
         completer.complete,
-        onError: (Object error, StackTrace stackTrace) {
+        onError: (error, stackTrace) {
           if (identical(_completer, completer)) {
             _completer = null;
           }

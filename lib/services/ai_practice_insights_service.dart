@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import '../repositories/recording_repository.dart';
-
+import 'package:music_life/repositories/recording_repository.dart';
 const String _openAiApiKey = String.fromEnvironment('OPENAI_API_KEY');
 const String _openAiModel = String.fromEnvironment(
   'OPENAI_MODEL',

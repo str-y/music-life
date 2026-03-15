@@ -1,10 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app_settings_controllers.dart';
-import 'dependency_providers.dart';
-import '../repositories/recording_repository.dart';
-import '../services/service_error_handler.dart';
-
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/services/service_error_handler.dart';
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------

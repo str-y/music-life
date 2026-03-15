@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../utils/app_logger.dart';
-
+import 'package:music_life/utils/app_logger.dart';
 enum AppFlavor {
   dev,
   staging,

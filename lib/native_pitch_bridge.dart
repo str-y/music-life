@@ -9,11 +9,11 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 
-import 'app_constants.dart';
-import 'services/permission_service.dart';
-import 'pigeon/native_pitch_messages.dart';
-import 'utils/app_logger.dart';
-import 'utils/ring_buffer.dart';
+import 'package:music_life/app_constants.dart';
+import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/pigeon/native_pitch_messages.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/utils/ring_buffer.dart';
 
 // ── FFI struct matching MLPitchResult in src/app_bridge/pitch_detector_ffi.h ──
 
@@ -1190,7 +1190,7 @@ class NativePitchBridge implements Finalizable {
     _audioSub = null;
     _recorder.stop().then<void>(
       (_) {},
-      onError: (Object e, StackTrace st) => AppLogger.reportError(
+      onError: (e, st) => AppLogger.reportError(
         'Failed to stop recorder during dispose',
         error: e,
         stackTrace: st,

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/metronome_sound_library.dart';
 
-import 'metronome_bpm_controls.dart';
-import 'metronome_preset_controls.dart';
+import 'package:music_life/widgets/rhythm/metronome_bpm_controls.dart';
+import 'package:music_life/widgets/rhythm/metronome_preset_controls.dart';
 
 class MetronomeSection extends StatelessWidget {
   const MetronomeSection({

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import '../../services/ad_service.dart';
-
+import 'package:music_life/services/ad_service.dart';
 /// Shared adaptive banner ad widget.
 ///
 /// This centralizes ad loading and rendering so screens can reuse the same

@@ -1,7 +1,6 @@
 import 'package:permission_handler/permission_handler.dart';
 
-import '../utils/app_logger.dart';
-
+import 'package:music_life/utils/app_logger.dart';
 abstract interface class PermissionGateway {
   Future<PermissionStatus> requestMicrophonePermission();
 

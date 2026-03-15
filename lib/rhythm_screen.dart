@@ -6,14 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/widgets/rhythm/metronome_preset_controls.dart';
 import 'package:music_life/widgets/rhythm/metronome_section.dart';
-import 'metronome_sound_library.dart';
+import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
-import 'repositories/metronome_settings_repository.dart';
-import 'services/ad_service.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
+import 'package:music_life/services/ad_service.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 
