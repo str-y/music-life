@@ -648,14 +648,14 @@ class _MiniBarChartState extends State<_MiniBarChart> {
                                       decoration: BoxDecoration(
                                         color: isSelected
                                             ? cs.primary
-                                            : cs.primary.withOpacity(0.65),
+                                            : cs.primary.withValues(alpha: 0.65),
                                         borderRadius: BorderRadius.circular(
                                           isSelected ? 6 : 4,
                                         ),
                                         boxShadow: isSelected
                                             ? [
                                                 BoxShadow(
-                                                  color: cs.primary.withOpacity(0.24),
+                                                  color: cs.primary.withValues(alpha: 0.24),
                                                   blurRadius: 8,
                                                   offset: const Offset(0, 4),
                                                 ),

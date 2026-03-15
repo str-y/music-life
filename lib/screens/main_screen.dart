@@ -1061,7 +1061,7 @@ class _GoalAchievementBadge extends StatelessWidget {
           color: cs.onPrimaryContainer,
         ),
         backgroundColor: cs.primaryContainer,
-        side: BorderSide(color: cs.primary.withOpacity(0.12)),
+        side: BorderSide(color: cs.primary.withValues(alpha: 0.12)),
         label: Text(
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -1143,23 +1143,55 @@ class _CelebrationDot extends StatelessWidget {
 class _FeatureTileState extends State<_FeatureTile> {
   static const double _maxAnimationDelayFraction = 0.9;
   bool _hovered = false;
+  late CurvedAnimation _interval;
+
+  @override
+  void initState() {
+    super.initState();
+    _interval = CurvedAnimation(
+      parent: widget.animation,
+      curve: Interval(
+        widget.delay.clamp(0.0, _maxAnimationDelayFraction),
+        1.0,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_FeatureTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animation != widget.animation ||
+        oldWidget.delay != widget.delay) {
+      _interval.dispose();
+      _interval = CurvedAnimation(
+        parent: widget.animation,
+        curve: Interval(
+          widget.delay.clamp(0.0, _maxAnimationDelayFraction),
+          1.0,
+          curve: Curves.easeOutCubic,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _interval.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final start = widget.delay.clamp(0.0, _maxAnimationDelayFraction);
-    final interval = CurvedAnimation(
-      parent: widget.animation,
-      curve: Interval(start, 1.0, curve: Curves.easeOutCubic),
-    );
 
     return FadeTransition(
-      opacity: interval,
+      opacity: _interval,
       child: SlideTransition(
         position: Tween<Offset>(
           begin: const Offset(0, 0.08),
           end: Offset.zero,
-        ).animate(interval),
+        ).animate(_interval),
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
@@ -1488,6 +1520,7 @@ class _SettingsModalState extends State<_SettingsModal> {
                 ),
                 value: _local.cloudSyncEnabled,
                 onChanged: (value) async {
+                  final previous = _local;
                   setState(() {
                     _local = value
                         ? _local.copyWith(cloudSyncEnabled: true)
@@ -1496,13 +1529,18 @@ class _SettingsModalState extends State<_SettingsModal> {
                             clearLastCloudSyncAt: true,
                           );
                   });
-                  final syncedAt = await widget.onSetCloudSyncEnabled(value);
-                  if (!mounted) return;
-                  setState(() {
-                    _local = value
-                        ? _local.copyWith(lastCloudSyncAt: syncedAt)
-                        : _local.copyWith(clearLastCloudSyncAt: true);
-                  });
+                  try {
+                    final syncedAt = await widget.onSetCloudSyncEnabled(value);
+                    if (!mounted) return;
+                    setState(() {
+                      _local = value
+                          ? _local.copyWith(lastCloudSyncAt: syncedAt)
+                          : _local.copyWith(clearLastCloudSyncAt: true);
+                    });
+                  } catch (_) {
+                    if (!mounted) return;
+                    setState(() => _local = previous);
+                  }
                 },
               ),
               ListTile(

@@ -17,16 +17,17 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   Future<void> update(AppSettings updated, {bool syncCloudBackup = true}) async {
-    state = updated;
     await _repo.save(updated);
+    state = updated;
     if (!syncCloudBackup ||
         !updated.cloudSyncEnabled ||
         !updated.hasRewardedPremiumAccess) {
       return;
     }
     final syncedAt = await ref.read(cloudSyncRepositoryProvider).syncNow();
-    state = updated.copyWith(lastCloudSyncAt: syncedAt);
-    await _repo.save(state);
+    final withSync = updated.copyWith(lastCloudSyncAt: syncedAt);
+    await _repo.save(withSync);
+    state = withSync;
   }
 
   Future<void> unlockRewardedPremiumFor(
