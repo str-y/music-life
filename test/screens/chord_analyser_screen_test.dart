@@ -238,6 +238,12 @@ void main() {
     });
   });
 
+  testWidgets('dynamic theme energy visualization semantics are exposed',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.chordStream)
+        .thenAnswer((_) => const Stream<String>.empty());
   testWidgets('shows enhanced empty-state content for chord history',
       (tester) async {
     final bridge = _MockNativePitchBridge();
@@ -256,6 +262,17 @@ void main() {
       ),
     );
     await tester.pump();
+
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(ChordAnalyserScreen)))!;
+    expect(l10n.dynamicThemeEnergySemanticLabel, isNotEmpty);
+    expect(
+      find.bySemanticsLabel(l10n.dynamicThemeEnergySemanticLabel),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('loads persisted history and filters by chord name', (tester) async {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Your note history will appear here'), findsOneWidget);

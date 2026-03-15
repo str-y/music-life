@@ -321,7 +321,11 @@ class _TunerBody extends StatelessWidget {
         ];
         final statusChildren = <Widget>[
           if (latest == null) ...[
-            ListeningIndicator(controller: pulseCtrl, color: cs.primary),
+            ListeningIndicator(
+              controller: pulseCtrl,
+              color: cs.primary,
+              semanticLabel: l10n.dynamicThemeEnergySemanticLabel,
+            ),
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context)!.playSound,

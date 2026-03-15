@@ -661,7 +661,9 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
               const SizedBox(height: 8),
               // Animated target
               Expanded(
-                child: ExcludeSemantics(
+                child: Semantics(
+                  label: l10n.tapTempoRingSemanticLabel,
+                  excludeSemantics: true,
                   child: AnimatedBuilder(
                     animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
                     builder: (context, _) {

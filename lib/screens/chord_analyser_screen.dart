@@ -407,6 +407,9 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                           colorScheme.tertiary,
                           dynamicThemeEnergy,
                         ),
+                        semanticLabel: AppLocalizations.of(
+                          context,
+                        )!.dynamicThemeEnergySemanticLabel,
                       ),
                     ),
                   ],

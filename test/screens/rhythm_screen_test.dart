@@ -71,6 +71,19 @@ void main() {
     }
   });
 
+  group('RhythmScreen – groove target semantics', () {
+    testWidgets('tapTempoRingSemanticLabel is non-empty and appears as a Semantics node',
+        (tester) async {
+      final overrides = await _settingsOverridesWithPrefs();
+      await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+      await tester.pump();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
+      expect(l10n.tapTempoRingSemanticLabel, isNotEmpty);
+      expect(find.bySemanticsLabel(l10n.tapTempoRingSemanticLabel), findsOneWidget);
+    });
+  });
+
   testWidgets('disposing RhythmScreen does not leak animation tickers',
       (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
