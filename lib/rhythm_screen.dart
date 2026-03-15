@@ -115,7 +115,9 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         children: [
           // ── Top half: metronome controls ────────────────────────────────
           Expanded(
-            child: _buildMetronomeSection(rhythmState),
+            child: RepaintBoundary(
+              child: _buildMetronomeSection(rhythmState),
+            ),
           ),
           const Divider(height: 1),
           // ── Bottom half: groove analysis target ─────────────────────────
@@ -661,26 +663,28 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
               const SizedBox(height: 8),
               // Animated target
               Expanded(
-                child: Semantics(
-                  label: l10n.tapTempoRingSemanticLabel,
-                  excludeSemantics: true,
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
-                    builder: (context, _) {
-                      return CustomPaint(
-                        painter: _GrooveTargetPainter(
-                          beatPhase: _beatPulseAnim.value,
-                          tapPhase: _tapRingAnim.value,
-                          offsetMs: rhythmState.lastOffsetMs,
-                          beatDurationMs:
-                              rhythmState.beatDuration.inMilliseconds.toDouble(),
-                          isPlaying: rhythmState.isPlaying,
-                          primaryColor: cs.primary,
-                          errorColor: cs.error,
-                        ),
-                        child: const SizedBox.expand(),
-                      );
-                    },
+                child: RepaintBoundary(
+                  child: Semantics(
+                    label: l10n.tapTempoRingSemanticLabel,
+                    excludeSemantics: true,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([_beatPulseAnim, _tapRingAnim]),
+                      builder: (context, _) {
+                        return CustomPaint(
+                          painter: _GrooveTargetPainter(
+                            beatPhase: _beatPulseAnim.value,
+                            tapPhase: _tapRingAnim.value,
+                            offsetMs: rhythmState.lastOffsetMs,
+                            beatDurationMs:
+                                rhythmState.beatDuration.inMilliseconds.toDouble(),
+                            isPlaying: rhythmState.isPlaying,
+                            primaryColor: cs.primary,
+                            errorColor: cs.error,
+                          ),
+                          child: const SizedBox.expand(),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

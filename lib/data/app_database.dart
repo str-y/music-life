@@ -592,6 +592,14 @@ class AppDatabase {
     return _resolveDatabasePassword();
   }
 
+  static Future<String?> readSecureValue(String key) {
+    return _secureValueReader(key);
+  }
+
+  static Future<void> writeSecureValue(String key, String value) {
+    return _secureValueWriter(key, value);
+  }
+
   static void configureSharedPreferencesLoader(
     Future<SharedPreferences> Function() loader,
   ) {

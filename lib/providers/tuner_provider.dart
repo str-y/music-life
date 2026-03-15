@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'dependency_providers.dart';
+import 'haptic_service_provider.dart';
 import '../native_pitch_bridge.dart';
 
 // ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ class TunerNotifier extends Notifier<TunerState> {
       final previousNote = state.latest?.noteName;
       state = state.copyWith(latest: result);
       if (result.noteName != previousNote) {
-        HapticFeedback.selectionClick();
+        ref.read(hapticServiceProvider).selectionClick();
       }
     });
     state = state.copyWith(loading: false, bridgeActive: true);

@@ -244,6 +244,30 @@ void main() {
       );
     });
 
+    testWidgets('haptic feedback toggle persists setting', (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('settings-haptic-feedback-toggle')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Haptic feedback'));
+      await tester.pumpAndSettle();
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(AppConfig.defaultHapticFeedbackEnabledStorageKey),
+        isFalse,
+      );
+    });
+
     testWidgets('theme changes update app mode immediately and define themed surfaces',
         (tester) async {
       await _pumpApp(

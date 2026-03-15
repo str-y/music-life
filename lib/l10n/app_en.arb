@@ -89,6 +89,14 @@
   "@followSystemTheme": {
     "description": "Label for toggling automatic light/dark theme mode based on OS setting"
   },
+  "hapticFeedbackLabel": "Haptic feedback",
+  "@hapticFeedbackLabel": {
+    "description": "Label for the global haptic feedback toggle"
+  },
+  "hapticFeedbackDescription": "Enable touch feedback across the app.",
+  "@hapticFeedbackDescription": {
+    "description": "Subtitle for the global haptic feedback toggle"
+  },
   "dynamicThemeModeLabel": "Dynamic mode",
   "@dynamicThemeModeLabel": {
     "description": "Label for selecting the dynamic theme palette mode"
