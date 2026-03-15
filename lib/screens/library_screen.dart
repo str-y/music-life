@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import "package:permission_handler/permission_handler.dart";
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
@@ -12,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/dependency_providers.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
+import '../router/routes.dart';
 import '../services/permission_service.dart';
 import '../services/recording_storage_service.dart';
 import '../utils/app_logger.dart';
@@ -185,7 +185,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   Expanded(
                     child: LogTab(
                       monthlyLogStatsByMonth: state.monthlyLogStats,
-                      onRecordPractice: () => context.push('/practice-log'),
+                      onRecordPractice: () =>
+                          const PracticeLogRoute().push(context),
                     ),
                   ),
                 ],
@@ -199,7 +200,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   ),
                   LogTab(
                     monthlyLogStatsByMonth: state.monthlyLogStats,
-                    onRecordPractice: () => context.push('/practice-log'),
+                    onRecordPractice: () =>
+                        const PracticeLogRoute().push(context),
                   ),
                 ],
               ),
