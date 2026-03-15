@@ -253,4 +253,137 @@ void main() {
       await tester.pumpAndSettle();
     });
   });
+
+  group('PremiumVideoExportPanel', () {
+    testWidgets('shows consolidated settings cards and export action',
+        (tester) async {
+      final overrides = await _settingsOverridesWithPrefs();
+      var exportCalls = 0;
+
+      await tester.pumpWidget(
+        _wrap(
+          PremiumVideoExportPanel(
+            recordingPath: '/tmp/sample.mp4',
+            onExport: () async {
+              exportCalls += 1;
+            },
+          ),
+          overrides: overrides,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MaterialApp)),
+      )!;
+      final previewCard = find.byKey(const Key('premium-export-preview-card'));
+
+      expect(
+        find.byKey(const Key('premium-export-settings-panel')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('premium-export-appearance-card')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('premium-export-output-card')), findsOneWidget);
+      expect(previewCard, findsOneWidget);
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportSkinAurora),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportEffectGlow),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportQualityHigh),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('premium-export-confirm-button')));
+      await tester.pump();
+
+      expect(exportCalls, 1);
+    });
+
+    testWidgets('updates live preview when export settings change',
+        (tester) async {
+      final overrides = await _settingsOverridesWithPrefs();
+
+      await tester.pumpWidget(
+        _wrap(
+          const PremiumVideoExportPanel(
+            recordingPath: '/tmp/sample.mp4',
+            onExport: _noopExport,
+          ),
+          overrides: overrides,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(MaterialApp)),
+      )!;
+      final previewCard = find.byKey(const Key('premium-export-preview-card'));
+
+      await tester.tap(find.text(l10n.videoPracticeExportSkinSunsetGold));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportSkinSunsetGold),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text(l10n.videoPracticeExportEffectPrism));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportEffectPrism),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text(l10n.videoPracticeExportQualityUltra));
+      await tester.tap(find.text(l10n.videoPracticeExportQualityUltra));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: previewCard, matching: find.text('2160×3840')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: previewCard, matching: find.text('30 Mbps')),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text(l10n.videoPracticeExportLogo));
+      await tester.tap(find.text(l10n.videoPracticeExportLogo));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: previewCard,
+          matching: find.text(l10n.videoPracticeExportLogoHidden),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: previewCard, matching: find.text('music-life')),
+        findsNothing,
+      );
+    });
+  });
 }
+
+Future<void> _noopExport() async {}

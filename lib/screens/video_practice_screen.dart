@@ -38,6 +38,13 @@ const List<double> _exportPreviewWaveform = <double>[
   0.26,
   0.18,
 ];
+const List<int> _exportPresetColors = <int>[
+  0xFF7C4DFF,
+  0xFF00E5FF,
+  0xFFFFB300,
+  0xFFFF4081,
+];
+const double _previewChipBorderRadius = 999;
 
 /// Screen that lets premium users record a video of their performance while
 /// real-time pitch detection is overlaid on the camera preview.
@@ -320,9 +327,12 @@ class _CameraViewState extends ConsumerState<_CameraView> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => _PremiumVideoExportSheet(
-        recordingPath: recordingPath,
-        onExport: _exportRecordingForSocial,
+      builder: (context) => FractionallySizedBox(
+        heightFactor: 0.92,
+        child: PremiumVideoExportPanel(
+          recordingPath: recordingPath,
+          onExport: _exportRecordingForSocial,
+        ),
       ),
     );
   }
@@ -572,10 +582,11 @@ class _ExportButton extends StatelessWidget {
   }
 }
 
-class _PremiumVideoExportSheet extends ConsumerWidget {
-  const _PremiumVideoExportSheet({
+class PremiumVideoExportPanel extends ConsumerWidget {
+  const PremiumVideoExportPanel({
     required this.recordingPath,
     required this.onExport,
+    super.key,
   });
 
   final String recordingPath;
@@ -594,147 +605,186 @@ class _PremiumVideoExportSheet extends ConsumerWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.videoPracticeSnsExportTitle,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.videoPracticeSnsExportDescription,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              _PremiumExportPreviewCard(settings: settings, plan: plan),
-              const SizedBox(height: 20),
-              _SectionTitle(l10n.videoPracticeExportSkin),
-              Wrap(
-                spacing: 8,
-                children: PremiumVideoExportSkin.values
-                    .map(
-                      (skin) => ChoiceChip(
-                        label: Text(_skinLabel(l10n, skin)),
-                        selected: settings.skin == skin,
-                        onSelected: (_) => unawaited(
-                          notifier.updatePremiumVideoExportSettings(skin: skin),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-              _SectionTitle(l10n.videoPracticeExportColor),
-              Wrap(
-                spacing: 12,
-                children: const <int>[
-                  0xFF7C4DFF,
-                  0xFF00E5FF,
-                  0xFFFFB300,
-                  0xFFFF4081,
-                ]
-                    .map(
-                      (colorValue) => GestureDetector(
-                        onTap: () => unawaited(
-                          notifier.updatePremiumVideoExportSettings(
-                            waveformColorValue: colorValue,
+        child: Column(
+          key: const Key('premium-export-settings-panel'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.videoPracticeSnsExportTitle,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.videoPracticeSnsExportDescription,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 20),
+            _PremiumExportPreviewCard(
+              settings: settings,
+              plan: plan,
+              l10n: l10n,
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _SettingsGroupCard(
+                      key: const Key('premium-export-appearance-card'),
+                      icon: Icons.palette_outlined,
+                      title: l10n.videoPracticeExportSkin,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionTitle(l10n.videoPracticeExportSkin),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: PremiumVideoExportSkin.values
+                                .map(
+                                  (skin) => ChoiceChip(
+                                    label: Text(_skinLabel(l10n, skin)),
+                                    selected: settings.skin == skin,
+                                    onSelected: (_) => unawaited(
+                                      notifier.updatePremiumVideoExportSettings(
+                                        skin: skin,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
-                        ),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Color(colorValue),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: settings.waveformColorValue == colorValue
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Colors.white24,
-                              width: 3,
+                          const SizedBox(height: 20),
+                          _SectionTitle(l10n.videoPracticeExportColor),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: _exportPresetColors
+                                .map(
+                                  (colorValue) => GestureDetector(
+                                    key: Key(
+                                      'premium-export-color-${_colorKey(colorValue)}',
+                                    ),
+                                    onTap: () => unawaited(
+                                      notifier.updatePremiumVideoExportSettings(
+                                        waveformColorValue: colorValue,
+                                      ),
+                                    ),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Color(colorValue),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: settings.waveformColorValue ==
+                                                  colorValue
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface
+                                              : Colors.white24,
+                                          width: 3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(height: 20),
+                          _SectionTitle(l10n.videoPracticeExportEffect),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: PremiumVideoExportEffect.values
+                                .map(
+                                  (effect) => ChoiceChip(
+                                    label: Text(_effectLabel(l10n, effect)),
+                                    selected: settings.effect == effect,
+                                    onSelected: (_) => unawaited(
+                                      notifier.updatePremiumVideoExportSettings(
+                                        effect: effect,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _SettingsGroupCard(
+                      key: const Key('premium-export-output-card'),
+                      icon: Icons.high_quality,
+                      title: l10n.videoPracticeExportQuality,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SwitchListTile.adaptive(
+                            value: settings.showLogo,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(l10n.videoPracticeExportLogo),
+                            subtitle: Text(
+                              settings.showLogo
+                                  ? l10n.videoPracticeExportLogoShown
+                                  : l10n.videoPracticeExportLogoHidden,
+                            ),
+                            onChanged: (value) => unawaited(
+                              notifier.updatePremiumVideoExportSettings(
+                                showLogo: value,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-              _SectionTitle(l10n.videoPracticeExportEffect),
-              Wrap(
-                spacing: 8,
-                children: PremiumVideoExportEffect.values
-                    .map(
-                      (effect) => ChoiceChip(
-                        label: Text(_effectLabel(l10n, effect)),
-                        selected: settings.effect == effect,
-                        onSelected: (_) => unawaited(
-                          notifier.updatePremiumVideoExportSettings(
-                            effect: effect,
+                          const SizedBox(height: 8),
+                          _SectionTitle(l10n.videoPracticeExportQuality),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: PremiumVideoExportQuality.values
+                                .map(
+                                  (quality) => ChoiceChip(
+                                    label: Text(_qualityLabel(l10n, quality)),
+                                    selected: settings.quality == quality,
+                                    onSelected: (_) => unawaited(
+                                      notifier.updatePremiumVideoExportSettings(
+                                        quality: quality,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 12),
-              SwitchListTile.adaptive(
-                value: settings.showLogo,
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.videoPracticeExportLogo),
-                subtitle: Text(
-                  settings.showLogo
-                      ? l10n.videoPracticeExportLogoShown
-                      : l10n.videoPracticeExportLogoHidden,
-                ),
-                onChanged: (value) => unawaited(
-                  notifier.updatePremiumVideoExportSettings(
-                    showLogo: value,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _SectionTitle(l10n.videoPracticeExportQuality),
-              Wrap(
-                spacing: 8,
-                children: PremiumVideoExportQuality.values
-                    .map(
-                      (quality) => ChoiceChip(
-                        label: Text(_qualityLabel(l10n, quality)),
-                        selected: settings.quality == quality,
-                        onSelected: (_) => unawaited(
-                          notifier.updatePremiumVideoExportSettings(
-                            quality: quality,
+                          const SizedBox(height: 12),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.high_quality),
+                            title: Text(plan.resolutionLabel),
+                            subtitle: Text(
+                              l10n.videoPracticeSnsExportReady(
+                                plan.resolutionLabel,
+                                plan.bitrateLabel,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.high_quality),
-                title: Text(plan.resolutionLabel),
-                subtitle: Text(
-                  l10n.videoPracticeSnsExportReady(
-                    plan.resolutionLabel,
-                    plan.bitrateLabel,
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => unawaited(onExport()),
-                  icon: const Icon(Icons.ios_share),
-                  label: Text(l10n.videoPracticeSnsExport),
-                ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: const Key('premium-export-confirm-button'),
+                onPressed: () => unawaited(onExport()),
+                icon: const Icon(Icons.ios_share),
+                label: Text(l10n.videoPracticeSnsExport),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -745,18 +795,23 @@ class _PremiumExportPreviewCard extends StatelessWidget {
   const _PremiumExportPreviewCard({
     required this.settings,
     required this.plan,
+    required this.l10n,
   });
 
   final PremiumVideoExportSettings settings;
   final PremiumVideoExportPlan plan;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
+    final effectColor = _effectAccentColor(settings);
     return Container(
+      key: const Key('premium-export-preview-card'),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: _previewGradient(settings.skin),
+        boxShadow: _previewBoxShadow(effectColor, settings.effect),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,19 +842,54 @@ class _PremiumExportPreviewCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: WaveformView(
-              data: _exportPreviewWaveform,
-              durationSeconds: 15,
-              isPlaying: false,
-              animate: true,
-              color: settings.waveformColor,
-            ),
+          Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: effectColor.withOpacity(0.55),
+                  ),
+                ),
+                child: WaveformView(
+                  data: _exportPreviewWaveform,
+                  durationSeconds: 15,
+                  isPlaying: false,
+                  animate: true,
+                  color: settings.waveformColor,
+                ),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: _effectOverlayGradient(settings.effect),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _PreviewChip(label: _skinLabel(l10n, settings.skin)),
+              _PreviewChip(label: _effectLabel(l10n, settings.effect)),
+              _PreviewChip(label: _qualityLabel(l10n, settings.quality)),
+              _PreviewChip(
+                label: settings.showLogo
+                    ? l10n.videoPracticeExportLogoShown
+                    : l10n.videoPracticeExportLogoHidden,
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
@@ -810,6 +900,47 @@ class _PremiumExportPreviewCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsGroupCard extends StatelessWidget {
+  const _SettingsGroupCard({
+    required this.icon,
+    required this.title,
+    required this.child,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
       ),
     );
   }
@@ -834,6 +965,31 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _PreviewChip extends StatelessWidget {
+  const _PreviewChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(_previewChipBorderRadius),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.92),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 LinearGradient _previewGradient(PremiumVideoExportSkin skin) {
   return switch (skin) {
     PremiumVideoExportSkin.aurora => const LinearGradient(
@@ -852,6 +1008,60 @@ LinearGradient _previewGradient(PremiumVideoExportSkin skin) {
         end: Alignment.bottomRight,
       ),
   };
+}
+
+List<BoxShadow> _previewBoxShadow(
+  Color effectColor,
+  PremiumVideoExportEffect effect,
+) {
+  final opacity = switch (effect) {
+    PremiumVideoExportEffect.glow => 0.34,
+    PremiumVideoExportEffect.prism => 0.28,
+    PremiumVideoExportEffect.shimmer => 0.2,
+  };
+
+  return [
+    BoxShadow(
+      color: effectColor.withOpacity(opacity),
+      blurRadius: 24,
+      spreadRadius: 2,
+      offset: const Offset(0, 10),
+    ),
+  ];
+}
+
+LinearGradient _effectOverlayGradient(PremiumVideoExportEffect effect) {
+  return switch (effect) {
+    PremiumVideoExportEffect.glow => const LinearGradient(
+        colors: [Color(0x00000000), Color(0x2200E5FF)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+    PremiumVideoExportEffect.prism => const LinearGradient(
+        colors: [Color(0x26FF4081), Color(0x00000000), Color(0x2600E5FF)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ),
+    PremiumVideoExportEffect.shimmer => const LinearGradient(
+        colors: [Color(0x00FFFFFF), Color(0x22FFFFFF), Color(0x00FFFFFF)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+  };
+}
+
+Color _effectAccentColor(PremiumVideoExportSettings settings) {
+  return switch (settings.effect) {
+    PremiumVideoExportEffect.glow => settings.waveformColor,
+    PremiumVideoExportEffect.prism =>
+      Color.alphaBlend(const Color(0x66FFFFFF), settings.waveformColor),
+    PremiumVideoExportEffect.shimmer =>
+      Color.alphaBlend(const Color(0x55FFF8E1), settings.waveformColor),
+  };
+}
+
+String _colorKey(int colorValue) {
+  return (colorValue & 0x00FFFFFF).toRadixString(16).padLeft(6, '0');
 }
 
 String _skinLabel(AppLocalizations l10n, PremiumVideoExportSkin skin) {
