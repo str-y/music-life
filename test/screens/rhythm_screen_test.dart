@@ -7,6 +7,15 @@ import 'package:music_life/rhythm_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
+Widget _wrap(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
+  return ProviderScope(
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
@@ -76,6 +85,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final variant in screenGoldenVariants) {
+    testWidgets('matches rhythm screen golden baseline (${variant.name})',
+        (tester) async {
+      await prepareGoldenSurface(tester);
+      await tester.pumpWidget(
+        _wrap(
+          const RhythmScreen(),
+          locale: variant.locale,
+          themeMode: variant.themeMode,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await expectScreenGolden(
+        find.byType(RhythmScreen),
+        variant.goldenPath('rhythm_screen'),
+      );
+    });
+  }
   testWidgets('matches rhythm screen golden baseline', (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));

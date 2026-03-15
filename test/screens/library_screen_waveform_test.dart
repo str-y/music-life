@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library_screen.dart';
@@ -86,33 +85,43 @@ void main() {
       expect(find.byKey(const ValueKey('library-wide-layout')), findsNothing);
     });
 
-    testWidgets('matches compact layout golden baseline', (tester) async {
-      final repo = _MockRecordingRepository();
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+    for (final variant in screenGoldenVariants) {
+      testWidgets('matches compact layout golden baseline (${variant.name})',
+          (tester) async {
+        final repo = _MockRecordingRepository();
+        when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
+        when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
 
-      await tester.binding.setSurfaceSize(const Size(600, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+        await prepareGoldenSurface(tester);
 
-      await tester.pumpWidget(_wrapLibraryScreen(repo));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_wrapLibraryScreen(
+          repo,
+          locale: variant.locale,
+          themeMode: variant.themeMode,
+        ));
+        await tester.pumpAndSettle();
 
-      await expectScreenGolden(
-        find.byType(LibraryScreen),
-        'goldens/library_screen.png',
-      );
-    });
+        await expectScreenGolden(
+          find.byType(LibraryScreen),
+          variant.goldenPath('library_screen'),
+        );
+      });
+    }
   });
 }
 
-Widget _wrapLibraryScreen(RecordingRepository repository) {
+Widget _wrapLibraryScreen(
+  RecordingRepository repository, {
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
   return ProviderScope(
     overrides: [
       recordingRepositoryProvider.overrideWithValue(repository),
     ],
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
       home: const LibraryScreen(),
     ),
   );

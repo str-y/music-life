@@ -19,11 +19,14 @@ import '../widgets/shared/async_value_state_view.dart';
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
 
+DateTime _defaultNow() => DateTime.now();
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class PracticeLogScreen extends ConsumerStatefulWidget {
-  const PracticeLogScreen({super.key});
+  const PracticeLogScreen({super.key, this.now = _defaultNow});
+
+  final DateTime Function() now;
 
   @override
   ConsumerState<PracticeLogScreen> createState() => _PracticeLogScreenState();
@@ -38,7 +41,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    final now = DateTime.now();
+    final now = widget.now();
     _displayMonth = DateTime(now.year, now.month);
   }
 
@@ -225,6 +228,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     final practiceLogState = ref.watch(practiceLogProvider);
     final entries = practiceLogState.valueOrNull ?? const <PracticeLogEntry>[];
     final isLoaded = practiceLogState.hasValue;
+    final currentNow = widget.now();
     return Scaffold(
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.practiceLogTitle),
@@ -313,6 +317,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
           children: [
             _CalendarTab(
               displayMonth: _displayMonth,
+              today: currentNow,
               practiceDays: _practiceDaysInMonth(
                 entries,
                 _displayMonth.year,
@@ -347,6 +352,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
 class _CalendarTab extends StatelessWidget {
   const _CalendarTab({
     required this.displayMonth,
+    required this.today,
     required this.practiceDays,
     required this.totalMinutes,
     required this.entries,
@@ -355,6 +361,7 @@ class _CalendarTab extends StatelessWidget {
   });
 
   final DateTime displayMonth;
+  final DateTime today;
   final Set<int> practiceDays;
   final int totalMinutes;
   final List<PracticeLogEntry> entries;
@@ -414,6 +421,7 @@ class _CalendarTab extends StatelessWidget {
           _CalendarGrid(
             year: year,
             month: month,
+            today: today,
             practiceDays: practiceDays,
           ),
           const SizedBox(height: 16),
@@ -442,7 +450,7 @@ class _CalendarTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _AnalyticsSection(entries: entries),
+          _AnalyticsSection(entries: entries, now: today),
         ],
       ),
     );
@@ -450,15 +458,16 @@ class _CalendarTab extends StatelessWidget {
 }
 
 class _AnalyticsSection extends StatelessWidget {
-  const _AnalyticsSection({required this.entries});
+  const _AnalyticsSection({required this.entries, required this.now});
 
   final List<PracticeLogEntry> entries;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final weeklyTrend = buildWeeklyPracticeTrend(entries);
-    final monthlyTrend = buildMonthlyPracticeTrend(entries);
+    final weeklyTrend = buildWeeklyPracticeTrend(entries, now: now);
+    final monthlyTrend = buildMonthlyPracticeTrend(entries, now: now);
     final instrumentMinutes = buildPracticeInstrumentMinutes(entries);
     final instrumentTotal = instrumentMinutes.values.fold<int>(0, (sum, value) => sum + value);
 
@@ -705,11 +714,13 @@ class _CalendarGrid extends StatelessWidget {
   const _CalendarGrid({
     required this.year,
     required this.month,
+    required this.today,
     required this.practiceDays,
   });
 
   final int year;
   final int month;
+  final DateTime today;
   final Set<int> practiceDays;
 
 
@@ -767,9 +778,9 @@ class _CalendarGrid extends StatelessWidget {
                 return const Expanded(child: SizedBox(height: 44));
               }
               final hasPractice = practiceDays.contains(day);
-              final isToday = DateTime.now().year == year &&
-                  DateTime.now().month == month &&
-                  DateTime.now().day == day;
+              final isToday = today.year == year &&
+                  today.month == month &&
+                  today.day == day;
               return Expanded(
                 child: _DayCell(
                   day: day,
