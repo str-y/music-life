@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
@@ -127,6 +128,59 @@ void main() {
       expect(
         AppLogger.bufferedLogs.any(
           (line) => line.contains('CompositionRepository: migration failed'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('concurrent loads keep querying current rows when migration write fails',
+        () async {
+      final repository = CompositionRepository(
+        prefs,
+        config: config,
+        store: store,
+      );
+      final legacyComposition = Composition(
+        id: 'legacy-write-failure',
+        title: 'Legacy write failure',
+        chords: ['C', 'F'],
+      );
+      store.queryRows = [
+        {
+          'id': 'db-1',
+          'title': 'Existing Song',
+          'chords': jsonEncode(['Dm', 'G']),
+        },
+      ];
+      store.replaceAllError = const FileSystemException('disk full');
+      await prefs.setString(
+        config.compositionsStorageKey,
+        jsonEncode([legacyComposition.toJson()]),
+      );
+
+      final loads = await Future.wait([
+        repository.load(),
+        repository.load(),
+      ]);
+
+      expect(store.replaceAllCalls, 1);
+      expect(prefs.getBool(config.compositionsMigratedStorageKey), isNot(true));
+      expect(loads, hasLength(2));
+      expect(loads[0].single.id, 'db-1');
+      expect(loads[1].single.id, 'db-1');
+
+      store.replaceAllError = null;
+
+      final retriedLoad = await repository.load();
+
+      expect(store.replaceAllCalls, 2);
+      expect(prefs.getBool(config.compositionsMigratedStorageKey), isTrue);
+      expect(retriedLoad.single.id, legacyComposition.id);
+      expect(retriedLoad.single.chords, legacyComposition.chords);
+      expect(
+        AppLogger.bufferedLogs.any(
+          (line) =>
+              line.contains('CompositionRepository: migration DB write failed'),
         ),
         isTrue,
       );
