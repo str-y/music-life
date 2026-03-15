@@ -44,12 +44,27 @@ class AppConfig {
     this.metronomeSoundPacksStorageKey = defaultMetronomeSoundPacksStorageKey,
     this.selectedMetronomeSoundPackStorageKey =
         defaultSelectedMetronomeSoundPackStorageKey,
+    this.premiumVideoExportSkinStorageKey =
+        defaultPremiumVideoExportSkinStorageKey,
+    this.premiumVideoExportColorStorageKey =
+        defaultPremiumVideoExportColorStorageKey,
+    this.premiumVideoExportEffectStorageKey =
+        defaultPremiumVideoExportEffectStorageKey,
+    this.premiumVideoExportShowLogoStorageKey =
+        defaultPremiumVideoExportShowLogoStorageKey,
+    this.premiumVideoExportQualityStorageKey =
+        defaultPremiumVideoExportQualityStorageKey,
     this.defaultDarkMode = false,
     this.defaultUseSystemTheme = true,
     this.defaultDynamicThemeMode = defaultChillDynamicThemeMode,
     this.defaultDynamicThemeIntensity = 0.7,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = _defaultTunerTransposition,
+    this.defaultPremiumVideoExportSkin = defaultAuroraPremiumVideoExportSkin,
+    this.defaultPremiumVideoExportColor = _defaultPremiumVideoExportColorValue,
+    this.defaultPremiumVideoExportEffect = defaultGlowPremiumVideoExportEffect,
+    this.defaultPremiumVideoExportShowLogo = true,
+    this.defaultPremiumVideoExportQuality = defaultHighPremiumVideoExportQuality,
     this.defaultMetronomeBpm = 120,
     this.defaultMetronomeTimeSignatureNumerator = 4,
     this.defaultMetronomeTimeSignatureDenominator = 4,
@@ -106,8 +121,22 @@ class AppConfig {
       'metronomeSoundPacks';
   static const String defaultSelectedMetronomeSoundPackStorageKey =
       'selectedMetronomeSoundPack';
+  static const String defaultPremiumVideoExportSkinStorageKey =
+      'premiumVideoExportSkin';
+  static const String defaultPremiumVideoExportColorStorageKey =
+      'premiumVideoExportColor';
+  static const String defaultPremiumVideoExportEffectStorageKey =
+      'premiumVideoExportEffect';
+  static const String defaultPremiumVideoExportShowLogoStorageKey =
+      'premiumVideoExportShowLogo';
+  static const String defaultPremiumVideoExportQualityStorageKey =
+      'premiumVideoExportQuality';
   static const String _defaultTunerTransposition = 'C';
   static const String defaultChillDynamicThemeMode = 'chill';
+  static const String defaultAuroraPremiumVideoExportSkin = 'aurora';
+  static const int _defaultPremiumVideoExportColorValue = 0xFF7C4DFF;
+  static const String defaultGlowPremiumVideoExportEffect = 'glow';
+  static const String defaultHighPremiumVideoExportQuality = 'high';
 
   final int audioFrameSize;
   final int audioSampleRate;
@@ -146,6 +175,11 @@ class AppConfig {
   final String rewardedPremiumExpiresAtStorageKey;
   final String metronomeSoundPacksStorageKey;
   final String selectedMetronomeSoundPackStorageKey;
+  final String premiumVideoExportSkinStorageKey;
+  final String premiumVideoExportColorStorageKey;
+  final String premiumVideoExportEffectStorageKey;
+  final String premiumVideoExportShowLogoStorageKey;
+  final String premiumVideoExportQualityStorageKey;
 
   final bool defaultDarkMode;
   final bool defaultUseSystemTheme;
@@ -153,6 +187,11 @@ class AppConfig {
   final double defaultDynamicThemeIntensity;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
+  final String defaultPremiumVideoExportSkin;
+  final int defaultPremiumVideoExportColor;
+  final String defaultPremiumVideoExportEffect;
+  final bool defaultPremiumVideoExportShowLogo;
+  final String defaultPremiumVideoExportQuality;
   final int defaultMetronomeBpm;
   final int defaultMetronomeTimeSignatureNumerator;
   final int defaultMetronomeTimeSignatureDenominator;

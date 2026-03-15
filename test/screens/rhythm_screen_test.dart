@@ -9,16 +9,12 @@ import 'golden_test_utils.dart';
 
 Widget _wrap(
   Widget child, {
-  required SharedPreferences prefs,
   List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(prefs),
-      ...overrides,
-    ],
+    overrides: [...overrides],
     child: buildGoldenTestApp(
       home: child,
       locale: locale,
@@ -40,8 +36,7 @@ Future<String> _pumpSemanticLabel(
   WidgetTester tester,
   String Function(AppLocalizations) extract,
 ) async {
-  SharedPreferences.setMockInitialValues({});
-  final prefs = await SharedPreferences.getInstance();
+  final overrides = await _settingsOverridesWithPrefs();
   late String label;
   await tester.pumpWidget(_wrap(
     Builder(builder: (context) {
@@ -52,7 +47,7 @@ Future<String> _pumpSemanticLabel(
         child: const SizedBox(width: 50, height: 36),
       );
     }),
-    prefs: prefs,
+    overrides: overrides,
   ));
   await tester.pumpAndSettle();
   return label;
@@ -78,34 +73,31 @@ void main() {
 
   testWidgets('disposing RhythmScreen does not leak animation tickers',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    await tester.pumpWidget(_wrap(const RhythmScreen(), prefs: prefs));
+    final overrides = await _settingsOverridesWithPrefs();
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
     await tester.pump();
 
-    await tester.pumpWidget(_wrap(const SizedBox.shrink(), prefs: prefs));
+    await tester.pumpWidget(_wrap(const SizedBox.shrink(), overrides: overrides));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('matches rhythm screen golden baseline', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    await tester.pumpWidget(_wrap(const RhythmScreen(), prefs: prefs));
+    final overrides = await _settingsOverridesWithPrefs();
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
     await tester.pump(const Duration(milliseconds: 200));
 
-    await tester.pumpWidget(_wrap(const RhythmScreen(), prefs: prefs));
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
   });
 
   testWidgets('sound library button is visible and tappable',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+    final overrides = await _settingsOverridesWithPrefs();
 
     await tester.pumpWidget(_wrap(
       const RhythmScreen(),
-      prefs: prefs,
+      overrides: overrides,
     ));
     await tester.pumpAndSettle();
 
@@ -126,18 +118,17 @@ void main() {
   testWidgets('downloads and selects a metronome sound pack from the library',
       (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
-    final prefs = (await SharedPreferences.getInstance());
-
+    
     await tester.pumpWidget(_wrap(
       const RhythmScreen(),
-      overrides: [...overrides.whereType<dynamic>().toList()],
-      prefs: prefs,
+      overrides: overrides,
     ));
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
+    await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 
@@ -153,18 +144,17 @@ void main() {
   testWidgets('premium sound pack prompts rewarded unlock when locked',
       (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
-    final prefs = (await SharedPreferences.getInstance());
 
     await tester.pumpWidget(_wrap(
       const RhythmScreen(),
-      overrides: [...overrides.whereType<dynamic>().toList()],
-      prefs: prefs,
+      overrides: overrides,
     ));
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
+    await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 

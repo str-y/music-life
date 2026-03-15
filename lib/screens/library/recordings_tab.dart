@@ -128,7 +128,7 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      semanticChildCount: _sorted.length,
+
       itemCount: _visibleCount,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, index) {

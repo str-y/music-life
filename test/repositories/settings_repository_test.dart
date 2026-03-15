@@ -199,7 +199,7 @@ void main() {
       expect(settings.dynamicThemeIntensity, 1.0);
     });
 
-    test('load falls back to defaults for invalid metronome values', () async {
+    test('load falls back to defaults for invalid metronome values and invalid sound pack selection', () async {
       SharedPreferences.setMockInitialValues({
         AppConfig.defaultMetronomeBpmStorageKey: 999,
         AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 1,

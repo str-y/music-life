@@ -3,18 +3,41 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../app_constants.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/dependency_providers.dart';
 import '../providers/tuner_provider.dart';
 import '../services/ad_service.dart';
+import '../services/premium_video_export_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/tuner_transposition.dart';
+import '../models/premium_video_export.dart';
 import '../widgets/shared/loading_state_widget.dart';
 import '../widgets/shared/status_message_view.dart';
+import '../widgets/shared/waveform_view.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
+const List<double> _exportPreviewWaveform = <double>[
+  0.18,
+  0.22,
+  0.34,
+  0.56,
+  0.72,
+  0.64,
+  0.48,
+  0.28,
+  0.2,
+  0.3,
+  0.46,
+  0.7,
+  0.62,
+  0.44,
+  0.26,
+  0.18,
+];
 
 /// Screen that lets premium users record a video of their performance while
 /// real-time pitch detection is overlaid on the camera preview.
@@ -128,6 +151,7 @@ class _CameraViewState extends ConsumerState<_CameraView> {
   bool _isInitializing = true;
   String? _errorMessage;
   bool _isRecording = false;
+  String? _lastRecordingPath;
 
   @override
   void initState() {
@@ -189,7 +213,10 @@ class _CameraViewState extends ConsumerState<_CameraView> {
       if (_isRecording) {
         final file = await controller.stopVideoRecording();
         if (!mounted) return;
-        setState(() => _isRecording = false);
+        setState(() {
+          _isRecording = false;
+          _lastRecordingPath = file.path;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -258,6 +285,14 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         CameraPreview(controller),
         _PitchOverlay(isRecording: _isRecording),
         Positioned(
+          top: 88,
+          right: 16,
+          child: _ExportButton(
+            isEnabled: _lastRecordingPath != null && !_isRecording,
+            onPressed: _isRecording ? null : _openExportSheet,
+          ),
+        ),
+        Positioned(
           bottom: 40,
           left: 0,
           right: 0,
@@ -270,6 +305,78 @@ class _CameraViewState extends ConsumerState<_CameraView> {
         ),
       ],
     );
+  }
+
+  Future<void> _openExportSheet() async {
+    final recordingPath = _lastRecordingPath;
+    final l10n = AppLocalizations.of(context)!;
+    if (recordingPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.videoPracticeSnsExportRecordFirst)),
+      );
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => _PremiumVideoExportSheet(
+        recordingPath: recordingPath,
+        onExport: _exportRecordingForSocial,
+      ),
+    );
+  }
+
+  Future<void> _exportRecordingForSocial() async {
+    final recordingPath = _lastRecordingPath;
+    if (recordingPath == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final settings = ref.read(appSettingsProvider).premiumVideoExportSettings;
+    final exportService = ref.read(premiumVideoExportServiceProvider);
+    try {
+      final plan = exportService.buildPlan(
+        sourceVideoPath: recordingPath,
+        settings: settings,
+      );
+      final exported = await exportService.createShareReadyCopy(plan);
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [
+          XFile(
+            exported.path,
+            name: exported.uri.pathSegments.isEmpty
+                ? null
+                : exported.uri.pathSegments.last,
+          ),
+        ],
+        text: l10n.videoPracticeSnsExportShareText(
+          plan.resolutionLabel,
+          plan.bitrateLabel,
+        ),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.videoPracticeSnsExportReady(
+              plan.resolutionLabel,
+              plan.bitrateLabel,
+            ),
+          ),
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.reportError(
+        'VideoPracticeScreen: premium SNS export failed',
+        error: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.videoPracticeSnsExportFailed)),
+      );
+    }
   }
 }
 
@@ -438,4 +545,335 @@ class _RecordButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ExportButton extends StatelessWidget {
+  const _ExportButton({
+    required this.isEnabled,
+    required this.onPressed,
+  });
+
+  final bool isEnabled;
+  final Future<void> Function()? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return FilledButton.icon(
+      onPressed: onPressed == null ? null : () => unawaited(onPressed!()),
+      icon: const Icon(Icons.auto_awesome),
+      label: Text(l10n.videoPracticeSnsExport),
+      style: FilledButton.styleFrom(
+        backgroundColor: isEnabled
+            ? Theme.of(context).colorScheme.primary
+            : Colors.black45,
+      ),
+    );
+  }
+}
+
+class _PremiumVideoExportSheet extends ConsumerWidget {
+  const _PremiumVideoExportSheet({
+    required this.recordingPath,
+    required this.onExport,
+  });
+
+  final String recordingPath;
+  final Future<void> Function() onExport;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = ref.watch(appSettingsProvider).premiumVideoExportSettings;
+    final plan = ref.read(premiumVideoExportServiceProvider).buildPlan(
+          sourceVideoPath: recordingPath,
+          settings: settings,
+        );
+    final notifier = ref.read(appSettingsProvider.notifier);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.videoPracticeSnsExportTitle,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.videoPracticeSnsExportDescription,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              _PremiumExportPreviewCard(settings: settings, plan: plan),
+              const SizedBox(height: 20),
+              _SectionTitle(l10n.videoPracticeExportSkin),
+              Wrap(
+                spacing: 8,
+                children: PremiumVideoExportSkin.values
+                    .map(
+                      (skin) => ChoiceChip(
+                        label: Text(_skinLabel(l10n, skin)),
+                        selected: settings.skin == skin,
+                        onSelected: (_) => unawaited(
+                          notifier.updatePremiumVideoExportSettings(skin: skin),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+              _SectionTitle(l10n.videoPracticeExportColor),
+              Wrap(
+                spacing: 12,
+                children: const <int>[
+                  0xFF7C4DFF,
+                  0xFF00E5FF,
+                  0xFFFFB300,
+                  0xFFFF4081,
+                ]
+                    .map(
+                      (colorValue) => GestureDetector(
+                        onTap: () => unawaited(
+                          notifier.updatePremiumVideoExportSettings(
+                            waveformColorValue: colorValue,
+                          ),
+                        ),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Color(colorValue),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: settings.waveformColorValue == colorValue
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.white24,
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+              _SectionTitle(l10n.videoPracticeExportEffect),
+              Wrap(
+                spacing: 8,
+                children: PremiumVideoExportEffect.values
+                    .map(
+                      (effect) => ChoiceChip(
+                        label: Text(_effectLabel(l10n, effect)),
+                        selected: settings.effect == effect,
+                        onSelected: (_) => unawaited(
+                          notifier.updatePremiumVideoExportSettings(
+                            effect: effect,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile.adaptive(
+                value: settings.showLogo,
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.videoPracticeExportLogo),
+                subtitle: Text(
+                  settings.showLogo
+                      ? l10n.videoPracticeExportLogoShown
+                      : l10n.videoPracticeExportLogoHidden,
+                ),
+                onChanged: (value) => unawaited(
+                  notifier.updatePremiumVideoExportSettings(
+                    showLogo: value,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _SectionTitle(l10n.videoPracticeExportQuality),
+              Wrap(
+                spacing: 8,
+                children: PremiumVideoExportQuality.values
+                    .map(
+                      (quality) => ChoiceChip(
+                        label: Text(_qualityLabel(l10n, quality)),
+                        selected: settings.quality == quality,
+                        onSelected: (_) => unawaited(
+                          notifier.updatePremiumVideoExportSettings(
+                            quality: quality,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.high_quality),
+                title: Text(plan.resolutionLabel),
+                subtitle: Text(
+                  l10n.videoPracticeSnsExportReady(
+                    plan.resolutionLabel,
+                    plan.bitrateLabel,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => unawaited(onExport()),
+                  icon: const Icon(Icons.ios_share),
+                  label: Text(l10n.videoPracticeSnsExport),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumExportPreviewCard extends StatelessWidget {
+  const _PremiumExportPreviewCard({
+    required this.settings,
+    required this.plan,
+  });
+
+  final PremiumVideoExportSettings settings;
+  final PremiumVideoExportPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: _previewGradient(settings.skin),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.graphic_eq,
+                color: Colors.white.withOpacity(0.92),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                plan.resolutionLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
+              if (settings.showLogo)
+                Text(
+                  'music-life',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.78),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: WaveformView(
+              data: _exportPreviewWaveform,
+              durationSeconds: 15,
+              isPlaying: false,
+              animate: true,
+              color: settings.waveformColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            plan.bitrateLabel,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.82),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+LinearGradient _previewGradient(PremiumVideoExportSkin skin) {
+  return switch (skin) {
+    PremiumVideoExportSkin.aurora => const LinearGradient(
+        colors: [Color(0xFF1B1E5A), Color(0xFF5E35B1), Color(0xFF00B8D4)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    PremiumVideoExportSkin.neonPulse => const LinearGradient(
+        colors: [Color(0xFF12001D), Color(0xFF6A00F4), Color(0xFFFF4081)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    PremiumVideoExportSkin.sunsetGold => const LinearGradient(
+        colors: [Color(0xFF3E2723), Color(0xFFFF8F00), Color(0xFFFFD180)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+  };
+}
+
+String _skinLabel(AppLocalizations l10n, PremiumVideoExportSkin skin) {
+  return switch (skin) {
+    PremiumVideoExportSkin.aurora => l10n.videoPracticeExportSkinAurora,
+    PremiumVideoExportSkin.neonPulse => l10n.videoPracticeExportSkinNeonPulse,
+    PremiumVideoExportSkin.sunsetGold => l10n.videoPracticeExportSkinSunsetGold,
+  };
+}
+
+String _effectLabel(AppLocalizations l10n, PremiumVideoExportEffect effect) {
+  return switch (effect) {
+    PremiumVideoExportEffect.glow => l10n.videoPracticeExportEffectGlow,
+    PremiumVideoExportEffect.prism => l10n.videoPracticeExportEffectPrism,
+    PremiumVideoExportEffect.shimmer => l10n.videoPracticeExportEffectShimmer,
+  };
+}
+
+String _qualityLabel(AppLocalizations l10n, PremiumVideoExportQuality quality) {
+  return switch (quality) {
+    PremiumVideoExportQuality.social => l10n.videoPracticeExportQualitySocial,
+    PremiumVideoExportQuality.high => l10n.videoPracticeExportQualityHigh,
+    PremiumVideoExportQuality.ultra => l10n.videoPracticeExportQualityUltra,
+  };
 }

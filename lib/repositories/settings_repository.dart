@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
 import '../metronome_sound_library.dart';
+import '../models/premium_video_export.dart';
 import '../theme/dynamic_theme_mode.dart';
 
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
@@ -84,6 +85,11 @@ class AppSettings {
   final List<MetronomePreset> metronomePresets;
   final List<String> installedMetronomeSoundPackIds;
   final String selectedMetronomeSoundPackId;
+  final PremiumVideoExportSkin premiumVideoExportSkin;
+  final int premiumVideoExportColor;
+  final PremiumVideoExportEffect premiumVideoExportEffect;
+  final bool premiumVideoExportShowLogo;
+  final PremiumVideoExportQuality premiumVideoExportQuality;
 
   const AppSettings({
     this.darkMode = false,
@@ -107,6 +113,11 @@ class AppSettings {
       defaultMetronomeSoundPackId,
     ],
     this.selectedMetronomeSoundPackId = defaultMetronomeSoundPackId,
+    this.premiumVideoExportSkin = PremiumVideoExportSkin.aurora,
+    this.premiumVideoExportColor = 0xFF7C4DFF,
+    this.premiumVideoExportEffect = PremiumVideoExportEffect.glow,
+    this.premiumVideoExportShowLogo = true,
+    this.premiumVideoExportQuality = PremiumVideoExportQuality.high,
   });
 
   AppSettings copyWith({
@@ -129,6 +140,11 @@ class AppSettings {
     List<MetronomePreset>? metronomePresets,
     List<String>? installedMetronomeSoundPackIds,
     String? selectedMetronomeSoundPackId,
+    PremiumVideoExportSkin? premiumVideoExportSkin,
+    int? premiumVideoExportColor,
+    PremiumVideoExportEffect? premiumVideoExportEffect,
+    bool? premiumVideoExportShowLogo,
+    PremiumVideoExportQuality? premiumVideoExportQuality,
     bool clearLastCloudSyncAt = false,
     bool clearRewardedPremiumExpiresAt = false,
     bool clearLocaleCode = false,
@@ -178,11 +194,30 @@ class AppSettings {
           installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
         ),
       ),
+      premiumVideoExportSkin:
+          premiumVideoExportSkin ?? this.premiumVideoExportSkin,
+      premiumVideoExportColor:
+          premiumVideoExportColor ?? this.premiumVideoExportColor,
+      premiumVideoExportEffect:
+          premiumVideoExportEffect ?? this.premiumVideoExportEffect,
+      premiumVideoExportShowLogo:
+          premiumVideoExportShowLogo ?? this.premiumVideoExportShowLogo,
+      premiumVideoExportQuality:
+          premiumVideoExportQuality ?? this.premiumVideoExportQuality,
     );
   }
 
   bool get hasRewardedPremiumAccess =>
       rewardedPremiumExpiresAt?.isAfter(DateTime.now()) ?? false;
+
+  PremiumVideoExportSettings get premiumVideoExportSettings =>
+      PremiumVideoExportSettings(
+        skin: premiumVideoExportSkin,
+        waveformColorValue: premiumVideoExportColor,
+        effect: premiumVideoExportEffect,
+        showLogo: premiumVideoExportShowLogo,
+        quality: premiumVideoExportQuality,
+      );
 
   @override
   bool operator ==(Object other) =>
@@ -211,11 +246,15 @@ class AppSettings {
             installedMetronomeSoundPackIds,
             other.installedMetronomeSoundPackIds,
           ) &&
-          selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId;
+          selectedMetronomeSoundPackId == other.selectedMetronomeSoundPackId &&
+          premiumVideoExportSkin == other.premiumVideoExportSkin &&
+          premiumVideoExportColor == other.premiumVideoExportColor &&
+          premiumVideoExportEffect == other.premiumVideoExportEffect &&
+          premiumVideoExportShowLogo == other.premiumVideoExportShowLogo &&
+          premiumVideoExportQuality == other.premiumVideoExportQuality;
 
   @override
-  int get hashCode =>
-      Object.hash(
+  int get hashCode => Object.hashAll([
         darkMode,
         useSystemTheme,
         localeCode,
@@ -235,7 +274,12 @@ class AppSettings {
         Object.hashAll(metronomePresets),
         Object.hashAll(installedMetronomeSoundPackIds),
         selectedMetronomeSoundPackId,
-      );
+        premiumVideoExportSkin,
+        premiumVideoExportColor,
+        premiumVideoExportEffect,
+        premiumVideoExportShowLogo,
+        premiumVideoExportQuality,
+      ]);
 
   static double _clampDynamicThemeIntensity(double intensity) {
     return intensity.clamp(0.0, 1.0).toDouble();
@@ -305,6 +349,24 @@ class SettingsRepository {
         normalizeInstalledMetronomeSoundPackIds(
           _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
         ),
+      ),
+      premiumVideoExportSkin: PremiumVideoExportSkin.fromStorage(
+        _prefs.getString(_config.premiumVideoExportSkinStorageKey) ??
+            _config.defaultPremiumVideoExportSkin,
+      ),
+      premiumVideoExportColor:
+          _prefs.getInt(_config.premiumVideoExportColorStorageKey) ??
+              _config.defaultPremiumVideoExportColor,
+      premiumVideoExportEffect: PremiumVideoExportEffect.fromStorage(
+        _prefs.getString(_config.premiumVideoExportEffectStorageKey) ??
+            _config.defaultPremiumVideoExportEffect,
+      ),
+      premiumVideoExportShowLogo:
+          _prefs.getBool(_config.premiumVideoExportShowLogoStorageKey) ??
+              _config.defaultPremiumVideoExportShowLogo,
+      premiumVideoExportQuality: PremiumVideoExportQuality.fromStorage(
+        _prefs.getString(_config.premiumVideoExportQualityStorageKey) ??
+            _config.defaultPremiumVideoExportQuality,
       ),
     );
   }
@@ -404,6 +466,26 @@ class SettingsRepository {
           settings.installedMetronomeSoundPackIds,
         ),
       ),
+    );
+    await _prefs.setString(
+      _config.premiumVideoExportSkinStorageKey,
+      settings.premiumVideoExportSkin.storageValue,
+    );
+    await _prefs.setInt(
+      _config.premiumVideoExportColorStorageKey,
+      settings.premiumVideoExportColor,
+    );
+    await _prefs.setString(
+      _config.premiumVideoExportEffectStorageKey,
+      settings.premiumVideoExportEffect.storageValue,
+    );
+    await _prefs.setBool(
+      _config.premiumVideoExportShowLogoStorageKey,
+      settings.premiumVideoExportShowLogo,
+    );
+    await _prefs.setString(
+      _config.premiumVideoExportQualityStorageKey,
+      settings.premiumVideoExportQuality.storageValue,
     );
   }
 
