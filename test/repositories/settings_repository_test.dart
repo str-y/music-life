@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
+import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/repositories/settings_repository.dart';
 import 'package:music_life/theme/dynamic_theme_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,6 +36,11 @@ void main() {
         AppConfig.defaultLastCloudSyncAtStorageKey: '2026-01-03T00:00:00.000Z',
         AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
             '2026-01-01T00:00:00.000Z',
+        AppConfig.defaultMetronomeSoundPacksStorageKey: <String>[
+          defaultMetronomeSoundPackId,
+          'acoustic_kit',
+        ],
+        AppConfig.defaultSelectedMetronomeSoundPackStorageKey: 'acoustic_kit',
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -72,6 +78,11 @@ void main() {
         settings.rewardedPremiumExpiresAt,
         DateTime.parse('2026-01-01T00:00:00.000Z'),
       );
+      expect(
+        settings.installedMetronomeSoundPackIds,
+        <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
+      );
+      expect(settings.selectedMetronomeSoundPackId, 'acoustic_kit');
     });
 
     test('save persists settings values', () async {
@@ -101,6 +112,11 @@ void main() {
         cloudSyncEnabled: true,
         lastCloudSyncAt: DateTime.utc(2026, 1, 3, 4, 5, 6),
         rewardedPremiumExpiresAt: DateTime.utc(2026, 1, 2, 3, 4, 5),
+        installedMetronomeSoundPackIds: const <String>[
+          defaultMetronomeSoundPackId,
+          'percussion_clave',
+        ],
+        selectedMetronomeSoundPackId: 'percussion_clave',
       );
 
       await repository.save(updated);
@@ -149,6 +165,14 @@ void main() {
         prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
         '2026-01-02T03:04:05.000Z',
       );
+      expect(
+        prefs.getStringList(AppConfig.defaultMetronomeSoundPacksStorageKey),
+        <String>[defaultMetronomeSoundPackId, 'percussion_clave'],
+      );
+      expect(
+        prefs.getString(AppConfig.defaultSelectedMetronomeSoundPackStorageKey),
+        'percussion_clave',
+      );
     });
 
     test('load ignores unsupported persisted locale values', () async {
@@ -182,6 +206,8 @@ void main() {
         AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 16,
         AppConfig.defaultMetronomePresetsStorageKey:
             '[{"name":"","bpm":20,"timeSignatureNumerator":1,"timeSignatureDenominator":16}]',
+        AppConfig.defaultMetronomeSoundPacksStorageKey: <String>['acoustic_kit'],
+        AppConfig.defaultSelectedMetronomeSoundPackStorageKey: 'missing_pack',
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -192,6 +218,14 @@ void main() {
       expect(settings.metronomeTimeSignatureNumerator, 2);
       expect(settings.metronomeTimeSignatureDenominator, 4);
       expect(settings.metronomePresets, isEmpty);
+      expect(
+        settings.installedMetronomeSoundPackIds,
+        <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
+      );
+      expect(
+        settings.selectedMetronomeSoundPackId,
+        defaultMetronomeSoundPackId,
+      );
     });
   });
 }

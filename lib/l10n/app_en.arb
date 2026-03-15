@@ -546,6 +546,158 @@
     "description": "Subtitle for the Rhythm card on the main screen"
   },
 
+  "metronomeSoundLibraryTitle": "Sound library",
+  "@metronomeSoundLibraryTitle": {
+    "description": "Title for the metronome sound library manager"
+  },
+
+  "metronomeSoundLibrarySubtitle": "Download studio-ready click packs, unlock premium artist samples, and switch to the best match for the current tempo.",
+  "@metronomeSoundLibrarySubtitle": {
+    "description": "Subtitle describing the metronome sound library"
+  },
+
+  "metronomeSoundLibraryManage": "Manage sound library",
+  "@metronomeSoundLibraryManage": {
+    "description": "Tooltip for opening the metronome sound library sheet"
+  },
+
+  "metronomeSoundLibrarySelected": "Current sound: {packName}",
+  "@metronomeSoundLibrarySelected": {
+    "description": "Label describing the currently selected metronome sound pack",
+    "placeholders": {
+      "packName": {}
+    }
+  },
+
+  "metronomeSoundLibraryRecommendation": "Recommended now: {packName}",
+  "@metronomeSoundLibraryRecommendation": {
+    "description": "Label describing the recommended metronome sound pack",
+    "placeholders": {
+      "packName": {}
+    }
+  },
+
+  "metronomeSoundLibraryRecommendedChip": "Recommended",
+  "@metronomeSoundLibraryRecommendedChip": {
+    "description": "Chip label for a recommended sound pack"
+  },
+
+  "metronomeSoundLibraryPremiumChip": "Premium",
+  "@metronomeSoundLibraryPremiumChip": {
+    "description": "Chip label for a premium sound pack"
+  },
+
+  "metronomeSoundLibraryInstalledChip": "Installed",
+  "@metronomeSoundLibraryInstalledChip": {
+    "description": "Chip label for an installed sound pack"
+  },
+
+  "metronomeSoundLibraryDownload": "Download",
+  "@metronomeSoundLibraryDownload": {
+    "description": "Action label to download a metronome sound pack"
+  },
+
+  "metronomeSoundLibraryUse": "Use sound",
+  "@metronomeSoundLibraryUse": {
+    "description": "Action label to select an installed sound pack"
+  },
+
+  "metronomeSoundLibraryInUse": "In use",
+  "@metronomeSoundLibraryInUse": {
+    "description": "Action label shown for the currently selected sound pack"
+  },
+
+  "metronomeSoundLibraryDownloaded": "{packName} is ready for low-latency playback.",
+  "@metronomeSoundLibraryDownloaded": {
+    "description": "Snackbar message shown after downloading or selecting a metronome sound pack",
+    "placeholders": {
+      "packName": {}
+    }
+  },
+
+  "metronomeSoundLibraryUnlocked": "{packName} premium pack unlocked and downloaded.",
+  "@metronomeSoundLibraryUnlocked": {
+    "description": "Snackbar message shown after unlocking a premium sound pack",
+    "placeholders": {
+      "packName": {}
+    }
+  },
+
+  "metronomeSoundPackElectronicName": "Electronic precision click",
+  "@metronomeSoundPackElectronicName": {
+    "description": "Name of the default electronic metronome sound pack"
+  },
+
+  "metronomeSoundPackElectronicDescription": "Dry electronic pulses with ultra-low latency for tight practice and silent stages.",
+  "@metronomeSoundPackElectronicDescription": {
+    "description": "Description of the default electronic metronome sound pack"
+  },
+
+  "metronomeSoundPackAcousticName": "Studio acoustic kit",
+  "@metronomeSoundPackAcousticName": {
+    "description": "Name of the acoustic drum metronome sound pack"
+  },
+
+  "metronomeSoundPackAcousticDescription": "Close-mic kick and snare accents for natural backbeats and rehearsal-friendly feel.",
+  "@metronomeSoundPackAcousticDescription": {
+    "description": "Description of the acoustic drum metronome sound pack"
+  },
+
+  "metronomeSoundPackPercussionName": "Percussion clave accents",
+  "@metronomeSoundPackPercussionName": {
+    "description": "Name of the percussion metronome sound pack"
+  },
+
+  "metronomeSoundPackPercussionDescription": "Bright wood and shaker layers that stay clear at higher tempos and dense subdivisions.",
+  "@metronomeSoundPackPercussionDescription": {
+    "description": "Description of the percussion metronome sound pack"
+  },
+
+  "metronomeSoundPackVoiceName": "Signature drummer count-in",
+  "@metronomeSoundPackVoiceName": {
+    "description": "Name of the premium voice count metronome sound pack"
+  },
+
+  "metronomeSoundPackVoiceDescription": "Premium spoken count-ins and stick cues supervised by a featured drummer for confident slow-groove practice.",
+  "@metronomeSoundPackVoiceDescription": {
+    "description": "Description of the premium voice count metronome sound pack"
+  },
+
+  "metronomeSoundTypeElectronic": "Electronic",
+  "@metronomeSoundTypeElectronic": {
+    "description": "Label for electronic metronome sound type"
+  },
+
+  "metronomeSoundTypeAcoustic": "Acoustic kit",
+  "@metronomeSoundTypeAcoustic": {
+    "description": "Label for acoustic drum metronome sound type"
+  },
+
+  "metronomeSoundTypePercussion": "Percussion",
+  "@metronomeSoundTypePercussion": {
+    "description": "Label for percussion metronome sound type"
+  },
+
+  "metronomeSoundTypeVoice": "Voice count",
+  "@metronomeSoundTypeVoice": {
+    "description": "Label for voice count metronome sound type"
+  },
+
+  "metronomeSoundLatencyUltraLow": "Ultra-low latency",
+  "@metronomeSoundLatencyUltraLow": {
+    "description": "Label for an ultra low latency playback profile"
+  },
+
+  "metronomeSoundLatencyBalanced": "Balanced latency",
+  "@metronomeSoundLatencyBalanced": {
+    "description": "Label for a balanced latency playback profile"
+  },
+
+  "metronomeSoundLatencyPreloaded": "Preloaded voice cache",
+  "@metronomeSoundLatencyPreloaded": {
+    "description": "Label for a preloaded playback profile"
+  },
+
   "grooveAnalysis": "Groove Analysis",
   "@grooveAnalysis": {
     "description": "Section label for the groove analysis panel"
@@ -986,6 +1138,32 @@
   "@micPermissionNeeded": {
     "description": "Message shown in the recording dialog when microphone permission is not granted"
   },
+  "recordingStorageEstimateWarning": "Before starting a recording, make sure at least about {megabytes} MB of writable storage is available.",
+  "@recordingStorageEstimateWarning": {
+    "description": "Inline warning shown before recording starts with the estimated minimum writable storage needed",
+    "placeholders": {
+      "megabytes": {
+        "type": "int"
+      }
+    }
+  },
+  "recordingStorageCheckFailed": "Could not verify about {megabytes} MB of writable storage for recording. Free up space and try again.",
+  "@recordingStorageCheckFailed": {
+    "description": "Snackbar message shown when recording storage availability cannot be verified before recording starts",
+    "placeholders": {
+      "megabytes": {
+        "type": "int"
+      }
+    }
+  },
+  "recordingStartFailed": "Could not start recording. Please try again.",
+  "@recordingStartFailed": {
+    "description": "Snackbar message shown when audio recording fails to start"
+  },
+  "recordingSaveFailed": "Could not save recording.",
+  "@recordingSaveFailed": {
+    "description": "Snackbar message shown when persisting a recorded entry fails"
+  },
   "shareRecording": "Share",
   "@shareRecording": {
     "description": "Tooltip for sharing a recording"
@@ -1096,5 +1274,52 @@
   "videoPracticeCameraPermissionDenied": "Camera access is denied. Please allow it in Settings.",
   "@videoPracticeCameraPermissionDenied": {
     "description": "Message shown when camera permission is denied"
-  }
+  },
+  "compositionLimitReached": "{max} composition limit reached. Please delete some first.",
+  "@compositionLimitReached": {
+    "description": "Warning shown when the saved composition limit is reached",
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "bpmLabel": "BPM",
+  "@bpmLabel": { "description": "Label for BPM" },
+  "metronomePresetLabel": "Presets",
+  "@metronomePresetLabel": { "description": "Label for metronome presets dropdown" },
+  "metronomePresetHint": "Select a preset",
+  "@metronomePresetHint": { "description": "Hint for metronome presets dropdown" },
+  "metronomeSavePreset": "Save",
+  "@metronomeSavePreset": { "description": "Button label to save current metronome settings as a preset" },
+  "metronomePresetNameLabel": "Preset name",
+  "@metronomePresetNameLabel": { "description": "Label for the preset name field" },
+  "metronomePresetSaved": "Saved preset: {name}",
+  "@metronomePresetSaved": {
+    "description": "Snackbar message shown after saving a preset",
+    "placeholders": { "name": {} }
+  },
+  "metronomePresetDefaultName": "Preset {number}",
+  "@metronomePresetDefaultName": {
+    "description": "Default name for a new preset",
+    "placeholders": { "number": { "type": "int" } }
+  },
+  "metronomeTimeSignatureLabel": "Time Signature",
+  "@metronomeTimeSignatureLabel": { "description": "Label for metronome time signature settings" },
+  "metronomePresetBallad": "Ballad",
+  "@metronomePresetBallad": { "description": "Built-in preset name: Ballad" },
+  "metronomePresetUpTempo": "Up-tempo",
+  "@metronomePresetUpTempo": { "description": "Built-in preset name: Up-tempo" },
+  "metronomePresetWaltz": "Waltz",
+  "@metronomePresetWaltz": { "description": "Built-in preset name: Waltz" },
+  "metronomePresetShuffle": "Shuffle",
+  "@metronomePresetShuffle": { "description": "Built-in preset name: Shuffle" },
+  "metronomePlayTooltip": "Start metronome",
+  "@metronomePlayTooltip": { "description": "Tooltip for starting the metronome" },
+  "metronomeStopTooltip": "Stop metronome",
+  "@metronomeStopTooltip": { "description": "Tooltip for stopping the metronome" },
+  "bpmDecrease10SemanticLabel": "Decrease BPM by 10",
+  "@bpmDecrease10SemanticLabel": { "description": "Accessibility label for decreasing BPM by 10" },
+  "bpmDecrease1SemanticLabel": "Decrease BPM by 1",
+  "@bpmDecrease1SemanticLabel": { "description": "Accessibility label for decreasing BPM by 1" },
+  "bpmIncrease1SemanticLabel": "Increase BPM by 1",
+  "@bpmIncrease1SemanticLabel": { "description": "Accessibility label for increasing BPM by 1" },
+  "bpmIncrease10SemanticLabel": "Increase BPM by 10",
+  "@bpmIncrease10SemanticLabel": { "description": "Accessibility label for increasing BPM by 10" }
 }

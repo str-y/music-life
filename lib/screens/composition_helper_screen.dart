@@ -115,11 +115,20 @@ class _CompositionHelperScreenState
     if (_sequence.isEmpty || !mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final sequenceText = _sequence.map((e) => e.chord).join(' - ');
+    final colorScheme = Theme.of(context).colorScheme;
     try {
       final shareCard = await generateShareCardImage(
         title: l10n.compositionHelperTitle,
         lines: [l10n.compositionSequence(_sequence.length), sequenceText],
-        accentColor: Theme.of(context).colorScheme.primary,
+        accentColor: colorScheme.primary,
+        backgroundColor:
+            Color.lerp(colorScheme.surface, colorScheme.primaryContainer, 0.08),
+        surfaceColor:
+            Color.lerp(colorScheme.surface, colorScheme.primaryContainer, 0.16),
+        titleColor: colorScheme.onSurface,
+        bodyColor: colorScheme.onSurfaceVariant,
+        footerColor:
+            Color.lerp(colorScheme.onSurfaceVariant, colorScheme.primary, 0.18),
       );
       await Share.shareXFiles(
         [shareCard],

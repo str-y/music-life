@@ -244,6 +244,43 @@ void main() {
       );
     });
 
+    testWidgets('theme changes update app mode immediately and define themed surfaces',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.themeAnimationDuration, const Duration(milliseconds: 250));
+      expect(app.themeAnimationCurve, Curves.easeOutCubic);
+      expect(app.theme!.dialogTheme.backgroundColor, app.theme!.colorScheme.surface);
+      expect(
+        app.theme!.bottomSheetTheme.modalBackgroundColor,
+        app.theme!.colorScheme.surface,
+      );
+      expect(app.themeMode, ThemeMode.system);
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Follow system theme'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dark mode'));
+      await tester.pumpAndSettle();
+
+      app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.themeMode, ThemeMode.dark);
+      expect(
+        app.darkTheme!.dialogTheme.backgroundColor,
+        app.darkTheme!.colorScheme.surface,
+      );
+      expect(
+        app.darkTheme!.bottomSheetTheme.modalBackgroundColor,
+        app.darkTheme!.colorScheme.surface,
+      );
+    });
+
     testWidgets('settings shows premium cloud sync upsell when premium is inactive',
         (tester) async {
       await _pumpApp(
@@ -282,18 +319,28 @@ void main() {
       expect(find.byKey(const ValueKey('settings-cloud-restore')), findsOneWidget);
     });
 
-    testWidgets('matches main screen golden baseline', (tester) async {
-      await _pumpApp(
-        tester,
-        initialValues: const <String, Object>{_onboardingShownKey: true},
-      );
-      await tester.pump(const Duration(milliseconds: 600));
+    for (final variant in screenGoldenVariants) {
+      testWidgets('matches main screen golden baseline (${variant.name})',
+          (tester) async {
+        await prepareGoldenSurface(tester);
+        await _pumpApp(
+          tester,
+          initialValues: <String, Object>{
+            _onboardingShownKey: true,
+            AppConfig.defaultUseSystemThemeStorageKey: false,
+            AppConfig.defaultDarkModeStorageKey:
+                variant.themeMode == ThemeMode.dark,
+            AppConfig.defaultLocaleStorageKey: variant.locale.languageCode,
+          },
+        );
+        await tester.pump(const Duration(milliseconds: 600));
 
-      await expectScreenGolden(
-        find.byType(Scaffold).first,
-        'goldens/main_screen.png',
-      );
-    });
+        await expectScreenGolden(
+          find.byType(Scaffold).first,
+          variant.goldenPath('main_screen'),
+        );
+      });
+    }
   });
 }
 
