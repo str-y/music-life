@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/app_settings_provider.dart';
+import '../providers/app_settings_controllers.dart';
 import '../repositories/recording_repository.dart';
 import '../services/service_error_handler.dart';
 import 'dependency_providers.dart';
@@ -11,13 +11,8 @@ class PracticeLogNotifier
   Future<List<PracticeLogEntry>> build() => _load();
 
   RecordingRepository get _repo => ref.read(recordingRepositoryProvider);
-  Future<void> _syncCloudBackupIfEnabled() async {
-    final settings = ref.read(appSettingsProvider);
-    if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
-      return;
-    }
-    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
-  }
+  Future<void> _syncCloudBackupIfEnabled() =>
+      ref.read(cloudSyncControllerProvider).syncBackupIfEligible();
 
   Future<List<PracticeLogEntry>> _load() async {
     try {

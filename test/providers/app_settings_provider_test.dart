@@ -4,6 +4,7 @@ import 'package:music_life/config/app_config.dart';
 import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/backup_repository.dart';
@@ -68,7 +69,7 @@ void main() {
       referencePitch: 444.0,
       hapticFeedbackEnabled: false,
     );
-    await container.read(appSettingsProvider.notifier).update(updated);
+    await container.read(appSettingsControllerProvider).update(updated);
 
     expect(container.read(appSettingsProvider), updated);
     expect(prefs.getBool(AppConfig.defaultDarkModeStorageKey), isTrue);
@@ -101,8 +102,8 @@ void main() {
     addTearDown(container.dispose);
 
     await container
-        .read(appSettingsProvider.notifier)
-        .installMetronomeSoundPack('acoustic_kit');
+        .read(metronomeSettingsControllerProvider)
+        .installSoundPack('acoustic_kit');
 
     expect(
       container.read(appSettingsProvider).installedMetronomeSoundPackIds,
@@ -125,8 +126,8 @@ void main() {
     addTearDown(container.dispose);
 
     await container
-        .read(appSettingsProvider.notifier)
-        .selectMetronomeSoundPack('acoustic_kit');
+        .read(metronomeSettingsControllerProvider)
+        .selectSoundPack('acoustic_kit');
 
     expect(
       container.read(appSettingsProvider).selectedMetronomeSoundPackId,
@@ -145,7 +146,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+    container.read(dynamicThemeControllerProvider).updateFromPitch(
           const PitchResult(
             noteName: 'A4',
             frequency: 440.0,
@@ -158,7 +159,7 @@ void main() {
     expect(settings.dynamicThemeNote, 'A4');
     expect(settings.dynamicThemeEnergy, 0.5);
 
-    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+    container.read(dynamicThemeControllerProvider).updateFromPitch(
           const PitchResult(
             noteName: 'C4',
             frequency: 261.63,
@@ -168,7 +169,7 @@ void main() {
         );
     expect(container.read(appSettingsProvider).dynamicThemeEnergy, 0.0);
 
-    container.read(appSettingsProvider.notifier).updateDynamicThemeFromPitch(
+    container.read(dynamicThemeControllerProvider).updateFromPitch(
           const PitchResult(
             noteName: 'B4',
             frequency: 493.88,
@@ -191,13 +192,13 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.read(appSettingsProvider.notifier).updateDynamicThemeFromChord('Gmaj7');
+    container.read(dynamicThemeControllerProvider).updateFromChord('Gmaj7');
 
     final settings = container.read(appSettingsProvider);
     expect(settings.dynamicThemeNote, 'G');
     expect(settings.dynamicThemeEnergy, 0.64);
 
-    container.read(appSettingsProvider.notifier).updateDynamicThemeFromChord('C');
+    container.read(dynamicThemeControllerProvider).updateFromChord('C');
     expect(container.read(appSettingsProvider).dynamicThemeEnergy, 0.28);
   });
 
@@ -212,7 +213,7 @@ void main() {
     addTearDown(container.dispose);
 
     final now = DateTime.utc(2026, 1, 1, 0, 0, 0);
-    await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
+    await container.read(premiumSettingsControllerProvider).unlockRewardedPremiumFor(
           const Duration(hours: 24),
           now: now,
         );
@@ -238,7 +239,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(appSettingsProvider.notifier).updatePremiumVideoExportSettings(
+    await container.read(premiumSettingsControllerProvider).updateVideoExportSettings(
           skin: PremiumVideoExportSkin.neonPulse,
           waveformColorValue: 0xFFFF4081,
           effect: PremiumVideoExportEffect.prism,
@@ -287,11 +288,11 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
+    await container.read(premiumSettingsControllerProvider).unlockRewardedPremiumFor(
           const Duration(hours: 24),
           now: DateTime.utc(2030, 1, 1),
         );
-    await container.read(appSettingsProvider.notifier).setCloudSyncEnabled(true);
+    await container.read(cloudSyncControllerProvider).setEnabled(true);
 
     final settings = container.read(appSettingsProvider);
     expect(settings.cloudSyncEnabled, isTrue);

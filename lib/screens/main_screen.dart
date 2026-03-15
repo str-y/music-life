@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/app_settings_controllers.dart';
 import '../providers/dependency_providers.dart';
 import '../providers/library_provider.dart';
 import '../repositories/settings_repository.dart';
@@ -129,7 +130,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         settings: settings,
         isRewardedPremiumUnlocked: settings.hasRewardedPremiumAccess,
         onChanged: (updated) {
-          ref.read(appSettingsProvider.notifier).update(updated);
+          ref.read(appSettingsControllerProvider).update(updated);
         },
         onUnlockPremiumWithRewardedAd: () => _unlockPremiumWithRewardedAd(context),
         onExportBackup: () => _exportBackupData(context),
@@ -154,7 +155,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       return;
     }
     await ref
-        .read(appSettingsProvider.notifier)
+        .read(premiumSettingsControllerProvider)
         .unlockRewardedPremiumFor(_rewardedPremiumDuration);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -225,8 +226,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final l10n = AppLocalizations.of(context)!;
     try {
       final syncedAt = await ref
-          .read(appSettingsProvider.notifier)
-          .setCloudSyncEnabled(enabled);
+          .read(cloudSyncControllerProvider)
+          .setEnabled(enabled);
       if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -259,8 +260,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   Future<DateTime?> _syncCloudBackupNow(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final syncedAt =
-          await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
+      final syncedAt = await ref.read(cloudSyncControllerProvider).syncNow();
       if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.cloudSyncCompleted)),
@@ -290,7 +290,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final l10n = AppLocalizations.of(context)!;
     try {
       final restored =
-          await ref.read(appSettingsProvider.notifier).restoreLatestCloudBackup();
+          await ref.read(cloudSyncControllerProvider).restoreLatestBackup();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

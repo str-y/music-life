@@ -8,6 +8,7 @@ import 'package:music_life/widgets/rhythm/metronome_preset_controls.dart';
 import 'package:music_life/widgets/rhythm/metronome_section.dart';
 import 'metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'repositories/settings_repository.dart';
@@ -418,12 +419,12 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         return;
       }
       await ref
-          .read(appSettingsProvider.notifier)
+          .read(premiumSettingsControllerProvider)
           .unlockRewardedPremiumFor(_rewardedPremiumDuration);
-      await ref.read(appSettingsProvider.notifier).installMetronomeSoundPack(
+      await ref.read(metronomeSettingsControllerProvider).installSoundPack(
             pack.id,
           );
-      await ref.read(appSettingsProvider.notifier).selectMetronomeSoundPack(
+      await ref.read(metronomeSettingsControllerProvider).selectSoundPack(
             pack.id,
           );
       if (!mounted) {
@@ -439,11 +440,11 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
       return;
     }
     if (!isInstalled) {
-      await ref.read(appSettingsProvider.notifier).installMetronomeSoundPack(
+      await ref.read(metronomeSettingsControllerProvider).installSoundPack(
             pack.id,
           );
     }
-    await ref.read(appSettingsProvider.notifier).selectMetronomeSoundPack(
+    await ref.read(metronomeSettingsControllerProvider).selectSoundPack(
           pack.id,
         );
     if (!mounted) {
@@ -561,7 +562,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         timeSignatureNumerator: rhythmState.timeSignatureNumerator,
         timeSignatureDenominator: rhythmState.timeSignatureDenominator,
       );
-      await ref.read(appSettingsProvider.notifier).saveMetronomePreset(preset);
+      await ref.read(metronomeSettingsControllerProvider).savePreset(preset);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.metronomePresetSaved(preset.name))),
@@ -598,7 +599,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           timeSignatureNumerator: numerator,
           timeSignatureDenominator: denominator,
         );
-    await ref.read(appSettingsProvider.notifier).updateMetronomeSettings(
+    await ref.read(metronomeSettingsControllerProvider).updateMetronomeSettings(
           bpm: bpm,
           timeSignatureNumerator: numerator,
           timeSignatureDenominator: denominator,

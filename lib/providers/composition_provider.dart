@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app_settings_provider.dart';
+import 'app_settings_controllers.dart';
 import 'dependency_providers.dart';
 import '../repositories/composition_repository.dart';
 import '../services/service_error_handler.dart';
@@ -24,13 +24,8 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
   Future<List<Composition>> build() => _load();
 
   CompositionRepository get _repo => ref.read(compositionRepositoryProvider);
-  Future<void> _syncCloudBackupIfEnabled() async {
-    final settings = ref.read(appSettingsProvider);
-    if (!settings.cloudSyncEnabled || !settings.hasRewardedPremiumAccess) {
-      return;
-    }
-    await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
-  }
+  Future<void> _syncCloudBackupIfEnabled() =>
+      ref.read(cloudSyncControllerProvider).syncBackupIfEligible();
 
   Future<List<Composition>> _load() async {
     try {

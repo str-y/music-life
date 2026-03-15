@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/app_settings_controllers.dart';
 import '../providers/app_settings_provider.dart';
 import '../providers/dependency_providers.dart';
 import '../providers/library_provider.dart';
@@ -143,7 +144,7 @@ class _AiPracticeInsightsScreenState
       return;
     }
     await ref
-        .read(appSettingsProvider.notifier)
+        .read(premiumSettingsControllerProvider)
         .unlockRewardedPremiumFor(_rewardedPremiumDuration);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
