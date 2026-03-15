@@ -2,6 +2,18 @@
 
 iOS/Android Music App
 
+## API documentation
+
+API documentation is generated automatically with `dart doc` in GitHub Actions
+and published to GitHub Pages alongside the project's static documentation.
+
+- Published docs landing page: `docs/index.html` in the Pages artifact
+- Local generation command:
+
+```bash
+dart doc --output docs/api
+```
+
 ## Golden testing
 
 Golden tests for major screens are in `test/screens`.

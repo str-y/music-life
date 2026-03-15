@@ -1,10 +1,13 @@
-name: Deploy Privacy Policy to GitHub Pages
+name: Deploy Project Documentation to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
   workflow_dispatch:
 
 permissions:
@@ -25,6 +28,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: pubspec.yaml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate API documentation
+        run: dart doc --output docs/api
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
