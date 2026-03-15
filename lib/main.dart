@@ -19,8 +19,11 @@ import 'utils/app_logger.dart';
 const double _themeContrastLevel = 0.5;
 
 Future<void> main() async {
+  await runMusicLifeApp(AppConfig.prod());
+}
+
+Future<void> runMusicLifeApp(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
-  const config = AppConfig();
   AppLogger.minimumLevel = config.effectiveLogLevel;
   try {
     await MobileAds.instance.initialize();
@@ -42,6 +45,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [
+        appConfigProvider.overrideWithValue(config),
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: const MusicLifeApp(),

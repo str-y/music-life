@@ -1,5 +1,6 @@
 // This is a basic Flutter widget test.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_life/config/app_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/main.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -12,7 +13,10 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        overrides: [
+          appConfigProvider.overrideWithValue(AppConfig.dev()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
         child: const MusicLifeApp(),
       ),
     );
