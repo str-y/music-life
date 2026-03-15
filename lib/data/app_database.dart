@@ -731,7 +731,7 @@ class AppDatabase {
         final doubles = (jsonDecode(jsonStr) as List)
             .map((e) => (e as num).toDouble())
             .toList();
-        // Encoding matches _waveformToBlob in recording_repository.dart.
+        // Encoding matches waveformToBlob in waveform_codec.dart.
         final byteData = ByteData(doubles.length * 8);
         for (var i = 0; i < doubles.length; i++) {
           byteData.setFloat64(i * 8, doubles[i], Endian.little);
