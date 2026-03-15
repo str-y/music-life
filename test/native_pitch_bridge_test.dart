@@ -38,6 +38,7 @@ void main() {
       ),
     );
 
+    expect(bridge, isA<NativePitchBridge>());
     expect(initializationAttempts, 0);
   });
 

@@ -865,7 +865,7 @@ class NativePitchBridge implements Finalizable {
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
   static bool _nativeLoggingConfigured = false;
-  static _NativePitchResourceFactory _nativePitchResourceFactory =
+  static final _NativePitchResourceFactory _nativePitchResourceFactory =
       _createNativeResources;
   static VoidCallback? _onNativeResourceInitializationAttemptForTesting;
   static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
@@ -1069,8 +1069,33 @@ class NativePitchBridge implements Finalizable {
   Future<bool> startCapture() async {
     if (_disposed) return false;
     if (!await _permissionService.hasMicrophonePermission()) return false;
+    if (_disposed) return false;
     try {
-      _ensureNativeResourcesInitialized();
+      final resources = _ensureNativeResourcesInitialized();
+      final manager = NativePitchIsolateManager(
+        handle: resources.handle,
+        buffer: resources.persistentBuffer,
+        frameSize: _frameSize,
+        entryPoint: _audioProcessingIsolate,
+        onMessage: (msg) {
+          if (msg is TransferableTunerAnalysisFrame) {
+            _onTunerAnalysisFrame(msg.materialize());
+            return;
+          }
+          final pitch = _tryDecodePitchResultPayload(msg);
+          if (pitch != null) {
+            _onPitchResult(pitch);
+          }
+        },
+        onMetrics: (metrics) {
+          _latestIsolateMetrics = metrics;
+          if (!_metricsController.isClosed) {
+            _metricsController.add(metrics);
+          }
+        },
+        onError: _onError,
+      );
+      _isolateManager = manager;
     } catch (e, stack) {
       if (_onError != null) {
         _onError.call(e, stack);
@@ -1078,31 +1103,7 @@ class NativePitchBridge implements Finalizable {
       }
       rethrow;
     }
-    final resources = _nativeResources!;
-    final manager = NativePitchIsolateManager(
-      handle: resources.handle,
-      buffer: resources.persistentBuffer,
-      frameSize: _frameSize,
-      entryPoint: _audioProcessingIsolate,
-      onMessage: (msg) {
-        if (msg is TransferableTunerAnalysisFrame) {
-          _onTunerAnalysisFrame(msg.materialize());
-          return;
-        }
-        final pitch = _tryDecodePitchResultPayload(msg);
-        if (pitch != null) {
-          _onPitchResult(pitch);
-        }
-      },
-      onMetrics: (metrics) {
-        _latestIsolateMetrics = metrics;
-        if (!_metricsController.isClosed) {
-          _metricsController.add(metrics);
-        }
-      },
-      onError: _onError,
-    );
-    _isolateManager = manager;
+    final manager = _isolateManager!;
 
     final ready = await manager.start();
     if (!ready) {
@@ -1128,8 +1129,9 @@ class NativePitchBridge implements Finalizable {
     }
   }
 
-  void _ensureNativeResourcesInitialized() {
-    if (_nativeResources != null) return;
+  _NativePitchResources _ensureNativeResourcesInitialized() {
+    final existingResources = _nativeResources;
+    if (existingResources != null) return existingResources;
     _onNativeResourceInitializationAttemptForTesting?.call();
     final resources = _nativePitchResourceFactory(
       sampleRate: _sampleRate,
@@ -1147,6 +1149,7 @@ class NativePitchBridge implements Finalizable {
       detach: this,
     );
     _nativeResources = resources;
+    return resources;
   }
 
   void _onAudioChunk(Uint8List chunk) {
@@ -1179,8 +1182,8 @@ class NativePitchBridge implements Finalizable {
     _disposed = true;
     final resources = _nativeResources;
     _nativeResources = null;
-    resources?.handleFinalizer.detach(this);
     if (resources != null) {
+      resources.handleFinalizer.detach(this);
       _bufferFinalizer.detach(this);
     }
     _audioSub?.cancel();
