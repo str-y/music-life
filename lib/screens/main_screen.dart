@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -96,11 +95,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.dispose();
   }
 
-  void _showAdAndPush(String route) {
+  void _showAdAndPush(VoidCallback pushRoute) {
     // Show interstitial with some probability or frequency logic
     // For now, let's try to show it, the service handles loading state
     ref.read(adServiceProvider).showInterstitialAd();
-    context.push(route);
+    pushRoute();
   }
 
   Future<void> _showOnboardingIfNeeded() async {
@@ -470,7 +469,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.tunerSubtitle,
                     delay: 0.0,
                     animation: _entranceCurve,
-                    onTap: () => _showAdAndPush(const TunerRoute().location),
+                    onTap: () =>
+                        _showAdAndPush(() => const TunerRoute().push(context)),
                   ),
                   _FeatureTile(
                     icon: Icons.graphic_eq,
@@ -478,8 +478,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.practiceLogSubtitle,
                     delay: 0.08,
                     animation: _entranceCurve,
-                    onTap: () =>
-                        _showAdAndPush(const PracticeLogRoute().location),
+                    onTap: () => _showAdAndPush(
+                      () => const PracticeLogRoute().push(context),
+                    ),
                   ),
                   _FeatureTile(
                     icon: Icons.library_music,
@@ -487,7 +488,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.librarySubtitle,
                     delay: 0.16,
                     animation: _entranceCurve,
-                    onTap: () => _showAdAndPush(const LibraryRoute().location),
+                    onTap: () =>
+                        _showAdAndPush(() => const LibraryRoute().push(context)),
                   ),
                   _FeatureTile(
                     icon: Icons.av_timer,
@@ -495,7 +497,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.rhythmSubtitle,
                     delay: 0.24,
                     animation: _entranceCurve,
-                    onTap: () => _showAdAndPush(const RhythmRoute().location),
+                    onTap: () =>
+                        _showAdAndPush(() => const RhythmRoute().push(context)),
                   ),
                   _FeatureTile(
                     icon: Icons.piano,
@@ -503,8 +506,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.chordAnalyserSubtitle,
                     delay: 0.32,
                     animation: _entranceCurve,
-                    onTap: () =>
-                        _showAdAndPush(const ChordAnalyserRoute().location),
+                    onTap: () => _showAdAndPush(
+                      () => const ChordAnalyserRoute().push(context),
+                    ),
                   ),
                   _FeatureTile(
                     icon: Icons.piano_outlined,
@@ -512,8 +516,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     subtitle: l10n.compositionHelperSubtitle,
                     delay: 0.4,
                     animation: _entranceCurve,
-                    onTap: () =>
-                        _showAdAndPush(const CompositionHelperRoute().location),
+                    onTap: () => _showAdAndPush(
+                      () => const CompositionHelperRoute().push(context),
+                    ),
                   ),
                   _FeatureTile(
                     icon: Icons.videocam_outlined,
@@ -522,8 +527,9 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     isPremium: !settings.hasRewardedPremiumAccess,
                     delay: 0.48,
                     animation: _entranceCurve,
-                    onTap: () =>
-                        _showAdAndPush(const VideoPracticeRoute().location),
+                    onTap: () => _showAdAndPush(
+                      () => const VideoPracticeRoute().push(context),
+                    ),
                   ),
                 ],
               ),
