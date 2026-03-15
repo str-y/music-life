@@ -23,6 +23,21 @@ const _chartBarMinHeight = 4.0;
 
 DateTime _defaultNow() => DateTime.now();
 
+String _practiceLogEntrySelectionSignature(PracticeLogEntry entry) =>
+    '${entry.date.toIso8601String()}\u0000${entry.durationMinutes}\u0000${entry.memo}';
+
+List<String> _buildPracticeLogEntrySelectionKeys(
+  List<PracticeLogEntry> entries,
+) {
+  final seenSignatures = <String, int>{};
+  return entries.map((entry) {
+    final signature = _practiceLogEntrySelectionSignature(entry);
+    final occurrence = (seenSignatures[signature] ?? 0) + 1;
+    seenSignatures[signature] = occurrence;
+    return '$signature#$occurrence';
+  }).toList();
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class PracticeLogScreen extends ConsumerStatefulWidget {
@@ -38,6 +53,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
     with SingleTickerProviderStateMixin {
   late DateTime _displayMonth;
   late final TabController _tabController;
+  final Set<String> _selectedEntryKeys = <String>{};
 
   @override
   void initState() {
@@ -64,6 +80,27 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
       );
     }
   }
+
+  void _toggleEntrySelection(String entryKey) {
+    setState(() {
+      if (!_selectedEntryKeys.add(entryKey)) {
+        _selectedEntryKeys.remove(entryKey);
+      }
+    });
+  }
+
+  void _clearSelectedEntries() {
+    if (_selectedEntryKeys.isEmpty) return;
+    setState(_selectedEntryKeys.clear);
+  }
+
+  List<PracticeLogEntry> _selectedEntries(
+    List<PracticeLogEntry> entries,
+    List<String> entrySelectionKeys,
+  ) => [
+        for (var i = 0; i < entries.length; i++)
+          if (_selectedEntryKeys.contains(entrySelectionKeys[i])) entries[i],
+      ];
 
   // ── Add-entry dialog ──────────────────────────────────────────────────────
 
@@ -229,15 +266,32 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   Widget build(BuildContext context) {
     final practiceLogState = ref.watch(practiceLogProvider);
     final entries = practiceLogState.asData?.value ?? const <PracticeLogEntry>[];
+    final entrySelectionKeys = _buildPracticeLogEntrySelectionKeys(entries);
+    final selectedEntries = _selectedEntries(entries, entrySelectionKeys);
     final isLoaded = practiceLogState.hasValue;
     final currentNow = widget.now();
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.practiceLogTitle),
+        title: Text(l10n.practiceLogTitle),
         actions: [
+          if (selectedEntries.isNotEmpty) ...[
+            IconButton(
+              key: const ValueKey('practice-log-export-selected-csv'),
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: '${l10n.exportCsv} (${selectedEntries.length})',
+              onPressed: () => _exportCsv(selectedEntries),
+            ),
+            IconButton(
+              key: const ValueKey('practice-log-clear-selection'),
+              icon: const Icon(Icons.close),
+              tooltip: l10n.cancel,
+              onPressed: _clearSelectedEntries,
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.auto_awesome_outlined),
-            tooltip: AppLocalizations.of(context)!.aiPracticeInsightsTitle,
+            tooltip: l10n.aiPracticeInsightsTitle,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -248,7 +302,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.share_outlined),
-            tooltip: AppLocalizations.of(context)!.exportAndShare,
+            tooltip: l10n.exportAndShare,
             onSelected: (value) {
               switch (value) {
                 case 'csv':
@@ -263,7 +317,6 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
               }
             },
             itemBuilder: (context) {
-              final l10n = AppLocalizations.of(context)!;
               return [
                 PopupMenuItem<String>(
                   value: 'csv',
@@ -334,14 +387,19 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
               onPrev: () => _changeMonth(-1),
               onNext: () => _changeMonth(1),
             ),
-            _ListTab(entries: entries),
+            _ListTab(
+              entries: entries,
+              entrySelectionKeys: entrySelectionKeys,
+              selectedEntryKeys: _selectedEntryKeys,
+              onEntryToggle: _toggleEntrySelection,
+            ),
           ],
         ),
       ),
       floatingActionButton: isLoaded
           ? FloatingActionButton(
               onPressed: _showAddDialog,
-              tooltip: AppLocalizations.of(context)!.recordPractice,
+              tooltip: l10n.recordPractice,
               child: const Icon(Icons.add),
             )
           : null,
@@ -925,9 +983,17 @@ class _SummaryItem extends StatelessWidget {
 // ── List tab ──────────────────────────────────────────────────────────────────
 
 class _ListTab extends StatelessWidget {
-  const _ListTab({required this.entries});
+  const _ListTab({
+    required this.entries,
+    required this.entrySelectionKeys,
+    required this.selectedEntryKeys,
+    required this.onEntryToggle,
+  });
 
   final List<PracticeLogEntry> entries;
+  final List<String> entrySelectionKeys;
+  final Set<String> selectedEntryKeys;
+  final ValueChanged<String> onEntryToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -967,13 +1033,23 @@ class _ListTab extends StatelessWidget {
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, i) {
         final e = entries[i];
+        final entryKey = entrySelectionKeys[i];
+        final isSelected = selectedEntryKeys.contains(entryKey);
         return ListTile(
+          key: ValueKey('practice-log-entry-$i'),
+          onTap: () => onEntryToggle(entryKey),
+          selected: isSelected,
+          selectedTileColor:
+              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.28),
           leading: CircleAvatar(
-            backgroundColor:
-                Theme.of(context).colorScheme.primaryContainer,
+            backgroundColor: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.primaryContainer,
             child: Icon(
               Icons.music_note,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
           title: Text(
@@ -981,12 +1057,22 @@ class _ListTab extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           subtitle: e.memo.isNotEmpty ? Text(e.memo) : null,
-          trailing: Text(
-            l10n.durationMinutes(e.durationMinutes),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.durationMinutes(e.durationMinutes),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              Checkbox(
+                key: ValueKey('practice-log-entry-toggle-$i'),
+                value: isSelected,
+                onChanged: (_) => onEntryToggle(entryKey),
+              ),
+            ],
           ),
         );
       },

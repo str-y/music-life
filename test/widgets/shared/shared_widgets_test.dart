@@ -19,7 +19,7 @@ void main() {
     expect(indicator.semanticsLabel, 'Loading library');
   });
 
-  testWidgets('StatusMessageView shows icon, message, and action', (tester) async {
+  testWidgets('StatusMessageView shows icon, details, and action', (tester) async {
     var tapped = false;
 
     await tester.pumpWidget(
@@ -27,6 +27,7 @@ void main() {
         StatusMessageView(
           icon: Icons.error_outline,
           message: 'Something went wrong',
+          details: 'Please try again in a moment.',
           action: ElevatedButton(
             onPressed: () => tapped = true,
             child: const Text('Retry'),
@@ -37,6 +38,7 @@ void main() {
 
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
     expect(find.text('Something went wrong'), findsOneWidget);
+    expect(find.text('Please try again in a moment.'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
     await tester.pump();

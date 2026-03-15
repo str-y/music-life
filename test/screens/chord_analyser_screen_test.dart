@@ -244,6 +244,13 @@ void main() {
     when(() => bridge.startCapture()).thenAnswer((_) async => true);
     when(() => bridge.chordStream)
         .thenAnswer((_) => const Stream<String>.empty());
+  testWidgets('shows enhanced empty-state content for chord history',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(
+      () => bridge.chordStream,
+    ).thenAnswer((_) => const Stream<String>.empty());
     when(() => bridge.dispose()).thenReturn(null);
 
     await tester.pumpWidget(
@@ -266,6 +273,24 @@ void main() {
   });
 
   testWidgets('loads persisted history and filters by chord name', (tester) async {
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Your note history will appear here'), findsOneWidget);
+    expect(
+      find.text(
+        'Play a note or chord to build a timeline of recent detections you can quickly review.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Listen for your first chord'));
+    await tester.pump();
+
+    verify(() => bridge.startCapture()).called(2);
+  });
+
+  testWidgets('loads persisted history and filters by chord name',
+      (tester) async {
     final bridge = _MockNativePitchBridge();
     final controller = StreamController<String>();
     when(() => bridge.startCapture()).thenAnswer((_) async => true);

@@ -30,8 +30,22 @@ Uint8List _waveformToBlob(List<double> data) {
 
 /// Decodes a packed IEEE 754 BLOB back to a list of [double] values.
 List<double> _blobToWaveform(Uint8List blob) {
+  final sampleCount = blob.lengthInBytes ~/ Float64List.bytesPerElement;
+  if (sampleCount == 0) {
+    return const <double>[];
+  }
+  // Use a zero-copy typed view when the stored bytes already match the host
+  // endianness and the buffer offset is aligned for Float64 reads.
+  if (Endian.host == Endian.little &&
+      blob.offsetInBytes % Float64List.bytesPerElement == 0) {
+    return blob.buffer.asFloat64List(blob.offsetInBytes, sampleCount);
+  }
   final bytes = ByteData.sublistView(blob);
-  return List.generate(blob.length ~/ 8, (i) => bytes.getFloat64(i * 8, Endian.little));
+  return List<double>.generate(
+    sampleCount,
+    (i) => bytes.getFloat64(i * Float64List.bytesPerElement, Endian.little),
+    growable: false,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +138,16 @@ typedef _EnsureMigrationDiskSpace = Future<void> Function(int requiredBytes);
 typedef _PersistBool = Future<bool> Function(String key, bool value);
 typedef _RemoveValue = Future<bool> Function(String key);
 
+class _WaveformCacheEntry {
+  const _WaveformCacheEntry({
+    required this.waveform,
+    required this.byteSize,
+  });
+
+  final List<double> waveform;
+  final int byteSize;
+}
+
 // ---------------------------------------------------------------------------
 // Repository – persists recording metadata and practice logs via SQLite.
 // A one-time migration from the legacy SharedPreferences JSON store is
@@ -145,9 +169,19 @@ class RecordingRepository {
   // estimating scratch space from serialized payload sizes alone.
   static const int _estimatedRowOverheadBytes = 256;
   static const int _maxWaveformCacheEntries = 256;
-  static final Uint8List _diskSpaceCheckChunk = Uint8List(_diskSpaceCheckChunkBytes);
-  static final LinkedHashMap<String, List<double>> _waveformCache =
-      LinkedHashMap<String, List<double>>();
+  static const int _maxWaveformCacheBytes = 4 * 1024 * 1024;
+  // Allow one oversized waveform to use up to 2x `_maxWaveformCacheBytes`
+  // before skipping caching altogether so typical recordings still benefit
+  // from reuse.
+  static const int _maxSingleWaveformCacheEntryMultiplier = 2;
+  static const int _maxWaveformCacheEntryBytes =
+      _maxWaveformCacheBytes * _maxSingleWaveformCacheEntryMultiplier;
+  static final Uint8List _diskSpaceCheckChunk = Uint8List(
+    _diskSpaceCheckChunkBytes,
+  );
+  static final LinkedHashMap<String, _WaveformCacheEntry> _waveformCache =
+      LinkedHashMap<String, _WaveformCacheEntry>();
+  static int _waveformCacheBytes = 0;
 
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
   RecordingRepository(
@@ -196,24 +230,90 @@ class RecordingRepository {
   final _PersistBool _persistBool;
   final _RemoveValue _removeValue;
 
+  static _WaveformCacheEntry? _promoteWaveformCacheEntry(String recordingId) {
+    final cached = _waveformCache.remove(recordingId);
+    if (cached != null) {
+      _waveformCache[recordingId] = cached;
+    }
+    return cached;
+  }
+
+  static void _cacheWaveform(
+    String recordingId,
+    List<double> waveform, {
+    required int byteSize,
+  }) {
+    final previous = _waveformCache.remove(recordingId);
+    if (previous != null) {
+      _waveformCacheBytes -= previous.byteSize;
+    }
+    if (byteSize > _maxWaveformCacheEntryBytes) {
+      return;
+    }
+
+    _waveformCache[recordingId] = _WaveformCacheEntry(
+      waveform: waveform,
+      byteSize: byteSize,
+    );
+    _waveformCacheBytes += byteSize;
+    if (_waveformCache.length > _maxWaveformCacheEntries ||
+        _waveformCacheBytes > _maxWaveformCacheBytes) {
+      _trimWaveformCache();
+    }
+  }
+
+  static void _trimWaveformCache() {
+    // Keep the most recently decoded waveform cached even if it alone exceeds
+    // the soft memory budget so repeated reads of a large recording do not
+    // thrash between decode and immediate eviction.
+    while (_waveformCache.length > 1 &&
+        (_waveformCache.length > _maxWaveformCacheEntries ||
+            _waveformCacheBytes > _maxWaveformCacheBytes)) {
+      final oldestKey = _waveformCache.keys.first;
+      final removed = _waveformCache.remove(oldestKey);
+      if (removed != null) {
+        _waveformCacheBytes -= removed.byteSize;
+      }
+    }
+  }
+
+  static void _replaceWaveformCache(Iterable<RecordingEntry> recordings) {
+    _clearWaveformCache();
+    for (final recording in recordings.toList(growable: false).reversed) {
+      _cacheWaveform(
+        recording.id,
+        UnmodifiableListView<double>(recording.waveformData),
+        byteSize: _waveformByteSize(recording.waveformData),
+      );
+    }
+  }
+
+  static int _waveformByteSize(List<double> waveform) {
+    return waveform.length * Float64List.bytesPerElement;
+  }
+
+  static void _clearWaveformCache() {
+    _waveformCache.clear();
+    _waveformCacheBytes = 0;
+  }
+
   static List<double> _decodeWaveform(
     String recordingId,
     Uint8List blob, {
     void Function(bool hit)? onCacheAccess,
   }) {
-    final cached = _waveformCache.remove(recordingId);
+    final cached = _promoteWaveformCacheEntry(recordingId);
     if (cached != null) {
-      _waveformCache[recordingId] = cached;
       onCacheAccess?.call(true);
-      return cached;
+      return cached.waveform;
     }
 
-    if (_waveformCache.length >= _maxWaveformCacheEntries) {
-      _waveformCache.remove(_waveformCache.keys.first);
-    }
-
-    final waveform = List<double>.unmodifiable(_blobToWaveform(blob));
-    _waveformCache[recordingId] = waveform;
+    final waveform = UnmodifiableListView<double>(_blobToWaveform(blob));
+    _cacheWaveform(
+      recordingId,
+      waveform,
+      byteSize: _waveformByteSize(waveform),
+    );
     onCacheAccess?.call(false);
     return waveform;
   }
@@ -502,13 +602,13 @@ class RecordingRepository {
       'RecordingRepository: loaded ${recordings.length} recordings in '
       '${stopwatch.elapsedMilliseconds}ms '
       '(waveform cache hits: $cacheHits, misses: $cacheMisses, '
-      'cache size: ${_waveformCache.length}$rssSuffix)',
+      'cache size: ${_waveformCache.length}, '
+      'cache memory: ${_formatMemoryUsage(_waveformCacheBytes)}$rssSuffix)',
     );
     return recordings;
   }
 
   Future<void> saveRecordings(List<RecordingEntry> recordings) async {
-    _waveformCache.clear();
     await AppDatabase.instance.replaceAllRecordings(
       recordings
           .map((e) => {
@@ -521,6 +621,7 @@ class RecordingRepository {
               })
           .toList(),
     );
+    _replaceWaveformCache(recordings);
   }
 
   Future<List<PracticeLogEntry>> loadPracticeLogs() async {
@@ -550,11 +651,14 @@ class RecordingRepository {
   @visibleForTesting
   static void resetMigrationStateForTesting() {
     _migrationCompleter = null;
-    _waveformCache.clear();
+    _clearWaveformCache();
   }
 
   @visibleForTesting
   static int get waveformCacheSize => _waveformCache.length;
+
+  @visibleForTesting
+  static int get waveformCacheByteSize => _waveformCacheBytes;
 
   static String _formatMemoryUsage(int bytes) {
     final megabytes = bytes / (1024 * 1024);

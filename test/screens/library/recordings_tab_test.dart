@@ -19,14 +19,20 @@ Widget _wrap(Widget child, {Locale? locale, ThemeData? theme}) {
 
 void main() {
   group('RecordingsTab', () {
-    testWidgets('shows empty-state message when recordings list is empty',
+    testWidgets('shows enhanced empty-state content when recordings list is empty',
         (tester) async {
       await tester.pumpWidget(_wrap(
         const RecordingsTab(recordings: []),
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('No recordings'), findsOneWidget);
+      expect(find.text('Your recording library is ready'), findsOneWidget);
+      expect(
+        find.text(
+          'Capture your first take to save ideas, replay sessions, and track your progress over time.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('empty-state CTA calls onCreateRecording', (tester) async {
@@ -41,7 +47,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('New Recording'));
+      await tester.tap(find.text('Start your first recording'));
       await tester.pump();
 
       expect(tapped, isTrue);

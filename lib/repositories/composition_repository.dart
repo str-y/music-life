@@ -147,12 +147,13 @@ class CompositionRepository {
         }
       }
 
-      if (!migrationSucceeded) {
-        throw StateError(
-          'CompositionRepository: migration did not complete successfully',
-        );
-      }
       _migrationCompleter!.complete();
+      if (!migrationSucceeded) {
+        // Migration failure is non-fatal. Existing database rows may still be
+        // valid, so let callers continue loading while allowing the next access
+        // to transparently retry the initialization.
+        _migrationCompleter = null;
+      }
     } catch (e, st) {
       ServiceErrorHandler.report(
         'CompositionRepository: migration failed',

@@ -96,6 +96,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('renders extracted metronome controls', (tester) async {
+    final overrides = await _settingsOverridesWithPrefs();
+
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
+
+    expect(find.byKey(const ValueKey('metronome-preset-dropdown')), findsOneWidget);
+    expect(find.byKey(const ValueKey('save-metronome-preset')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('time-signature-numerator-dropdown')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('time-signature-denominator-dropdown')),
+      findsOneWidget,
+    );
+    expect(find.text('120'), findsOneWidget);
+    expect(find.bySemanticsLabel(l10n.bpmDecrease10SemanticLabel), findsOneWidget);
+    expect(find.bySemanticsLabel(l10n.bpmIncrease10SemanticLabel), findsOneWidget);
+  });
+
   testWidgets('matches rhythm screen golden baseline', (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));

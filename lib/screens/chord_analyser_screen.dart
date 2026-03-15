@@ -119,6 +119,17 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     setState(() => _loading = false);
   }
 
+  Future<void> _restartCapture() async {
+    await _subscription?.cancel();
+    _subscription = null;
+    _bridge?.dispose();
+    _bridge = null;
+    if (mounted) {
+      setState(() => _currentChord = '---');
+    }
+    await _startCapture();
+  }
+
   Future<void> _persistChordAndRefresh(_ChordEntry entry) async {
     try {
       final repository = ref.read(chordHistoryRepositoryProvider);
@@ -444,12 +455,26 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
             child: RepaintBoundary(
               child: _history.isEmpty
                   ? StatusMessageView(
+                      illustration: StatusMessageIllustration(
+                        primaryIcon: Icons.music_note_rounded,
+                        accentIcon: Icons.history_rounded,
+                        colorScheme: colorScheme,
+                      ),
                       message: AppLocalizations.of(context)!.noChordHistory,
                       padding: EdgeInsets.zero,
-                      messageStyle:
+                      messageStyle: Theme.of(context).textTheme.titleMedium,
+                      details: AppLocalizations.of(context)!.chordHistoryEmptyHint,
+                      detailsStyle:
                           Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onSurfaceVariant,
                               ),
+                      action: OutlinedButton.icon(
+                        onPressed: _restartCapture,
+                        icon: const Icon(Icons.hearing_rounded),
+                        label: Text(
+                          AppLocalizations.of(context)!.listenForFirstChord,
+                        ),
+                      ),
                     )
                   : ListView.builder(
                       padding:
