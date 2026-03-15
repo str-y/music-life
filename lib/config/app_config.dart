@@ -66,6 +66,7 @@ class AppConfig {
     this.dynamicThemeIntensityStorageKey = defaultDynamicThemeIntensityStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
+    this.hapticFeedbackEnabledStorageKey = defaultHapticFeedbackEnabledStorageKey,
     this.metronomeBpmStorageKey = defaultMetronomeBpmStorageKey,
     this.metronomeTimeSignatureNumeratorStorageKey =
         defaultMetronomeTimeSignatureNumeratorStorageKey,
@@ -96,6 +97,7 @@ class AppConfig {
     this.defaultDynamicThemeIntensity = 0.7,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = _defaultTunerTransposition,
+    this.defaultHapticFeedbackEnabled = true,
     this.defaultPremiumVideoExportSkin = defaultAuroraPremiumVideoExportSkin,
     this.defaultPremiumVideoExportColor = _defaultPremiumVideoExportColorValue,
     this.defaultPremiumVideoExportEffect = defaultGlowPremiumVideoExportEffect,
@@ -271,6 +273,8 @@ class AppConfig {
       'dynamicThemeIntensity';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
+  static const String defaultHapticFeedbackEnabledStorageKey =
+      'hapticFeedbackEnabled';
   static const String defaultMetronomeBpmStorageKey = 'metronomeBpm';
   static const String defaultMetronomeTimeSignatureNumeratorStorageKey =
       'metronomeTimeSignatureNumerator';
@@ -332,6 +336,7 @@ class AppConfig {
   final String dynamicThemeIntensityStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
+  final String hapticFeedbackEnabledStorageKey;
   final String metronomeBpmStorageKey;
   final String metronomeTimeSignatureNumeratorStorageKey;
   final String metronomeTimeSignatureDenominatorStorageKey;
@@ -354,6 +359,7 @@ class AppConfig {
   final double defaultDynamicThemeIntensity;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
+  final bool defaultHapticFeedbackEnabled;
   final String defaultPremiumVideoExportSkin;
   final int defaultPremiumVideoExportColor;
   final String defaultPremiumVideoExportEffect;

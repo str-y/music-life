@@ -27,6 +27,9 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Generate API documentation
+        run: dart doc --output docs/api
+
       - name: Test with coverage
         run: flutter test --coverage --no-pub --dart-define=RUN_SCREEN_GOLDENS=true
 

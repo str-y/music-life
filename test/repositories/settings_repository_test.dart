@@ -27,6 +27,7 @@ void main() {
         AppConfig.defaultDynamicThemeIntensityStorageKey: 0.9,
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
+        AppConfig.defaultHapticFeedbackEnabledStorageKey: false,
         AppConfig.defaultMetronomeBpmStorageKey: 96,
         AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 3,
         AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 4,
@@ -55,6 +56,7 @@ void main() {
       expect(settings.dynamicThemeIntensity, 0.9);
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
+      expect(settings.hapticFeedbackEnabled, isFalse);
       expect(settings.metronomeBpm, 96);
       expect(settings.metronomeTimeSignatureNumerator, 3);
       expect(settings.metronomeTimeSignatureDenominator, 4);
@@ -98,6 +100,7 @@ void main() {
         dynamicThemeIntensity: 0.4,
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
+        hapticFeedbackEnabled: false,
         metronomeBpm: 84,
         metronomeTimeSignatureNumerator: 6,
         metronomeTimeSignatureDenominator: 8,
@@ -140,6 +143,10 @@ void main() {
       expect(
         prefs.getString(AppConfig.defaultTunerTranspositionStorageKey),
         'Eb',
+      );
+      expect(
+        prefs.getBool(AppConfig.defaultHapticFeedbackEnabledStorageKey),
+        isFalse,
       );
       expect(prefs.getInt(AppConfig.defaultMetronomeBpmStorageKey), 84);
       expect(

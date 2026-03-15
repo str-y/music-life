@@ -2,13 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import "package:permission_handler/permission_handler.dart";
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/dependency_providers.dart';
+import '../providers/haptic_service_provider.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../router/routes.dart';
@@ -127,7 +127,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       try {
         await ref.read(libraryProvider.notifier).addRecording(result);
         if (mounted) {
-          HapticFeedback.mediumImpact();
+          await ref.read(hapticServiceProvider).mediumImpact();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
