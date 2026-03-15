@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/widgets/rhythm/metronome_preset_controls.dart';
+import 'package:music_life/widgets/rhythm/metronome_section.dart';
 import 'metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
@@ -113,7 +115,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         children: [
           // ── Top half: metronome controls ────────────────────────────────
           Expanded(
-            child: _buildMetronomeSection(colorScheme, rhythmState),
+            child: _buildMetronomeSection(rhythmState),
           ),
           const Divider(height: 1),
           // ── Bottom half: groove analysis target ─────────────────────────
@@ -125,7 +127,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     );
   }
 
-  Widget _buildMetronomeSection(ColorScheme cs, RhythmState rhythmState) {
+  Widget _buildMetronomeSection(RhythmState rhythmState) {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
     final presetOptions = _buildPresetOptions(l10n, settings);
@@ -137,239 +139,46 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     );
     final recommendedPack = recommendMetronomeSoundPack(rhythmState.bpm);
 
-    return Container(
-      color: cs.surface,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    key: const ValueKey('metronome-preset-dropdown'),
-                    value: selectedPreset?.id,
-                    decoration: InputDecoration(
-                      labelText: l10n.metronomePresetLabel,
-                    ),
-                    hint: Text(l10n.metronomePresetHint),
-                    items: presetOptions
-                        .map(
-                          (option) => DropdownMenuItem<String>(
-                            value: option.id,
-                            child: Text(option.label),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      final option = _findPresetOption(presetOptions, value);
-                      if (option == null) return;
-                      _applyPreset(option.preset);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  key: const ValueKey('save-metronome-preset'),
-                  onPressed: () => _showSavePresetDialog(rhythmState),
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                  label: Text(l10n.metronomeSavePreset),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Text(
-                  l10n.metronomeTimeSignatureLabel,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    key: const ValueKey('time-signature-numerator-dropdown'),
-                    value: rhythmState.timeSignatureNumerator,
-                    decoration: const InputDecoration(isDense: true),
-                    items: _timeSignatureNumerators
-                        .map(
-                          (value) => DropdownMenuItem<int>(
-                            value: value,
-                            child: Text(value.toString()),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      _updateMetronomeSettings(
-                        bpm: rhythmState.bpm,
-                        numerator: value,
-                        denominator: rhythmState.timeSignatureDenominator,
-                      );
-                    },
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('/'),
-                ),
-                Expanded(
-                  child: DropdownButtonFormField<int>(
-                    key: const ValueKey('time-signature-denominator-dropdown'),
-                    value: rhythmState.timeSignatureDenominator,
-                    decoration: const InputDecoration(isDense: true),
-                    items: _timeSignatureDenominators
-                        .map(
-                          (value) => DropdownMenuItem<int>(
-                            value: value,
-                            child: Text(value.toString()),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      _updateMetronomeSettings(
-                        bpm: rhythmState.bpm,
-                        numerator: rhythmState.timeSignatureNumerator,
-                        denominator: value,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // BPM display
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, -0.3),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                  ),
-                  child: child,
-                ),
-              ),
-              child: Text(
-                '${rhythmState.bpm}',
-                key: ValueKey(rhythmState.bpm),
-                style: TextStyle(
-                  fontSize: 96,
-                  fontWeight: FontWeight.bold,
-                  color: cs.primary,
-                  letterSpacing: -4,
-                ),
-              ),
-            ),
-            Text(
-              l10n.bpmLabel,
-              style: const TextStyle(fontSize: 18, letterSpacing: 4),
-            ),
-            const SizedBox(height: 16),
-            // BPM controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _BpmButton(
-                  label: '−10',
-                  semanticLabel: l10n.bpmDecrease10SemanticLabel,
-                  onPressed: () =>
-                      ref.read(rhythmProvider.notifier).changeBpm(-10),
-                ),
-                const SizedBox(width: 8),
-                _BpmButton(
-                  label: '−1',
-                  semanticLabel: l10n.bpmDecrease1SemanticLabel,
-                  onPressed: () =>
-                      ref.read(rhythmProvider.notifier).changeBpm(-1),
-                ),
-                const SizedBox(width: 24),
-                // Play / Stop button
-                AnimatedBuilder(
-                  animation: _beatPulseAnim,
-                  builder: (context, child) {
-                    final scale = rhythmState.isPlaying
-                        ? 1.0 + _beatPulseAnim.value * 0.08
-                        : 1.0;
-                    return Transform.scale(
-                      scale: scale,
-                      child: child,
-                    );
-                  },
-                  child: FloatingActionButton(
-                    heroTag: 'playStop',
-                    onPressed: ref.read(rhythmProvider.notifier).toggleMetronome,
-                    tooltip: rhythmState.isPlaying
-                        ? l10n.metronomeStopTooltip
-                        : l10n.metronomePlayTooltip,
-                    backgroundColor: rhythmState.isPlaying
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.primary,
-                    child: Icon(
-                      rhythmState.isPlaying ? Icons.stop : Icons.play_arrow,
-                      size: 36,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                _BpmButton(
-                  label: '+1',
-                  semanticLabel: l10n.bpmIncrease1SemanticLabel,
-                  onPressed: () =>
-                      ref.read(rhythmProvider.notifier).changeBpm(1),
-                ),
-                const SizedBox(width: 8),
-                _BpmButton(
-                  label: '+10',
-                  semanticLabel: l10n.bpmIncrease10SemanticLabel,
-                  onPressed: () =>
-                      ref.read(rhythmProvider.notifier).changeBpm(10),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Card(
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                leading: Icon(_iconForSoundPack(selectedPack)),
-                title: Text(l10n.metronomeSoundLibraryTitle),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.metronomeSoundLibrarySelected(
-                        _soundPackName(l10n, selectedPack),
-                      ),
-                    ),
-                    Text(
-                      l10n.metronomeSoundLibraryRecommendation(
-                        _soundPackName(l10n, recommendedPack),
-                      ),
-                      style: TextStyle(color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-                trailing: IconButton(
-                  key: const ValueKey('metronome-sound-library-button'),
-                  tooltip: l10n.metronomeSoundLibraryManage,
-                  onPressed: () => _showSoundLibrarySheet(rhythmState),
-                  icon: const Icon(Icons.library_music),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+    return MetronomeSection(
+      presetOptions: presetOptions,
+      selectedPresetId: selectedPreset?.id,
+      onPresetSelected: (value) {
+        final option = _findPresetOption(presetOptions, value);
+        if (option == null) return;
+        _applyPreset(option.preset);
+      },
+      onSavePreset: () => _showSavePresetDialog(rhythmState),
+      timeSignatureNumerators: _timeSignatureNumerators,
+      timeSignatureDenominators: _timeSignatureDenominators,
+      selectedNumerator: rhythmState.timeSignatureNumerator,
+      selectedDenominator: rhythmState.timeSignatureDenominator,
+      onNumeratorChanged: (value) {
+        if (value == null) return;
+        _updateMetronomeSettings(
+          bpm: rhythmState.bpm,
+          numerator: value,
+          denominator: rhythmState.timeSignatureDenominator,
+        );
+      },
+      onDenominatorChanged: (value) {
+        if (value == null) return;
+        _updateMetronomeSettings(
+          bpm: rhythmState.bpm,
+          numerator: rhythmState.timeSignatureNumerator,
+          denominator: value,
+        );
+      },
+      bpm: rhythmState.bpm,
+      isPlaying: rhythmState.isPlaying,
+      beatPulseAnimation: _beatPulseAnim,
+      onDecrease10: () => ref.read(rhythmProvider.notifier).changeBpm(-10),
+      onDecrease1: () => ref.read(rhythmProvider.notifier).changeBpm(-1),
+      onTogglePlayStop: ref.read(rhythmProvider.notifier).toggleMetronome,
+      onIncrease1: () => ref.read(rhythmProvider.notifier).changeBpm(1),
+      onIncrease10: () => ref.read(rhythmProvider.notifier).changeBpm(10),
+      selectedPack: selectedPack,
+      recommendedPack: recommendedPack,
+      onManageSoundLibrary: () => _showSoundLibrarySheet(rhythmState),
     );
   }
 
@@ -647,12 +456,12 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     );
   }
 
-  List<_PresetOption> _buildPresetOptions(
+  List<MetronomePresetOption> _buildPresetOptions(
     AppLocalizations l10n,
     AppSettings settings,
   ) {
-    final builtInPresets = <_PresetOption>[
-      _PresetOption(
+    final builtInPresets = <MetronomePresetOption>[
+      MetronomePresetOption(
         id: 'builtin-ballad',
         label: l10n.metronomePresetBallad,
         preset: const MetronomePreset(
@@ -662,7 +471,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           timeSignatureDenominator: 4,
         ),
       ),
-      _PresetOption(
+      MetronomePresetOption(
         id: 'builtin-up-tempo',
         label: l10n.metronomePresetUpTempo,
         preset: const MetronomePreset(
@@ -672,7 +481,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           timeSignatureDenominator: 4,
         ),
       ),
-      _PresetOption(
+      MetronomePresetOption(
         id: 'builtin-waltz',
         label: l10n.metronomePresetWaltz,
         preset: const MetronomePreset(
@@ -682,7 +491,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           timeSignatureDenominator: 4,
         ),
       ),
-      _PresetOption(
+      MetronomePresetOption(
         id: 'builtin-shuffle',
         label: l10n.metronomePresetShuffle,
         preset: const MetronomePreset(
@@ -697,7 +506,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         .asMap()
         .entries
         .map(
-          (entry) => _PresetOption(
+          (entry) => MetronomePresetOption(
             id: 'custom-${entry.key}',
             label: entry.value.name,
             preset: entry.value,
@@ -794,8 +603,8 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         );
   }
 
-  _PresetOption? _findMatchingPreset(
-    List<_PresetOption> presetOptions,
+  MetronomePresetOption? _findMatchingPreset(
+    List<MetronomePresetOption> presetOptions,
     RhythmState rhythmState,
   ) {
     for (final option in presetOptions) {
@@ -810,8 +619,8 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     return null;
   }
 
-  _PresetOption? _findPresetOption(
-    List<_PresetOption> presetOptions,
+  MetronomePresetOption? _findPresetOption(
+    List<MetronomePresetOption> presetOptions,
     String? id,
   ) {
     if (id == null) return null;
@@ -937,36 +746,6 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
   }
 }
 
-// ── BPM helper button ────────────────────────────────────────────────────────
-
-class _BpmButton extends StatelessWidget {
-  const _BpmButton({
-    required this.label,
-    required this.onPressed,
-    required this.semanticLabel,
-  });
-
-  final String label;
-  final VoidCallback onPressed;
-  final String semanticLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          minimumSize: const Size(50, 36),
-        ),
-        child: ExcludeSemantics(child: Text(label)),
-      ),
-    );
-  }
-}
-
 class _StatusChip extends StatelessWidget {
   const _StatusChip({
     required this.label,
@@ -984,19 +763,6 @@ class _StatusChip extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
-  }
-}
-
-IconData _iconForSoundPack(MetronomeSoundPack pack) {
-  switch (pack.type) {
-    case MetronomeSoundPackType.electronic:
-      return Icons.radio_button_checked;
-    case MetronomeSoundPackType.acousticDrums:
-      return Icons.album;
-    case MetronomeSoundPackType.percussion:
-      return Icons.music_note;
-    case MetronomeSoundPackType.voiceCount:
-      return Icons.record_voice_over;
   }
 }
 
@@ -1136,16 +902,4 @@ class _GrooveTargetPainter extends CustomPainter {
       old.tapPhase != tapPhase ||
       old.offsetMs != offsetMs ||
       old.isPlaying != isPlaying;
-}
-
-class _PresetOption {
-  const _PresetOption({
-    required this.id,
-    required this.label,
-    required this.preset,
-  });
-
-  final String id;
-  final String label;
-  final MetronomePreset preset;
 }
