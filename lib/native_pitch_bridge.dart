@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 
 import 'app_constants.dart';
@@ -65,6 +66,12 @@ typedef _MLSetLogCallbackDart = void Function(
 
 typedef _MLInstallCrashHandlersNative = Void Function();
 typedef _MLInstallCrashHandlersDart = void Function();
+
+typedef _NativePitchResourceFactory = _NativePitchResources Function({
+  required int sampleRate,
+  required int frameSize,
+  required double threshold,
+});
 
 const int _mlLogLevelTrace = 0;
 const int _mlLogLevelDebug = 1;
@@ -858,21 +865,21 @@ class NativePitchBridge implements Finalizable {
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
   static bool _nativeLoggingConfigured = false;
+  static _NativePitchResourceFactory _nativePitchResourceFactory =
+      _createNativeResources;
+  static VoidCallback? _onNativeResourceInitializationAttemptForTesting;
   static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
       NativeCallable<_MLNativeLogCallbackNative>.listener(
     _onNativeLog,
   );
 
-  final NativeFinalizer _handleFinalizer;
   static final NativeFinalizer _bufferFinalizer =
       NativeFinalizer(malloc.nativeFree);
 
-  final Pointer<Void> _handle;
-  final Pointer<Float> _persistentBuffer;
-  final _MLDestroyDart _nativeDestroy;
-
   final int _sampleRate;
   final int _frameSize;
+  final double _threshold;
+  _NativePitchResources? _nativeResources;
 
   NativePitchIsolateManager? _isolateManager;
   final FfiErrorHandler? _onError;
@@ -920,25 +927,16 @@ class NativePitchBridge implements Finalizable {
   }
 
   NativePitchBridge._({
-    required Pointer<Void> handle,
-    required _MLDestroyDart nativeDestroy,
-    required Pointer<Float> persistentBuffer,
     required int frameSize,
     required int sampleRate,
-    required NativeFinalizer handleFinalizer,
+    required double threshold,
     required PermissionService permissionService,
     FfiErrorHandler? onError,
-  })  : _handle = handle,
-        _nativeDestroy = nativeDestroy,
-        _persistentBuffer = persistentBuffer,
-        _frameSize = frameSize,
+  })  : _frameSize = frameSize,
         _sampleRate = sampleRate,
-        _handleFinalizer = handleFinalizer,
+        _threshold = threshold,
         _permissionService = permissionService,
-        _onError = onError {
-    _handleFinalizer.attach(this, handle.cast(), detach: this);
-    _bufferFinalizer.attach(this, persistentBuffer.cast(), detach: this);
-  }
+        _onError = onError;
 
   factory NativePitchBridge({
     int sampleRate = defaultSampleRate,
@@ -946,6 +944,20 @@ class NativePitchBridge implements Finalizable {
     double threshold = defaultThreshold,
     FfiErrorHandler? onError,
     PermissionService permissionService = defaultPermissionService,
+  }) {
+    return NativePitchBridge._(
+      frameSize: frameSize,
+      sampleRate: sampleRate,
+      threshold: threshold,
+      permissionService: permissionService,
+      onError: onError,
+    );
+  }
+
+  static _NativePitchResources _createNativeResources({
+    required int sampleRate,
+    required int frameSize,
+    required double threshold,
   }) {
     final lib = _loadNativeLib();
     _configureNativeLogging(lib);
@@ -961,17 +973,25 @@ class NativePitchBridge implements Finalizable {
       throw StateError('ml_pitch_detector_create returned a null handle.');
     }
 
-    return NativePitchBridge._(
+    return _NativePitchResources(
       handle: handle,
       nativeDestroy: lib.lookupFunction<_MLDestroyNative, _MLDestroyDart>(
           'ml_pitch_detector_destroy'),
       persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
-      frameSize: frameSize,
-      sampleRate: sampleRate,
       handleFinalizer: handleFinalizer,
-      permissionService: permissionService,
-      onError: onError,
     );
+  }
+
+  @visibleForTesting
+  static void configureNativeResourceInitializationCallbackForTesting(
+    VoidCallback? callback,
+  ) {
+    _onNativeResourceInitializationAttemptForTesting = callback;
+  }
+
+  @visibleForTesting
+  static void resetNativeResourceInitializationCallbackForTesting() {
+    _onNativeResourceInitializationAttemptForTesting = null;
   }
 
   static void _configureNativeLogging(DynamicLibrary lib) {
@@ -1047,10 +1067,21 @@ class NativePitchBridge implements Finalizable {
   }
 
   Future<bool> startCapture() async {
+    if (_disposed) return false;
     if (!await _permissionService.hasMicrophonePermission()) return false;
+    try {
+      _ensureNativeResourcesInitialized();
+    } catch (e, stack) {
+      if (_onError != null) {
+        _onError.call(e, stack);
+        return false;
+      }
+      rethrow;
+    }
+    final resources = _nativeResources!;
     final manager = NativePitchIsolateManager(
-      handle: _handle,
-      buffer: _persistentBuffer,
+      handle: resources.handle,
+      buffer: resources.persistentBuffer,
       frameSize: _frameSize,
       entryPoint: _audioProcessingIsolate,
       onMessage: (msg) {
@@ -1097,6 +1128,27 @@ class NativePitchBridge implements Finalizable {
     }
   }
 
+  void _ensureNativeResourcesInitialized() {
+    if (_nativeResources != null) return;
+    _onNativeResourceInitializationAttemptForTesting?.call();
+    final resources = _nativePitchResourceFactory(
+      sampleRate: _sampleRate,
+      frameSize: _frameSize,
+      threshold: _threshold,
+    );
+    resources.handleFinalizer.attach(
+      this,
+      resources.handle.cast(),
+      detach: this,
+    );
+    _bufferFinalizer.attach(
+      this,
+      resources.persistentBuffer.cast(),
+      detach: this,
+    );
+    _nativeResources = resources;
+  }
+
   void _onAudioChunk(Uint8List chunk) {
     if (_disposed) return;
     _isolateManager?.send(
@@ -1125,8 +1177,12 @@ class NativePitchBridge implements Finalizable {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _handleFinalizer.detach(this);
-    _bufferFinalizer.detach(this);
+    final resources = _nativeResources;
+    _nativeResources = null;
+    resources?.handleFinalizer.detach(this);
+    if (resources != null) {
+      _bufferFinalizer.detach(this);
+    }
     _audioSub?.cancel();
     _audioSub = null;
     _recorder.stop().then<void>(
@@ -1148,10 +1204,14 @@ class NativePitchBridge implements Finalizable {
     final isolate = shutdownHandle?.isolate;
     final exitPort = shutdownHandle?.exitPort;
 
+    if (resources == null) {
+      return;
+    }
+
     if (isolate == null || exitPort == null) {
       // No isolate was started; free native resources immediately.
-      _nativeDestroy(_handle);
-      malloc.free(_persistentBuffer);
+      resources.nativeDestroy(resources.handle);
+      malloc.free(resources.persistentBuffer);
       return;
     }
 
@@ -1169,8 +1229,8 @@ class NativePitchBridge implements Finalizable {
       forceKillTimer?.cancel();
       exitSub?.cancel();
       exitPort.close();
-      _nativeDestroy(_handle);
-      malloc.free(_persistentBuffer);
+      resources.nativeDestroy(resources.handle);
+      malloc.free(resources.persistentBuffer);
     }
 
     exitSub = exitPort.listen((_) => freeNativeResources());
@@ -1183,6 +1243,20 @@ class NativePitchBridge implements Finalizable {
       isolate.kill(priority: Isolate.immediate);
     });
   }
+}
+
+final class _NativePitchResources {
+  const _NativePitchResources({
+    required this.handle,
+    required this.nativeDestroy,
+    required this.persistentBuffer,
+    required this.handleFinalizer,
+  });
+
+  final Pointer<Void> handle;
+  final _MLDestroyDart nativeDestroy;
+  final Pointer<Float> persistentBuffer;
+  final NativeFinalizer handleFinalizer;
 }
 
 Duration _clampDurationToZero(int microseconds) {
