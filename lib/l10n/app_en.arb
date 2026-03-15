@@ -199,6 +199,38 @@
       "path": {}
     }
   },
+  "helpAndFeedback": "Help & Feedback",
+  "@helpAndFeedback": {
+    "description": "Section header for help and feedback actions in settings"
+  },
+  "reportBug": "Report a bug",
+  "@reportBug": {
+    "description": "Action label for opening a bug report flow"
+  },
+  "reportBugDescription": "Open a GitHub issue to share a problem you found.",
+  "@reportBugDescription": {
+    "description": "Subtitle describing the bug report action"
+  },
+  "suggestFeature": "Suggest a feature",
+  "@suggestFeature": {
+    "description": "Action label for opening a feature request flow"
+  },
+  "suggestFeatureDescription": "Share an idea that could make Music Life better.",
+  "@suggestFeatureDescription": {
+    "description": "Subtitle describing the feature request action"
+  },
+  "contactSupport": "Contact support",
+  "@contactSupport": {
+    "description": "Action label for opening the support request flow"
+  },
+  "contactSupportDescription": "Ask a question or get help from the project maintainers.",
+  "@contactSupportDescription": {
+    "description": "Subtitle describing the support request action"
+  },
+  "helpAndFeedbackOpenError": "Could not open the Help & Feedback link.",
+  "@helpAndFeedbackOpenError": {
+    "description": "Snackbar message when a help or feedback link fails to open"
+  },
   "cloudSyncTitle": "Cloud sync & backup",
   "@cloudSyncTitle": {
     "description": "Title for the premium cloud sync toggle in settings"
