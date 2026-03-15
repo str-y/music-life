@@ -9,9 +9,10 @@ import 'package:music_life/widgets/rhythm/metronome_section.dart';
 import 'metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
-import 'repositories/settings_repository.dart';
+import 'repositories/metronome_settings_repository.dart';
 import 'services/ad_service.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
@@ -76,12 +77,11 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final settings = ref.read(appSettingsProvider);
+      final settings = ref.read(metronomeSettingsProvider);
       ref.read(rhythmProvider.notifier).applyMetronomeSettings(
-            bpm: settings.metronomeBpm,
-            timeSignatureNumerator: settings.metronomeTimeSignatureNumerator,
-            timeSignatureDenominator:
-                settings.metronomeTimeSignatureDenominator,
+            bpm: settings.bpm,
+            timeSignatureNumerator: settings.timeSignatureNumerator,
+            timeSignatureDenominator: settings.timeSignatureDenominator,
           );
     });
   }
@@ -132,13 +132,16 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   Widget _buildMetronomeSection(RhythmState rhythmState) {
     final l10n = AppLocalizations.of(context)!;
-    final settings = ref.watch(appSettingsProvider);
+    final hasPremiumAccess = ref.watch(
+      appSettingsProvider.select((settings) => settings.hasRewardedPremiumAccess),
+    );
+    final settings = ref.watch(metronomeSettingsProvider);
     final presetOptions = _buildPresetOptions(l10n, settings);
     final selectedPreset = _findMatchingPreset(presetOptions, rhythmState);
     final selectedPack = resolveSelectedMetronomeSoundPack(
-      selectedId: settings.selectedMetronomeSoundPackId,
-      installedIds: settings.installedMetronomeSoundPackIds,
-      hasPremiumAccess: settings.hasRewardedPremiumAccess,
+      selectedId: settings.selectedSoundPackId,
+      installedIds: settings.installedSoundPackIds,
+      hasPremiumAccess: hasPremiumAccess,
     );
     final recommendedPack = recommendMetronomeSoundPack(rhythmState.bpm);
 
@@ -174,11 +177,19 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
       bpm: rhythmState.bpm,
       isPlaying: rhythmState.isPlaying,
       beatPulseAnimation: _beatPulseAnim,
-      onDecrease10: () => ref.read(rhythmProvider.notifier).changeBpm(-10),
-      onDecrease1: () => ref.read(rhythmProvider.notifier).changeBpm(-1),
+      onDecrease10: () {
+        _changeBpm(rhythmState, -10);
+      },
+      onDecrease1: () {
+        _changeBpm(rhythmState, -1);
+      },
       onTogglePlayStop: ref.read(rhythmProvider.notifier).toggleMetronome,
-      onIncrease1: () => ref.read(rhythmProvider.notifier).changeBpm(1),
-      onIncrease10: () => ref.read(rhythmProvider.notifier).changeBpm(10),
+      onIncrease1: () {
+        _changeBpm(rhythmState, 1);
+      },
+      onIncrease10: () {
+        _changeBpm(rhythmState, 10);
+      },
       selectedPack: selectedPack,
       recommendedPack: recommendedPack,
       onManageSoundLibrary: () => _showSoundLibrarySheet(rhythmState),
@@ -193,11 +204,16 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
       builder: (context) {
         return Consumer(
           builder: (context, ref, _) {
-            final settings = ref.watch(appSettingsProvider);
+            final hasPremiumAccess = ref.watch(
+              appSettingsProvider.select(
+                (settings) => settings.hasRewardedPremiumAccess,
+              ),
+            );
+            final settings = ref.watch(metronomeSettingsProvider);
             final selectedPack = resolveSelectedMetronomeSoundPack(
-              selectedId: settings.selectedMetronomeSoundPackId,
-              installedIds: settings.installedMetronomeSoundPackIds,
-              hasPremiumAccess: settings.hasRewardedPremiumAccess,
+              selectedId: settings.selectedSoundPackId,
+              installedIds: settings.installedSoundPackIds,
+              hasPremiumAccess: hasPremiumAccess,
             );
             final recommendedPack = recommendMetronomeSoundPack(rhythmState.bpm);
             final sheetHeight = MediaQuery.of(context).size.height * 0.72;
@@ -263,13 +279,12 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
                           itemBuilder: (context, index) {
                             final pack = metronomeSoundPacks[index];
                             final isInstalled = settings
-                                .installedMetronomeSoundPackIds
+                                .installedSoundPackIds
                                 .contains(pack.id);
                             final isSelected =
                                 selectedPack.id == pack.id && isInstalled;
                             final isRecommended = recommendedPack.id == pack.id;
-                            final isLocked = pack.premiumOnly &&
-                                !settings.hasRewardedPremiumAccess;
+                            final isLocked = pack.premiumOnly && !hasPremiumAccess;
 
                             return Card(
                               child: Padding(
@@ -461,7 +476,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   List<MetronomePresetOption> _buildPresetOptions(
     AppLocalizations l10n,
-    AppSettings settings,
+    MetronomeSettings settings,
   ) {
     final builtInPresets = <MetronomePresetOption>[
       MetronomePresetOption(
@@ -505,7 +520,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
         ),
       ),
     ];
-    final customPresets = settings.metronomePresets
+    final customPresets = settings.presets
         .asMap()
         .entries
         .map(
@@ -521,8 +536,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   Future<void> _showSavePresetDialog(RhythmState rhythmState) async {
     final l10n = AppLocalizations.of(context)!;
-    final customPresetCount =
-        ref.read(appSettingsProvider).metronomePresets.length;
+    final customPresetCount = ref.read(metronomeSettingsProvider).presets.length;
     final controller = TextEditingController(
       text: l10n.metronomePresetDefaultName(customPresetCount + 1),
     );

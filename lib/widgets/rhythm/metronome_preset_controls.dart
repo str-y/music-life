@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/repositories/settings_repository.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
 
 class MetronomePresetOption {
   const MetronomePresetOption({

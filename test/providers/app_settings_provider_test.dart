@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
-import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
@@ -43,8 +42,6 @@ void main() {
         dynamicThemeIntensity: 0.7,
         referencePitch: 442.0,
         hapticFeedbackEnabled: false,
-        installedMetronomeSoundPackIds: <String>[defaultMetronomeSoundPackId],
-        selectedMetronomeSoundPackId: defaultMetronomeSoundPackId,
       ),
     );
   });
@@ -88,50 +85,6 @@ void main() {
     expect(
       prefs.getBool(AppConfig.defaultHapticFeedbackEnabledStorageKey),
       isFalse,
-    );
-  });
-
-  test('installMetronomeSoundPack persists a newly downloaded pack', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container
-        .read(metronomeSettingsControllerProvider)
-        .installSoundPack('acoustic_kit');
-
-    expect(
-      container.read(appSettingsProvider).installedMetronomeSoundPackIds,
-      <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
-    );
-    expect(
-      prefs.getStringList(AppConfig.defaultMetronomeSoundPacksStorageKey),
-      <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
-    );
-  });
-
-  test('selectMetronomeSoundPack ignores packs that are not installed', () async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container
-        .read(metronomeSettingsControllerProvider)
-        .selectSoundPack('acoustic_kit');
-
-    expect(
-      container.read(appSettingsProvider).selectedMetronomeSoundPackId,
-      defaultMetronomeSoundPackId,
     );
   });
 

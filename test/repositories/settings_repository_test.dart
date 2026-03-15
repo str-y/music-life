@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
-import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/repositories/settings_repository.dart';
 import 'package:music_life/theme/dynamic_theme_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,20 +27,10 @@ void main() {
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
         AppConfig.defaultHapticFeedbackEnabledStorageKey: false,
-        AppConfig.defaultMetronomeBpmStorageKey: 96,
-        AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 3,
-        AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 4,
-        AppConfig.defaultMetronomePresetsStorageKey:
-            '[{"name":"Practice 6/8","bpm":132,"timeSignatureNumerator":6,"timeSignatureDenominator":8}]',
         AppConfig.defaultCloudSyncEnabledStorageKey: true,
         AppConfig.defaultLastCloudSyncAtStorageKey: '2026-01-03T00:00:00.000Z',
         AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
             '2026-01-01T00:00:00.000Z',
-        AppConfig.defaultMetronomeSoundPacksStorageKey: <String>[
-          defaultMetronomeSoundPackId,
-          'acoustic_kit',
-        ],
-        AppConfig.defaultSelectedMetronomeSoundPackStorageKey: 'acoustic_kit',
       });
       final prefs = await SharedPreferences.getInstance();
       final repository = SettingsRepository(prefs);
@@ -57,20 +46,6 @@ void main() {
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
       expect(settings.hapticFeedbackEnabled, isFalse);
-      expect(settings.metronomeBpm, 96);
-      expect(settings.metronomeTimeSignatureNumerator, 3);
-      expect(settings.metronomeTimeSignatureDenominator, 4);
-      expect(
-        settings.metronomePresets,
-        const [
-          MetronomePreset(
-            name: 'Practice 6/8',
-            bpm: 132,
-            timeSignatureNumerator: 6,
-            timeSignatureDenominator: 8,
-          ),
-        ],
-      );
       expect(settings.cloudSyncEnabled, isTrue);
       expect(
         settings.lastCloudSyncAt,
@@ -80,11 +55,6 @@ void main() {
         settings.rewardedPremiumExpiresAt,
         DateTime.parse('2026-01-01T00:00:00.000Z'),
       );
-      expect(
-        settings.installedMetronomeSoundPackIds,
-        <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
-      );
-      expect(settings.selectedMetronomeSoundPackId, 'acoustic_kit');
     });
 
     test('save persists settings values', () async {
@@ -101,25 +71,9 @@ void main() {
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
         hapticFeedbackEnabled: false,
-        metronomeBpm: 84,
-        metronomeTimeSignatureNumerator: 6,
-        metronomeTimeSignatureDenominator: 8,
-        metronomePresets: const [
-          MetronomePreset(
-            name: 'Gig',
-            bpm: 148,
-            timeSignatureNumerator: 4,
-            timeSignatureDenominator: 4,
-          ),
-        ],
         cloudSyncEnabled: true,
         lastCloudSyncAt: DateTime.utc(2026, 1, 3, 4, 5, 6),
         rewardedPremiumExpiresAt: DateTime.utc(2026, 1, 2, 3, 4, 5),
-        installedMetronomeSoundPackIds: const <String>[
-          defaultMetronomeSoundPackId,
-          'percussion_clave',
-        ],
-        selectedMetronomeSoundPackId: 'percussion_clave',
       );
 
       await repository.save(updated);
@@ -148,21 +102,6 @@ void main() {
         prefs.getBool(AppConfig.defaultHapticFeedbackEnabledStorageKey),
         isFalse,
       );
-      expect(prefs.getInt(AppConfig.defaultMetronomeBpmStorageKey), 84);
-      expect(
-        prefs.getInt(AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey),
-        6,
-      );
-      expect(
-        prefs.getInt(
-          AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey,
-        ),
-        8,
-      );
-      expect(
-        prefs.getString(AppConfig.defaultMetronomePresetsStorageKey),
-        '[{"name":"Gig","bpm":148,"timeSignatureNumerator":4,"timeSignatureDenominator":4}]',
-      );
       expect(prefs.getBool(AppConfig.defaultCloudSyncEnabledStorageKey), isTrue);
       expect(
         prefs.getString(AppConfig.defaultLastCloudSyncAtStorageKey),
@@ -171,14 +110,6 @@ void main() {
       expect(
         prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
         '2026-01-02T03:04:05.000Z',
-      );
-      expect(
-        prefs.getStringList(AppConfig.defaultMetronomeSoundPacksStorageKey),
-        <String>[defaultMetronomeSoundPackId, 'percussion_clave'],
-      );
-      expect(
-        prefs.getString(AppConfig.defaultSelectedMetronomeSoundPackStorageKey),
-        'percussion_clave',
       );
     });
 
@@ -206,33 +137,5 @@ void main() {
       expect(settings.dynamicThemeIntensity, 1.0);
     });
 
-    test('load falls back to defaults for invalid metronome values and invalid sound pack selection', () async {
-      SharedPreferences.setMockInitialValues({
-        AppConfig.defaultMetronomeBpmStorageKey: 999,
-        AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 1,
-        AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 16,
-        AppConfig.defaultMetronomePresetsStorageKey:
-            '[{"name":"","bpm":20,"timeSignatureNumerator":1,"timeSignatureDenominator":16}]',
-        AppConfig.defaultMetronomeSoundPacksStorageKey: <String>['acoustic_kit'],
-        AppConfig.defaultSelectedMetronomeSoundPackStorageKey: 'missing_pack',
-      });
-      final prefs = await SharedPreferences.getInstance();
-      final repository = SettingsRepository(prefs);
-
-      final settings = repository.load();
-
-      expect(settings.metronomeBpm, 240);
-      expect(settings.metronomeTimeSignatureNumerator, 2);
-      expect(settings.metronomeTimeSignatureDenominator, 4);
-      expect(settings.metronomePresets, isEmpty);
-      expect(
-        settings.installedMetronomeSoundPackIds,
-        <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
-      );
-      expect(
-        settings.selectedMetronomeSoundPackId,
-        defaultMetronomeSoundPackId,
-      );
-    });
   });
 }
