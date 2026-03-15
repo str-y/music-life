@@ -146,10 +146,10 @@ class RecordingPlaybackNotifier extends Notifier<RecordingPlaybackState> {
 
   Future<void> setVolume(double volume) async {
     final clamped = volume.clamp(0.0, 1.0).toDouble();
-    state = state.copyWith(volume: clamped);
     try {
       await _ensurePlayer();
       await _player!.setVolume(clamped);
+      state = state.copyWith(volume: clamped);
     } catch (e, st) {
       ServiceErrorHandler.report(
         'RecordingPlaybackNotifier: failed to set volume',

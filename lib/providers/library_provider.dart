@@ -143,7 +143,6 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
     state = AsyncValue.data(previous.copyWith(recordings: updated));
     try {
       await _repo.saveRecordings(updated);
-      await _syncCloudBackupIfEnabled();
     } catch (e, st) {
       ServiceErrorHandler.report(
         'LibraryNotifier: failed to save recordings',
@@ -152,6 +151,15 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
       );
       state = AsyncValue.data(previous);
       rethrow;
+    }
+    try {
+      await _syncCloudBackupIfEnabled();
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'LibraryNotifier: cloud sync failed after adding recording',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

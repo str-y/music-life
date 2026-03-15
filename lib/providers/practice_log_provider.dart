@@ -45,7 +45,6 @@ class PracticeLogNotifier
     state = AsyncValue.data(updated);
     try {
       await _repo.savePracticeLogs(updated);
-      await _syncCloudBackupIfEnabled();
     } catch (e, st) {
       ServiceErrorHandler.report(
         'PracticeLogNotifier: failed to save practice log entry',
@@ -54,6 +53,15 @@ class PracticeLogNotifier
       );
       state = AsyncValue.data(previous);
       rethrow;
+    }
+    try {
+      await _syncCloudBackupIfEnabled();
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'PracticeLogNotifier: cloud sync failed after adding entry',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 

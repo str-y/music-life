@@ -165,7 +165,7 @@ class CloudSyncController {
     }
     final syncedAt = await _ref.read(cloudSyncRepositoryProvider).syncNow();
     await _notifier.save(
-      currentSettings.copyWith(lastCloudSyncAt: syncedAt),
+      _ref.read(appSettingsProvider).copyWith(lastCloudSyncAt: syncedAt),
     );
     return syncedAt;
   }

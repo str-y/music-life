@@ -821,7 +821,7 @@ class _PremiumExportPreviewCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.graphic_eq,
-                color: Colors.white.withOpacity(0.92),
+                color: Colors.white.withValues(alpha: \1.92),
               ),
               const SizedBox(width: 8),
               Text(
@@ -836,7 +836,7 @@ class _PremiumExportPreviewCard extends StatelessWidget {
                 Text(
                   'music-life',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.78),
+                    color: Colors.white.withValues(alpha: \1.78),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -851,10 +851,10 @@ class _PremiumExportPreviewCard extends StatelessWidget {
                   vertical: 20,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.18),
+                  color: Colors.black.withValues(alpha: \1.18),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: effectColor.withOpacity(0.55),
+                    color: effectColor.withValues(alpha: \1.55),
                   ),
                 ),
                 child: WaveformView(
@@ -896,7 +896,7 @@ class _PremiumExportPreviewCard extends StatelessWidget {
           Text(
             plan.bitrateLabel,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
+              color: Colors.white.withValues(alpha: \1.82),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -976,14 +976,14 @@ class _PreviewChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.16),
+        color: Colors.white.withValues(alpha: \1.16),
         borderRadius: BorderRadius.circular(_previewChipBorderRadius),
-        border: Border.all(color: Colors.white.withOpacity(0.14)),
+        border: Border.all(color: Colors.white.withValues(alpha: \1.14)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withOpacity(0.92),
+          color: Colors.white.withValues(alpha: \1.92),
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -1023,7 +1023,7 @@ List<BoxShadow> _previewBoxShadow(
 
   return [
     BoxShadow(
-      color: effectColor.withOpacity(opacity),
+      color: effectColor.withValues(alpha: \1pacity),
       blurRadius: 24,
       spreadRadius: 2,
       offset: const Offset(0, 10),
