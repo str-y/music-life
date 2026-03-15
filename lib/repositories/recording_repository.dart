@@ -34,6 +34,8 @@ List<double> _blobToWaveform(Uint8List blob) {
   if (sampleCount == 0) {
     return const <double>[];
   }
+  // Use a zero-copy typed view when the stored bytes already match the host
+  // endianness and the buffer offset is aligned for Float64 reads.
   if (Endian.host == Endian.little &&
       blob.offsetInBytes % Float64List.bytesPerElement == 0) {
     return blob.buffer.asFloat64List(blob.offsetInBytes, sampleCount);
@@ -42,6 +44,7 @@ List<double> _blobToWaveform(Uint8List blob) {
   return List<double>.generate(
     sampleCount,
     (i) => bytes.getFloat64(i * Float64List.bytesPerElement, Endian.little),
+    growable: false,
   );
 }
 
@@ -167,6 +170,12 @@ class RecordingRepository {
   static const int _estimatedRowOverheadBytes = 256;
   static const int _maxWaveformCacheEntries = 256;
   static const int _maxWaveformCacheBytes = 4 * 1024 * 1024;
+  // Allow one oversized waveform to use up to 2x `_maxWaveformCacheBytes`
+  // before skipping caching altogether so typical recordings still benefit
+  // from reuse.
+  static const int _maxSingleWaveformCacheEntryMultiplier = 2;
+  static const int _maxWaveformCacheEntryBytes =
+      _maxWaveformCacheBytes * _maxSingleWaveformCacheEntryMultiplier;
   static final Uint8List _diskSpaceCheckChunk = Uint8List(
     _diskSpaceCheckChunkBytes,
   );
@@ -238,16 +247,25 @@ class RecordingRepository {
     if (previous != null) {
       _waveformCacheBytes -= previous.byteSize;
     }
+    if (byteSize > _maxWaveformCacheEntryBytes) {
+      return;
+    }
 
     _waveformCache[recordingId] = _WaveformCacheEntry(
       waveform: waveform,
       byteSize: byteSize,
     );
     _waveformCacheBytes += byteSize;
-    _trimWaveformCache();
+    if (_waveformCache.length > _maxWaveformCacheEntries ||
+        _waveformCacheBytes > _maxWaveformCacheBytes) {
+      _trimWaveformCache();
+    }
   }
 
   static void _trimWaveformCache() {
+    // Keep the most recently decoded waveform cached even if it alone exceeds
+    // the soft memory budget so repeated reads of a large recording do not
+    // thrash between decode and immediate eviction.
     while (_waveformCache.length > 1 &&
         (_waveformCache.length > _maxWaveformCacheEntries ||
             _waveformCacheBytes > _maxWaveformCacheBytes)) {
@@ -261,13 +279,17 @@ class RecordingRepository {
 
   static void _replaceWaveformCache(Iterable<RecordingEntry> recordings) {
     _clearWaveformCache();
-    for (final recording in recordings) {
+    for (final recording in recordings.toList(growable: false).reversed) {
       _cacheWaveform(
         recording.id,
-        List<double>.unmodifiable(recording.waveformData),
-        byteSize: recording.waveformData.length * Float64List.bytesPerElement,
+        UnmodifiableListView<double>(recording.waveformData),
+        byteSize: _waveformByteSize(recording.waveformData),
       );
     }
+  }
+
+  static int _waveformByteSize(List<double> waveform) {
+    return waveform.length * Float64List.bytesPerElement;
   }
 
   static void _clearWaveformCache() {
@@ -287,7 +309,11 @@ class RecordingRepository {
     }
 
     final waveform = UnmodifiableListView<double>(_blobToWaveform(blob));
-    _cacheWaveform(recordingId, waveform, byteSize: blob.lengthInBytes);
+    _cacheWaveform(
+      recordingId,
+      waveform,
+      byteSize: _waveformByteSize(waveform),
+    );
     onCacheAccess?.call(false);
     return waveform;
   }
@@ -630,6 +656,9 @@ class RecordingRepository {
 
   @visibleForTesting
   static int get waveformCacheSize => _waveformCache.length;
+
+  @visibleForTesting
+  static int get waveformCacheByteSize => _waveformCacheBytes;
 
   static String _formatMemoryUsage(int bytes) {
     final megabytes = bytes / (1024 * 1024);

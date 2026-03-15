@@ -334,6 +334,10 @@ void main() {
           isTrue);
       expect(RecordingRepository.waveformCacheSize, 1);
       expect(
+        RecordingRepository.waveformCacheByteSize,
+        recording.waveformData.length * Float64List.bytesPerElement,
+      );
+      expect(
         AppLogger.bufferedLogs.any(
           (line) => line.contains('waveform cache hits: 1'),
         ),
@@ -382,6 +386,28 @@ void main() {
       expect(identical(retainedWaveform, firstLoad.first.waveformData), isTrue);
       expect(identical(evictedWaveform, firstLoad[1].waveformData), isFalse);
       expect(RecordingRepository.waveformCacheSize, 256);
+    });
+
+    test('resetMigrationStateForTesting clears waveform cache byte tracking',
+        () async {
+      final recording = RecordingEntry(
+        id: 'byte-reset',
+        title: 'Byte reset',
+        recordedAt: DateTime(2024, 7, 8, 9, 10),
+        durationSeconds: 30,
+        waveformData: const [0.1, 0.4, 0.7],
+      );
+      currentRecordingRows = [_recordingRow(recording)];
+
+      final repository = createRepository();
+
+      await repository.loadRecordings();
+      expect(RecordingRepository.waveformCacheByteSize, greaterThan(0));
+
+      RecordingRepository.resetMigrationStateForTesting();
+
+      expect(RecordingRepository.waveformCacheSize, 0);
+      expect(RecordingRepository.waveformCacheByteSize, 0);
     });
   });
 }
