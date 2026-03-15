@@ -2,9 +2,10 @@ import 'dart:typed_data';
 
 /// Encodes a list of [double] amplitude values as a packed IEEE 754 BLOB.
 Uint8List waveformToBlob(List<double> data) {
-  final bytes = ByteData(data.length * Float64List.bytesPerElement);
+  const bytesPerElement = Float64List.bytesPerElement;
+  final bytes = ByteData(data.length * bytesPerElement);
   for (var i = 0; i < data.length; i++) {
-    bytes.setFloat64(i * Float64List.bytesPerElement, data[i], Endian.little);
+    bytes.setFloat64(i * bytesPerElement, data[i], Endian.little);
   }
   return bytes.buffer.asUint8List();
 }

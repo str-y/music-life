@@ -12,6 +12,7 @@ import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
+import 'package:music_life/data/waveform_codec.dart';
 import 'package:music_life/utils/app_logger.dart';
 /// Singleton Drift database used throughout the app.
 ///
@@ -731,11 +732,7 @@ class AppDatabase {
         final doubles = (jsonDecode(jsonStr) as List)
             .map((e) => (e as num).toDouble())
             .toList();
-        // Encoding matches waveformToBlob in waveform_codec.dart.
-        final byteData = ByteData(doubles.length * 8);
-        for (var i = 0; i < doubles.length; i++) {
-          byteData.setFloat64(i * 8, doubles[i], Endian.little);
-        }
+        final waveformBlob = waveformToBlob(doubles);
         await db.customStatement(
           '''
           INSERT INTO recordings_new (
@@ -751,7 +748,7 @@ class AppDatabase {
             row['title'],
             row['recorded_at'],
             row['duration_seconds'],
-            byteData.buffer.asUint8List(),
+            waveformBlob,
           ],
         );
       }
