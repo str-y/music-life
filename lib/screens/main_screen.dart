@@ -16,7 +16,7 @@ import '../services/review_service.dart';
 import '../services/service_error_handler.dart';
 import '../utils/app_logger.dart';
 import '../theme/dynamic_theme_mode.dart';
-import '../widgets/banner_ad_widget.dart';
+import '../widgets/shared/banner_ad_widget.dart';
 
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
