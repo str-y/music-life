@@ -11,7 +11,6 @@
 #include "yin.h"
 
 #include <cmath>
-#include <gtest/gtest.h>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -21,12 +20,18 @@
 #include <type_traits>
 #include <vector>
 
+#include <gtest/gtest.h>
+
 using music_life::PitchDetector;
 using music_life::Yin;
 
 // ---------------------------------------------------------------------------
 // Google Test-backed helper assertions
 // ---------------------------------------------------------------------------
+//
+// The individual test bodies remain bool-returning helpers so the migration can
+// preserve the original fail-fast behavior with minimal churn while still
+// registering each case as a first-class Google Test.
 
 static int g_last_log_level = -1;
 static std::string g_last_log_message;
@@ -635,3 +640,5 @@ ML_REGISTER_TEST(PitchDetectorFfiTest, LogCallbackSupportsTraceLevel, test_ffi_l
 ML_REGISTER_TEST(PitchDetectorFfiTest, ApiIsNoexcept, test_ffi_api_is_noexcept);
 
 #undef ML_REGISTER_TEST
+#undef ML_ASSERT_NEAR
+#undef ML_ASSERT_TRUE
