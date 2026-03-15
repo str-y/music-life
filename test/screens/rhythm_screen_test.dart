@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/rhythm_screen.dart';
+import 'package:music_life/widgets/rhythm/metronome_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
@@ -117,6 +118,31 @@ void main() {
     expect(find.text('120'), findsOneWidget);
     expect(find.bySemanticsLabel(l10n.bpmDecrease10SemanticLabel), findsOneWidget);
     expect(find.bySemanticsLabel(l10n.bpmIncrease10SemanticLabel), findsOneWidget);
+  });
+
+  testWidgets('isolates metronome and groove target repaints with boundaries',
+      (tester) async {
+    final overrides = await _settingsOverridesWithPrefs();
+
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
+
+    expect(
+      find.ancestor(
+        of: find.byType(MetronomeSection),
+        matching: find.byType(RepaintBoundary),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.ancestor(
+        of: find.bySemanticsLabel(l10n.tapTempoRingSemanticLabel),
+        matching: find.byType(RepaintBoundary),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('matches rhythm screen golden baseline', (tester) async {
