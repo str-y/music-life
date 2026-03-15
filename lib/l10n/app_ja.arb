@@ -19,6 +19,8 @@
   "themeSection": "テーマ",
   "darkMode": "ダークモード",
   "followSystemTheme": "システム設定に合わせる",
+  "hapticFeedbackLabel": "触覚フィードバック",
+  "hapticFeedbackDescription": "アプリ全体のタッチ時の反応を有効にします。",
   "dynamicThemeModeLabel": "ダイナミックモード",
   "dynamicThemeModeChill": "チル",
   "dynamicThemeModeIntense": "インテンス",

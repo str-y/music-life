@@ -1392,6 +1392,15 @@ class _SettingsModalState extends State<_SettingsModal> {
               value: _local.useSystemTheme,
               onChanged: (v) => _emit(_local.copyWith(useSystemTheme: v)),
             ),
+            SwitchListTile(
+              key: const ValueKey('settings-haptic-feedback-toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.hapticFeedbackLabel),
+              subtitle: Text(l10n.hapticFeedbackDescription),
+              value: _local.hapticFeedbackEnabled,
+              onChanged: (value) =>
+                  _emit(_local.copyWith(hapticFeedbackEnabled: value)),
+            ),
             if (!_local.useSystemTheme)
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
