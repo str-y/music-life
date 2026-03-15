@@ -5,25 +5,74 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
+Color _deriveNeutralTone(
+  Color accentColor, {
+  required double lightness,
+  required double saturationFactor,
+}) {
+  final hsl = HSLColor.fromColor(accentColor);
+  return hsl
+      .withSaturation(
+        (hsl.saturation * saturationFactor).clamp(0.0, 1.0).toDouble(),
+      )
+      .withLightness(lightness.clamp(0.0, 1.0).toDouble())
+      .toColor();
+}
+
 /// Renders a shareable square PNG card and returns it as an [XFile].
 Future<XFile> generateShareCardImage({
   required String title,
   required List<String> lines,
-  Color accentColor = const Color(0xFF6750A4),
+  required Color accentColor,
+  Color? backgroundColor,
+  Color? surfaceColor,
+  Color? titleColor,
+  Color? bodyColor,
+  Color? footerColor,
 }) async {
   const width = 1080;
   const height = 1080;
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   const rect = Rect.fromLTWH(0, 0, 1080, 1080);
+  final resolvedBackgroundColor = backgroundColor ??
+      _deriveNeutralTone(
+        accentColor,
+        lightness: 0.97,
+        saturationFactor: 0.14,
+      );
+  final resolvedSurfaceColor = surfaceColor ??
+      _deriveNeutralTone(
+        accentColor,
+        lightness: 0.995,
+        saturationFactor: 0.05,
+      );
+  final resolvedTitleColor = titleColor ??
+      _deriveNeutralTone(
+        accentColor,
+        lightness: 0.14,
+        saturationFactor: 0.24,
+      );
+  final resolvedBodyColor = bodyColor ??
+      _deriveNeutralTone(
+        accentColor,
+        lightness: 0.22,
+        saturationFactor: 0.18,
+      );
+  final resolvedFooterColor = footerColor ??
+      _deriveNeutralTone(
+        accentColor,
+        lightness: 0.42,
+        saturationFactor: 0.14,
+      );
 
-  canvas.drawRect(rect, Paint()..color = const Color(0xFFF8F7FF));
+  canvas.drawRect(rect, Paint()..color = resolvedBackgroundColor);
   canvas.drawRRect(
     RRect.fromRectAndRadius(
       const Rect.fromLTWH(70, 70, 940, 940),
       const Radius.circular(48),
     ),
-    Paint()..color = Colors.white,
+    Paint()..color = resolvedSurfaceColor,
   );
   canvas.drawRRect(
     RRect.fromRectAndRadius(
@@ -36,10 +85,10 @@ Future<XFile> generateShareCardImage({
   final titlePainter = TextPainter(
     text: TextSpan(
       text: title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 56,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF1C1B1F),
+        color: resolvedTitleColor,
       ),
     ),
     textDirection: TextDirection.ltr,
@@ -52,10 +101,10 @@ Future<XFile> generateShareCardImage({
     final linePainter = TextPainter(
       text: TextSpan(
         text: line,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 42,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF313033),
+          color: resolvedBodyColor,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -67,12 +116,12 @@ Future<XFile> generateShareCardImage({
   }
 
   final footerPainter = TextPainter(
-    text: const TextSpan(
+    text: TextSpan(
       text: 'music-life',
       style: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF625B71),
+        color: resolvedFooterColor,
       ),
     ),
     textDirection: TextDirection.ltr,

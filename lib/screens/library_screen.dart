@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,17 +6,20 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import '../l10n/app_localizations.dart';
+import '../providers/dependency_providers.dart';
 import '../providers/library_provider.dart';
 import '../repositories/recording_repository.dart';
 import '../services/permission_service.dart';
+import '../services/recording_storage_service.dart';
 import '../utils/app_logger.dart';
 import '../widgets/shared/async_value_state_view.dart';
 import '../widgets/shared/waveform_view.dart';
 import 'library/log_tab.dart';
 import 'library/recordings_tab.dart';
+
+typedef AudioRecorderFactory = AudioRecorder Function();
 
 @visibleForTesting
 List<double> downsampleWaveform(List<double> source, int targetPoints) {
@@ -71,9 +72,18 @@ List<double> buildLiveWaveformPreview(
 // ---------------------------------------------------------------------------
 
 class LibraryScreen extends ConsumerStatefulWidget {
-  const LibraryScreen({super.key, this.initialTabIndex = 0});
+  const LibraryScreen({
+    super.key,
+    this.initialTabIndex = 0,
+    this.permissionService,
+    this.recordingStorageService,
+    this.audioRecorderFactory = AudioRecorder.new,
+  });
 
   final int initialTabIndex;
+  final PermissionService? permissionService;
+  final RecordingStorageService? recordingStorageService;
+  final AudioRecorderFactory audioRecorderFactory;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
@@ -100,17 +110,36 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   }
 
   Future<void> _showAddDialog() async {
+    final storageService =
+        widget.recordingStorageService ??
+        ref.read(recordingStorageServiceProvider);
     final result = await showDialog<RecordingEntry>(
       context: context,
-      builder: (_) => const _AddRecordingDialog(),
+      builder: (_) => _AddRecordingDialog(
+        permissionService:
+            widget.permissionService ?? ref.read(permissionServiceProvider),
+        storageService: storageService,
+        recorder: widget.audioRecorderFactory(),
+      ),
     );
     if (result != null && mounted) {
-      await ref.read(libraryProvider.notifier).addRecording(result);
-      if (mounted) {
-        HapticFeedback.mediumImpact();
+      try {
+        await ref.read(libraryProvider.notifier).addRecording(result);
+        if (mounted) {
+          HapticFeedback.mediumImpact();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (_) {
+        await storageService.deleteFileIfExists(result.audioFilePath);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.recordingSavedSuccess),
+            content: Text(AppLocalizations.of(context)!.recordingSaveFailed),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -198,7 +227,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 enum _RecordingState { idle, recording, stopped }
 
 class _AddRecordingDialog extends StatefulWidget {
-  const _AddRecordingDialog();
+  const _AddRecordingDialog({
+    required this.permissionService,
+    required this.storageService,
+    required this.recorder,
+  });
+
+  final PermissionService permissionService;
+  final RecordingStorageService storageService;
+  final AudioRecorder recorder;
 
   @override
   State<_AddRecordingDialog> createState() => _AddRecordingDialogState();
@@ -208,8 +245,6 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   static const double _amplitudeFloorDb = -60.0;
   static const int _amplitudeSamplesPerUiUpdate = 3;
   final _titleCtrl = TextEditingController();
-  final _recorder = AudioRecorder();
-  final PermissionService _permissionService = defaultPermissionService;
   final List<double> _amplitudeData = [];
   List<double> _liveWaveformPreview = const [];
   int _samplesSinceUiUpdate = 0;
@@ -218,26 +253,26 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
   int _durationSeconds = 0;
   List<double> _waveformData = const [];
   String? _recordingPath;
+  bool _preserveRecordingFile = false;
   Timer? _ticker;
   StreamSubscription<Amplitude>? _amplitudeSub;
+
+  AudioRecorder get _recorder => widget.recorder;
+  PermissionService get _permissionService => widget.permissionService;
+  RecordingStorageService get _storageService => widget.storageService;
 
   @override
   void dispose() {
     _ticker?.cancel();
     _amplitudeSub?.cancel();
-    unawaited(_disposeRecorder());
+    unawaited(_disposeDialogResources());
     _titleCtrl.dispose();
     super.dispose();
   }
 
-  Future<String> _createRecordingPath() async {
-    final dbPath = await getDatabasesPath();
-    final dir = Directory(p.join(dbPath, 'recordings'));
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
+  String _createRecordingPath(String directoryPath) {
     final fileName = 'rec_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    return p.join(dir.path, fileName);
+    return p.join(directoryPath, fileName);
   }
 
   Future<void> _disposeRecorder() async {
@@ -263,20 +298,46 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
     }
   }
 
+  Future<void> _disposeDialogResources() async {
+    await _disposeRecorder();
+    if (!_preserveRecordingFile) {
+      await _storageService.deleteFileIfExists(_recordingPath);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   Future<void> _startRecording() async {
+    String? path;
     try {
       final hasPermission =
           (await _permissionService.requestMicrophonePermission()).isGranted;
       if (!mounted) return;
       if (!hasPermission) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.micPermissionNeeded)),
-        );
+        _showSnackBar(AppLocalizations.of(context)!.micPermissionNeeded);
         return;
       }
 
-      final path = await _createRecordingPath();
+      final permissionStillGranted =
+          await _permissionService.hasMicrophonePermission();
       if (!mounted) return;
+      if (!permissionStillGranted) {
+        _showSnackBar(AppLocalizations.of(context)!.micPermissionNeeded);
+        return;
+      }
+
+      final storageCheck = await _storageService.prepareForRecording();
+      if (!mounted) return;
+      path = _createRecordingPath(storageCheck.recordingsDirectoryPath);
+      _recordingPath = path;
       await _recorder.start(
         const RecordConfig(
           encoder: AudioEncoder.aacLc,
@@ -287,10 +348,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       );
       if (!mounted) {
         await _recorder.stop();
-        final file = File(path);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        await _storageService.deleteFileIfExists(path);
         return;
       }
 
@@ -323,12 +381,24 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
         _waveformData = const [];
         _recordingPath = path;
       });
+    } on RecordingStorageException catch (error) {
+      if (mounted) {
+        _showSnackBar(
+          AppLocalizations.of(context)!.recordingStorageCheckFailed(
+            error.requiredMegabytes,
+          ),
+        );
+      }
     } catch (error, stackTrace) {
+      await _storageService.deleteFileIfExists(path ?? _recordingPath);
       AppLogger.reportError(
         'Failed to start audio recording.',
         error: error,
         stackTrace: stackTrace,
       );
+      if (mounted) {
+        _showSnackBar(AppLocalizations.of(context)!.recordingStartFailed);
+      }
     }
   }
 
@@ -414,6 +484,18 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
                 isRecording ? l10n.tapToStop : l10n.tapToRecord,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+              if (!isRecording) ...[
+                const SizedBox(height: 8),
+                Text(
+                  l10n.recordingStorageEstimateWarning(
+                    _storageService.estimatedRequiredMegabytes,
+                  ),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ],
             // Waveform preview after recording stops
             if (isRecording && _amplitudeData.isNotEmpty) ...[
@@ -449,6 +531,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
                   final title = _titleCtrl.text.trim().isEmpty
                       ? l10n.newRecording
                       : _titleCtrl.text.trim();
+                  _preserveRecordingFile = true;
                   Navigator.of(context).pop(
                     RecordingEntry(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),

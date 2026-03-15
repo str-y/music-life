@@ -244,6 +244,43 @@ void main() {
       );
     });
 
+    testWidgets('theme changes update app mode immediately and define themed surfaces',
+        (tester) async {
+      await _pumpApp(
+        tester,
+        initialValues: const <String, Object>{_onboardingShownKey: true},
+      );
+
+      MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.themeAnimationDuration, const Duration(milliseconds: 250));
+      expect(app.themeAnimationCurve, Curves.easeOutCubic);
+      expect(app.theme!.dialogTheme.backgroundColor, app.theme!.colorScheme.surface);
+      expect(
+        app.theme!.bottomSheetTheme.modalBackgroundColor,
+        app.theme!.colorScheme.surface,
+      );
+      expect(app.themeMode, ThemeMode.system);
+
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Follow system theme'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dark mode'));
+      await tester.pumpAndSettle();
+
+      app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.themeMode, ThemeMode.dark);
+      expect(
+        app.darkTheme!.dialogTheme.backgroundColor,
+        app.darkTheme!.colorScheme.surface,
+      );
+      expect(
+        app.darkTheme!.bottomSheetTheme.modalBackgroundColor,
+        app.darkTheme!.colorScheme.surface,
+      );
+    });
+
     testWidgets('settings shows premium cloud sync upsell when premium is inactive',
         (tester) async {
       await _pumpApp(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/config/app_config.dart';
+import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
@@ -38,6 +39,8 @@ void main() {
         dynamicThemeMode: DynamicThemeMode.chill,
         dynamicThemeIntensity: 0.7,
         referencePitch: 442.0,
+        installedMetronomeSoundPackIds: <String>[defaultMetronomeSoundPackId],
+        selectedMetronomeSoundPackId: defaultMetronomeSoundPackId,
       ),
     );
   });
@@ -77,6 +80,50 @@ void main() {
       0.25,
     );
     expect(prefs.getDouble(AppConfig.defaultReferencePitchStorageKey), 444.0);
+  });
+
+  test('installMetronomeSoundPack persists a newly downloaded pack', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(appSettingsProvider.notifier)
+        .installMetronomeSoundPack('acoustic_kit');
+
+    expect(
+      container.read(appSettingsProvider).installedMetronomeSoundPackIds,
+      <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
+    );
+    expect(
+      prefs.getStringList(AppConfig.defaultMetronomeSoundPacksStorageKey),
+      <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],
+    );
+  });
+
+  test('selectMetronomeSoundPack ignores packs that are not installed', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(appSettingsProvider.notifier)
+        .selectMetronomeSoundPack('acoustic_kit');
+
+    expect(
+      container.read(appSettingsProvider).selectedMetronomeSoundPackId,
+      defaultMetronomeSoundPackId,
+    );
   });
 
   test('updateDynamicThemeFromPitch updates in-memory theme values only',
@@ -187,7 +234,7 @@ void main() {
 
     await container.read(appSettingsProvider.notifier).unlockRewardedPremiumFor(
           const Duration(hours: 24),
-          now: DateTime.utc(2026, 1, 1),
+          now: DateTime.utc(2030, 1, 1),
         );
     await container.read(appSettingsProvider.notifier).setCloudSyncEnabled(true);
 

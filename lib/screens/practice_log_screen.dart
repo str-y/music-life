@@ -185,6 +185,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
       _displayMonth.year,
       _displayMonth.month,
     );
+    final colorScheme = Theme.of(context).colorScheme;
     try {
       final shareCard = await generateShareCardImage(
         title: l10n.practiceLogTitle,
@@ -193,7 +194,15 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
           '${l10n.practiceDays}: ${l10n.practiceDayCount(practiceDays.length)}',
           '${l10n.totalTime}: ${l10n.durationMinutes(totalMinutes)}',
         ],
-        accentColor: Theme.of(context).colorScheme.primary,
+        accentColor: colorScheme.primary,
+        backgroundColor:
+            Color.lerp(colorScheme.surface, colorScheme.primaryContainer, 0.08),
+        surfaceColor:
+            Color.lerp(colorScheme.surface, colorScheme.primaryContainer, 0.16),
+        titleColor: colorScheme.onSurface,
+        bodyColor: colorScheme.onSurfaceVariant,
+        footerColor:
+            Color.lerp(colorScheme.onSurfaceVariant, colorScheme.primary, 0.18),
       );
       await Share.shareXFiles(
         [shareCard],
@@ -648,14 +657,14 @@ class _MiniBarChartState extends State<_MiniBarChart> {
                                       decoration: BoxDecoration(
                                         color: isSelected
                                             ? cs.primary
-                                            : cs.primary.withOpacity(0.65),
+                                            : cs.primary.withValues(alpha: 0.65),
                                         borderRadius: BorderRadius.circular(
                                           isSelected ? 6 : 4,
                                         ),
                                         boxShadow: isSelected
                                             ? [
                                                 BoxShadow(
-                                                  color: cs.primary.withOpacity(0.24),
+                                                  color: cs.primary.withValues(alpha: 0.24),
                                                   blurRadius: 8,
                                                   offset: const Offset(0, 4),
                                                 ),
