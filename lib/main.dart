@@ -16,7 +16,7 @@ import 'utils/app_logger.dart';
 
 const double _themeContrastLevel = 0.5;
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const config = AppConfig();
   AppLogger.minimumLevel = config.effectiveLogLevel;
