@@ -46,7 +46,7 @@ void main() {
     test('reportError forwards errors to FlutterError.reportError', () {
       FlutterErrorDetails? captured;
       final previousHandler = FlutterError.onError;
-      FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.onError = (details) {
         captured = details;
       };
       addTearDown(() => FlutterError.onError = previousHandler);

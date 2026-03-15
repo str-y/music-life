@@ -6,19 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
 
-import '../l10n/app_localizations.dart';
-import '../providers/dependency_providers.dart';
-import '../providers/haptic_service_provider.dart';
-import '../providers/library_provider.dart';
-import '../repositories/recording_repository.dart';
-import '../router/routes.dart';
-import '../services/permission_service.dart';
-import '../services/recording_storage_service.dart';
-import '../utils/app_logger.dart';
-import '../widgets/shared/async_value_state_view.dart';
-import '../widgets/shared/waveform_view.dart';
-import 'library/log_tab.dart';
-import 'library/recordings_tab.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/haptic_service_provider.dart';
+import 'package:music_life/providers/library_provider.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/router/routes.dart';
+import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/services/recording_storage_service.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/widgets/shared/async_value_state_view.dart';
+import 'package:music_life/widgets/shared/waveform_view.dart';
+import 'package:music_life/screens/library/log_tab.dart';
+import 'package:music_life/screens/library/recordings_tab.dart';
 
 typedef AudioRecorderFactory = AudioRecorder Function();
 

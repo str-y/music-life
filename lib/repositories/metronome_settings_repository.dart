@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_config.dart';
-import '../metronome_sound_library.dart';
-
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/metronome_sound_library.dart';
 const Set<int> _supportedMetronomeDenominators = <int>{4, 8};
 
 class MetronomePreset {

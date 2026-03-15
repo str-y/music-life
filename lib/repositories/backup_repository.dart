@@ -3,8 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 
-import '../data/app_database.dart';
-
+import 'package:music_life/data/app_database.dart';
 const _backupTypeGroups = [
   XTypeGroup(
     label: 'JSON',

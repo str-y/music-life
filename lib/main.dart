@@ -7,14 +7,14 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import 'config/app_config.dart';
-import 'data/app_database.dart';
-import 'l10n/app_localizations.dart';
-import 'providers/app_settings_provider.dart';
-import 'providers/dependency_providers.dart';
-import 'router/app_router.dart';
-import 'theme/app_theme_seed.dart';
-import 'utils/app_logger.dart';
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/data/app_database.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/router/app_router.dart';
+import 'package:music_life/theme/app_theme_seed.dart';
+import 'package:music_life/utils/app_logger.dart';
 
 const double _themeContrastLevel = 0.5;
 

@@ -4,18 +4,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
-import '../app_constants.dart';
-import '../native_pitch_bridge.dart';
-import '../providers/app_settings_provider.dart';
-import '../providers/app_settings_controllers.dart';
-import '../providers/tuner_provider.dart';
-import '../utils/tuner_transposition.dart';
-import '../widgets/shared/loading_state_widget.dart';
-import '../widgets/listening_indicator.dart';
-import '../widgets/mic_permission_denied_view.dart';
-import '../widgets/mic_permission_gate.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/app_constants.dart';
+import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/tuner_provider.dart';
+import 'package:music_life/utils/tuner_transposition.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/listening_indicator.dart';
+import 'package:music_life/widgets/mic_permission_denied_view.dart';
+import 'package:music_life/widgets/mic_permission_gate.dart';
 Color _tunerInTuneColor(ColorScheme colorScheme) => colorScheme.tertiary;
 Color _tunerWarningColor(ColorScheme colorScheme) => colorScheme.secondary;
 

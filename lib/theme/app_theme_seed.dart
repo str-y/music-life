@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'dynamic_theme_mode.dart';
+import 'package:music_life/theme/dynamic_theme_mode.dart';
 
 const Map<String, int> _noteSteps = <String, int>{
   'C': 0,

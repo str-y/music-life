@@ -4,10 +4,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_config.dart';
-import '../data/app_database.dart';
-import '../services/service_error_handler.dart';
-
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/data/app_database.dart';
+import 'package:music_life/services/service_error_handler.dart';
 // ── Data model ────────────────────────────────────────────────────────────────
 
 /// Represents a saved composition and its chord progression.

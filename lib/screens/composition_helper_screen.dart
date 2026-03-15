@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../l10n/app_localizations.dart';
-import '../providers/composition_provider.dart';
-import '../repositories/composition_repository.dart';
-import '../services/service_error_handler.dart';
-import '../utils/share_card_image.dart';
-import '../widgets/shared/chord_card.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/composition_provider.dart';
+import 'package:music_life/repositories/composition_repository.dart';
+import 'package:music_life/services/service_error_handler.dart';
+import 'package:music_life/utils/share_card_image.dart';
+import 'package:music_life/widgets/shared/chord_card.dart';
 // ── Palette chords ────────────────────────────────────────────────────────────
 
 const List<String> _kPaletteChords = [

@@ -4,9 +4,8 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
-import '../repositories/recording_repository.dart';
-import '../services/service_error_handler.dart';
-
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/services/service_error_handler.dart';
 class RecordingPlaybackState {
   const RecordingPlaybackState({
     this.activeRecordingId,

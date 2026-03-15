@@ -5,8 +5,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
-import '../utils/app_logger.dart';
-
+import 'package:music_life/utils/app_logger.dart';
 const int _bytesPerMegabyte = 1024 * 1024;
 
 class RecordingStorageCheckResult {

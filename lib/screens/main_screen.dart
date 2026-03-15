@@ -3,21 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../l10n/app_localizations.dart';
-import '../providers/app_settings_provider.dart';
-import '../providers/app_settings_controllers.dart';
-import '../providers/dependency_providers.dart';
-import '../providers/library_provider.dart';
-import '../repositories/settings_repository.dart';
-import '../router/routes.dart';
-import '../services/ad_service.dart';
-import '../services/permission_service.dart';
-import '../services/review_service.dart';
-import '../services/service_error_handler.dart';
-import '../utils/app_logger.dart';
-import '../theme/dynamic_theme_mode.dart';
-import '../widgets/shared/banner_ad_widget.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/library_provider.dart';
+import 'package:music_life/repositories/settings_repository.dart';
+import 'package:music_life/router/routes.dart';
+import 'package:music_life/services/ad_service.dart';
+import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/services/review_service.dart';
+import 'package:music_life/services/service_error_handler.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/theme/dynamic_theme_mode.dart';
+import 'package:music_life/widgets/shared/banner_ad_widget.dart';
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 const String _repositoryUrl = 'https://github.com/str-y/music-life';

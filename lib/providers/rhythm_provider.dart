@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../app_constants.dart';
-import '../utils/metronome_utils.dart';
-
+import 'package:music_life/app_constants.dart';
+import 'package:music_life/utils/metronome_utils.dart';
 typedef RhythmClock = DateTime Function();
 typedef RhythmTickCallback = void Function(Duration elapsed);
 typedef RhythmTickerFactory = RhythmTicker Function(RhythmTickCallback onTick);

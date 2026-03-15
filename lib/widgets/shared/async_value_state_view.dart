@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../l10n/app_localizations.dart';
-import 'loading_state_widget.dart';
-import 'status_message_view.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
 
 class AsyncValueStateView<T> extends StatelessWidget {
   const AsyncValueStateView({

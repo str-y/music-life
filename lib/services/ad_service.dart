@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/app_config.dart';
-import 'service_error_handler.dart';
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/services/service_error_handler.dart';
 
 /// Indicates the current load lifecycle state for an ad slot.
 enum AdLoadStatus { idle, loading, loaded, error }
