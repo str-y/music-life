@@ -9,6 +9,7 @@ android {
     namespace = "com.example.music_life"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    flavorDimensions += "environment"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -28,6 +29,31 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Music Life Dev")
+            manifestPlaceholders["admobApplicationId"] =
+                "ca-app-pub-3940256099942544~3347511713"
+        }
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+            resValue("string", "app_name", "Music Life Staging")
+            manifestPlaceholders["admobApplicationId"] =
+                "ca-app-pub-3940256099942544~3347511713"
+        }
+        create("prod") {
+            dimension = "environment"
+            resValue("string", "app_name", "Music Life")
+            manifestPlaceholders["admobApplicationId"] =
+                "ca-app-pub-3940256099942544~3347511713"
+        }
     }
 
     buildTypes {
