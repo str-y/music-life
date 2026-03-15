@@ -22,12 +22,12 @@ class _MockAdService extends Mock implements IAdService {}
 
 Widget _wrap(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [...overrides.whereType<dynamic>().toList()],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
@@ -36,7 +36,7 @@ Widget _wrap(
   );
 }
 
-Future<List<Override>> _settingsOverridesWithPrefs({
+Future<List<dynamic>> _settingsOverridesWithPrefs({
   Map<String, Object> initialValues = const {},
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);

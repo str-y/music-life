@@ -152,7 +152,7 @@ class _CompositionHelperScreenState
   Future<void> _showSaveDialog() async {
     final l10n = AppLocalizations.of(context)!;
     final savedCount =
-        ref.read(compositionProvider).valueOrNull?.length ?? 0;
+        ref.read(compositionProvider).asData?.value?.length ?? 0;
     final controller = TextEditingController(
       text: l10n.compositionDefaultName(savedCount + 1),
     );
@@ -226,7 +226,7 @@ class _CompositionHelperScreenState
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _LoadCompositionSheet(
-        compositions: ref.read(compositionProvider).valueOrNull ?? const [],
+        compositions: ref.read(compositionProvider).asData?.value ?? const [],
         onDelete: (comp) async {
           try {
             await ref
@@ -267,7 +267,7 @@ class _CompositionHelperScreenState
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final compositionState = ref.watch(compositionProvider);
-    final compositions = compositionState.valueOrNull ?? const <Composition>[];
+    final compositions = compositionState.asData?.value ?? const <Composition>[];
 
     ref.listen(compositionProvider, (previous, next) {
       if (next.hasError && (previous == null || !previous.hasError)) {

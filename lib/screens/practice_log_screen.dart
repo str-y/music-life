@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import "package:flutter/semantics.dart";
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
@@ -226,7 +228,7 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
   @override
   Widget build(BuildContext context) {
     final practiceLogState = ref.watch(practiceLogProvider);
-    final entries = practiceLogState.valueOrNull ?? const <PracticeLogEntry>[];
+    final entries = practiceLogState.asData?.value ?? const <PracticeLogEntry>[];
     final isLoaded = practiceLogState.hasValue;
     final currentNow = widget.now();
     return Scaffold(

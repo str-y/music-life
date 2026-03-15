@@ -227,7 +227,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       final syncedAt = await ref
           .read(appSettingsProvider.notifier)
           .setCloudSyncEnabled(enabled);
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -243,7 +243,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           error: e,
           stackTrace: stackTrace,
         );
-        return;
+        return null;
       }
       ServiceErrorHandler.reportAndNotify(
         context: context,
@@ -261,7 +261,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     try {
       final syncedAt =
           await ref.read(appSettingsProvider.notifier).syncCloudBackupNow();
-      if (!context.mounted) return;
+      if (!context.mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.cloudSyncCompleted)),
       );
@@ -273,7 +273,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           error: e,
           stackTrace: stackTrace,
         );
-        return;
+        return null;
       }
       ServiceErrorHandler.reportAndNotify(
         context: context,
@@ -356,7 +356,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final settings = ref.watch(appSettingsProvider);
     final libraryState = ref.watch(libraryProvider);
     final practiceSummary =
-        computePracticeSummary(libraryState.valueOrNull?.logs ?? const []);
+        computePracticeSummary(libraryState.asData?.value.logs ?? const []);
     final hasDailyGoalAchievement =
         practiceSummary.todayMinutes >= _dailyGoalMinutes;
     return Scaffold(

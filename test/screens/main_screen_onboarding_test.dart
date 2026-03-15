@@ -18,7 +18,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
   PermissionService testPermissionService = defaultPermissionService,
-  List<Override> overrides = const <Override>[],
+  List<dynamic> overrides = const <dynamic>[],
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
   final prefs = await SharedPreferences.getInstance();
