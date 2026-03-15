@@ -33,6 +33,10 @@ void main() {
       '{"version":1}',
     );
     expect(prefs.getString(AppConfig.defaultCloudBackupBundleStorageKey), isNull);
+    expect(
+      prefs.getString(AppConfig.defaultLastCloudSyncAtStorageKey),
+      '2026-01-01T12:00:00.000Z',
+    );
   });
 
   test('restoreLatestBackup imports the stored backup bundle', () async {
