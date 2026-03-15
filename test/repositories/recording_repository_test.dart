@@ -334,11 +334,80 @@ void main() {
           isTrue);
       expect(RecordingRepository.waveformCacheSize, 1);
       expect(
+        RecordingRepository.waveformCacheByteSize,
+        recording.waveformData.length * Float64List.bytesPerElement,
+      );
+      expect(
         AppLogger.bufferedLogs.any(
           (line) => line.contains('waveform cache hits: 1'),
         ),
         isTrue,
       );
+    });
+
+    test('evicts the least recently used waveform when cache reaches capacity',
+        () async {
+      final recordings = List<RecordingEntry>.generate(
+        257,
+        (index) => RecordingEntry(
+          id: 'recording-$index',
+          title: 'Recording $index',
+          recordedAt: DateTime(2024, 7, 8, 9, index),
+          durationSeconds: index + 1,
+          waveformData: [index / 257, (index + 1) / 257],
+        ),
+      );
+      currentRecordingRows =
+          recordings.take(256).map(_recordingRow).toList(growable: false);
+
+      final repository = createRepository();
+
+      final firstLoad = await repository.loadRecordings();
+
+      currentRecordingRows = <Map<String, Object?>>[
+        _recordingRow(recordings.first),
+        _recordingRow(recordings.last),
+        ...recordings
+            .skip(2)
+            .take(254)
+            .map(_recordingRow)
+            .toList(growable: false),
+        _recordingRow(recordings[1]),
+      ];
+
+      final secondLoad = await repository.loadRecordings();
+      final retainedWaveform = secondLoad
+          .firstWhere((recording) => recording.id == recordings.first.id)
+          .waveformData;
+      final evictedWaveform = secondLoad
+          .firstWhere((recording) => recording.id == recordings[1].id)
+          .waveformData;
+
+      expect(identical(retainedWaveform, firstLoad.first.waveformData), isTrue);
+      expect(identical(evictedWaveform, firstLoad[1].waveformData), isFalse);
+      expect(RecordingRepository.waveformCacheSize, 256);
+    });
+
+    test('resetMigrationStateForTesting clears waveform cache byte tracking',
+        () async {
+      final recording = RecordingEntry(
+        id: 'byte-reset',
+        title: 'Byte reset',
+        recordedAt: DateTime(2024, 7, 8, 9, 10),
+        durationSeconds: 30,
+        waveformData: const [0.1, 0.4, 0.7],
+      );
+      currentRecordingRows = [_recordingRow(recording)];
+
+      final repository = createRepository();
+
+      await repository.loadRecordings();
+      expect(RecordingRepository.waveformCacheByteSize, greaterThan(0));
+
+      RecordingRepository.resetMigrationStateForTesting();
+
+      expect(RecordingRepository.waveformCacheSize, 0);
+      expect(RecordingRepository.waveformCacheByteSize, 0);
     });
   });
 }
