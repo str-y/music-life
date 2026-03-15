@@ -134,6 +134,38 @@ static bool test_yin_silence_returns_no_pitch() {
     return true;
 }
 
+static bool test_yin_low_amplitude_returns_no_pitch() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME);
+    make_sine(buf, 440.0f, SR);
+    for (float& sample : buf) {
+        sample *= 1.0e-5f;
+    }
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(detected < 0.0f);
+    ASSERT_TRUE(yin.probability() == 0.0f);
+    return true;
+}
+
+static bool test_yin_nan_input_returns_no_pitch() {
+    const int SR    = 44100;
+    const int FRAME = 2048;
+
+    Yin yin(SR, FRAME, 0.10f);
+    std::vector<float> buf(FRAME, std::numeric_limits<float>::quiet_NaN());
+
+    std::vector<float> workspace(FRAME / 2);
+    float detected = yin.detect(buf.data(), workspace);
+    ASSERT_TRUE(detected < 0.0f);
+    ASSERT_TRUE(yin.probability() == 0.0f);
+    return true;
+}
+
 static bool test_yin_workspace_no_reallocation() {
     // When the workspace is pre-allocated with the correct capacity,
     // Yin::detect must not trigger a heap reallocation (i.e. the
@@ -596,6 +628,8 @@ int main() {
     run_test("yin: detects low-E guitar (82 Hz)",   test_yin_sine_e2);
     run_test("yin: detects C5 (523 Hz)",            test_yin_sine_c5);
     run_test("yin: silence returns -1",             test_yin_silence_returns_no_pitch);
+    run_test("yin: low amplitude returns -1",       test_yin_low_amplitude_returns_no_pitch);
+    run_test("yin: NaN input returns -1",           test_yin_nan_input_returns_no_pitch);
     run_test("yin: no realloc with pre-alloc ws",   test_yin_workspace_no_reallocation);
     run_test("yin: keeps caller workspace size",    test_yin_workspace_size_is_not_changed);
     run_test("yin: handles non-SIMD-multiple frame", test_yin_non_simd_multiple_frame_size);
