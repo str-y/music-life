@@ -28,6 +28,9 @@ namespace music_life {
 
 namespace {
 
+constexpr float kDefaultThreshold = 0.10f;
+constexpr float kMinSignalMeanSquare = 1.0e-8f;
+
 static_assert(sizeof(std::complex<float>) == sizeof(float) * 2,
               "SIMD complex operations require tightly packed std::complex<float>.");
 
@@ -194,6 +197,33 @@ inline void compute_difference_from_corr(const std::vector<float>& sq_prefix,
         const float B_tau = sq_prefix[tau + W] - sq_prefix[tau];
         const float r_tau = corr[tau].real();
         df[tau] = A + B_tau - 2.0f * r_tau;
+    }
+}
+
+bool has_sufficient_signal(const float* samples, int n) {
+    if (samples == nullptr || n <= 0) {
+        return false;
+    }
+
+    double sum_squares = 0.0;
+    for (int i = 0; i < n; ++i) {
+        const float sample = samples[i];
+        if (!std::isfinite(sample)) {
+            return false;
+        }
+        sum_squares += static_cast<double>(sample) * static_cast<double>(sample);
+    }
+
+    const double min_sum_squares = static_cast<double>(n) * static_cast<double>(kMinSignalMeanSquare);
+    return sum_squares > min_sum_squares;
+}
+
+void sanitize_cmndf(std::vector<float>& df, int n) {
+    for (int tau = 0; tau < n; ++tau) {
+        float& value = df[tau];
+        if (!std::isfinite(value) || value < 0.0f) {
+            value = 1.0f;
+        }
     }
 }
 
@@ -511,13 +541,14 @@ const char* Yin::fft_backend_name() const {
 // ---------------------------------------------------------------------------
 
 float Yin::detect(const float* samples, std::vector<float>& workspace) {
-    if (static_cast<int>(workspace.size()) < half_buffer_) {
+    if (static_cast<int>(workspace.size()) < half_buffer_ || !has_sufficient_signal(samples, buffer_size_)) {
         probability_ = 0.0f;
         return -1.0f;
     }
 
     difference(samples, workspace);
     cmndf(workspace);
+    sanitize_cmndf(workspace, half_buffer_);
 
     int tau = absolute_threshold(workspace);
     if (tau == -1) {
@@ -526,8 +557,19 @@ float Yin::detect(const float* samples, std::vector<float>& workspace) {
     }
 
     float refined_tau = parabolic_interpolation(workspace, tau);
-    probability_ = 1.0f - workspace[tau];
-    return static_cast<float>(sample_rate_) / refined_tau;
+    if (!std::isfinite(refined_tau) || refined_tau <= 0.0f) {
+        probability_ = 0.0f;
+        return -1.0f;
+    }
+
+    const float frequency = static_cast<float>(sample_rate_) / refined_tau;
+    if (!std::isfinite(frequency) || frequency <= 0.0f) {
+        probability_ = 0.0f;
+        return -1.0f;
+    }
+
+    probability_ = std::clamp(1.0f - workspace[tau], 0.0f, 1.0f);
+    return frequency;
 }
 
 // ---------------------------------------------------------------------------
@@ -635,24 +677,35 @@ void Yin::cmndf(std::vector<float>& df) const {
 // ---------------------------------------------------------------------------
 
 int Yin::absolute_threshold(const std::vector<float>& df) const {
+    const float threshold =
+        std::isfinite(threshold_) ? std::clamp(threshold_, 0.0f, 1.0f) : kDefaultThreshold;
+
     // Start from tau = 2 (tau = 1 is always very low for periodic signals)
     for (int tau = 2; tau < half_buffer_; ++tau) {
-        if (df[tau] < threshold_) {
+        if (!std::isfinite(df[tau])) {
+            continue;
+        }
+        if (df[tau] < threshold) {
             // Find the local minimum in this dip
-            while (tau + 1 < half_buffer_ && df[tau + 1] < df[tau]) {
+            while (tau + 1 < half_buffer_ &&
+                   std::isfinite(df[tau + 1]) &&
+                   df[tau + 1] < df[tau]) {
                 ++tau;
             }
             return tau;
         }
     }
     // No pitch found below threshold – return the global minimum instead
-    int min_tau = 2;
-    for (int tau = 3; tau < half_buffer_; ++tau) {
-        if (df[tau] < df[min_tau]) {
+    int min_tau = -1;
+    for (int tau = 2; tau < half_buffer_; ++tau) {
+        if (!std::isfinite(df[tau])) {
+            continue;
+        }
+        if (min_tau == -1 || df[tau] < df[min_tau]) {
             min_tau = tau;
         }
     }
-    return (df[min_tau] < 0.5f) ? min_tau : -1;
+    return (min_tau != -1 && df[min_tau] < 0.5f) ? min_tau : -1;
 }
 
 // ---------------------------------------------------------------------------
@@ -663,14 +716,21 @@ float Yin::parabolic_interpolation(const std::vector<float>& df, int tau) const 
     if (tau <= 0 || tau >= half_buffer_ - 1) {
         return static_cast<float>(tau);
     }
-    float s0 = df[tau - 1];
-    float s1 = df[tau];
-    float s2 = df[tau + 1];
-    float denom = 2.0f * (2.0f * s1 - s2 - s0);
-    if (std::abs(denom) < std::numeric_limits<float>::epsilon()) {
+    const float s0 = df[tau - 1];
+    const float s1 = df[tau];
+    const float s2 = df[tau + 1];
+    if (!std::isfinite(s0) || !std::isfinite(s1) || !std::isfinite(s2)) {
         return static_cast<float>(tau);
     }
-    return static_cast<float>(tau) + (s2 - s0) / denom;
+    const float denom = 2.0f * (2.0f * s1 - s2 - s0);
+    if (!std::isfinite(denom) || std::abs(denom) < std::numeric_limits<float>::epsilon()) {
+        return static_cast<float>(tau);
+    }
+    const float offset = (s2 - s0) / denom;
+    if (!std::isfinite(offset) || std::abs(offset) > 1.0f) {
+        return static_cast<float>(tau);
+    }
+    return static_cast<float>(tau) + offset;
 }
 
 } // namespace music_life
