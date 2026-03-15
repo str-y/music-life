@@ -18,6 +18,34 @@ import 'utils/app_logger.dart';
 
 const double _themeContrastLevel = 0.5;
 
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  const config = AppConfig();
+  AppLogger.minimumLevel = config.effectiveLogLevel;
+  try {
+    await MobileAds.instance.initialize();
+    await JustAudioBackground.init(
+      androidNotificationChannelId: config.audioNotificationChannelId,
+      androidNotificationChannelName: config.audioNotificationChannelName,
+      androidNotificationOngoing: true,
+    );
+  } catch (e, stackTrace) {
+    AppLogger.reportError(
+      'Failed to initialize background audio',
+      error: e,
+      stackTrace: stackTrace,
+    );
+  }
+  final prefs = await SharedPreferences.getInstance();
+  AppDatabase.configureSharedPreferencesLoader(() async => prefs);
+  await AppDatabase.instance.ensureHealthy();
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const MusicLifeApp(),
+    ),
 typedef AppErrorReporter =
     void Function(
       String message, {
