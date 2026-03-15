@@ -5,6 +5,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val testAdmobApplicationId = "ca-app-pub-3940256099942544~3347511713"
+val prodAdmobApplicationId =
+    providers.gradleProperty("PROD_ADMOB_APPLICATION_ID").orNull
+        ?: "ca-app-pub-0000000000000000~0000000000"
+
 android {
     namespace = "com.example.music_life"
     compileSdk = flutter.compileSdkVersion
@@ -37,22 +42,19 @@ android {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             resValue("string", "app_name", "Music Life Dev")
-            manifestPlaceholders["admobApplicationId"] =
-                "ca-app-pub-3940256099942544~3347511713"
+            manifestPlaceholders["admobApplicationId"] = testAdmobApplicationId
         }
         create("staging") {
             dimension = "environment"
             applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
             resValue("string", "app_name", "Music Life Staging")
-            manifestPlaceholders["admobApplicationId"] =
-                "ca-app-pub-3940256099942544~3347511713"
+            manifestPlaceholders["admobApplicationId"] = testAdmobApplicationId
         }
         create("prod") {
             dimension = "environment"
             resValue("string", "app_name", "Music Life")
-            manifestPlaceholders["admobApplicationId"] =
-                "ca-app-pub-3940256099942544~3347511713"
+            manifestPlaceholders["admobApplicationId"] = prodAdmobApplicationId
         }
     }
 

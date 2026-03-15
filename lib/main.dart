@@ -17,7 +17,7 @@ import 'utils/app_logger.dart';
 const double _themeContrastLevel = 0.5;
 
 Future<void> main() async {
-  await runMusicLifeApp(const AppConfig());
+  await runMusicLifeApp(AppConfig.prod());
 }
 
 Future<void> runMusicLifeApp(AppConfig config) async {

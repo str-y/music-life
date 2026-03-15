@@ -34,3 +34,6 @@ application ID suffixes.
 Each flavor uses its own `AppConfig`, API base URL, Android app label, and
 shared-preferences storage namespace so non-production builds do not reuse
 production data on the same device.
+
+For Android production builds, set `-PPROD_ADMOB_APPLICATION_ID=...` to supply
+the real AdMob application ID instead of the non-production placeholder.
