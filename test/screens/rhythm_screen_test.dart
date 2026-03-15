@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/rhythm_screen.dart';
+import 'package:music_life/widgets/rhythm/groove_analysis_section.dart';
+import 'package:music_life/widgets/rhythm/metronome_controls.dart';
 import 'package:music_life/widgets/rhythm/metronome_section.dart';
+import 'package:music_life/widgets/rhythm/sound_library_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
@@ -105,6 +108,7 @@ void main() {
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
+    expect(find.byType(MetronomeControls), findsOneWidget);
     expect(find.byKey(const ValueKey('metronome-preset-dropdown')), findsOneWidget);
     expect(find.byKey(const ValueKey('save-metronome-preset')), findsOneWidget);
     expect(
@@ -129,6 +133,7 @@ void main() {
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
+    expect(find.byType(GrooveAnalysisSection), findsOneWidget);
     expect(
       find.ancestor(
         of: find.byType(MetronomeSection),
@@ -170,10 +175,11 @@ void main() {
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
     expect(buttonFinder, findsOneWidget);
-    
+     
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
-    
+     
+    expect(find.byType(SoundLibrarySheet), findsOneWidget);
     expect(find.text(l10n.metronomeSoundPackElectronicName), findsWidgets);
   });
 
