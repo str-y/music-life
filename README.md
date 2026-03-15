@@ -12,3 +12,6 @@ Golden tests for major screens are in `test/screens`.
 ```bash
 flutter test --dart-define=RUN_SCREEN_GOLDENS=true --update-goldens test/screens
 ```
+
+- CI validates the checked-in screen baselines with the same
+  `RUN_SCREEN_GOLDENS=true` flag during `flutter test`.

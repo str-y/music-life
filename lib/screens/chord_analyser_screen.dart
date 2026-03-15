@@ -372,7 +372,6 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                                         ),
                                       ],
                               ),
-                          ),
                         ),
                       ),
                     ),

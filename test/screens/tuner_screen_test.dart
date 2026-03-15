@@ -6,15 +6,21 @@ import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/tuner_screen.dart';
+import 'golden_test_utils.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
-Widget _wrap(Widget child, {List<dynamic> overrides = const []}) {
+Widget _wrap(
+  Widget child, {
+  List<dynamic> overrides = const [],
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
   return ProviderScope(
     overrides: [...overrides],
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
       home: Scaffold(body: child),
     ),
   );
@@ -55,37 +61,42 @@ void main() {
     });
   });
 
-  testWidgets('matches tuner screen golden', (tester) async {
-    final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
-    when(() => bridge.pitchStream)
-        .thenAnswer((_) => const Stream<PitchResult>.empty());
-    when(() => bridge.tunerAnalysisStream)
-        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+  for (final variant in screenGoldenVariants) {
+    testWidgets('matches tuner screen golden (${variant.name})', (tester) async {
+      await prepareGoldenSurface(tester);
+      final bridge = _MockNativePitchBridge();
+      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(() => bridge.pitchStream)
+          .thenAnswer((_) => const Stream<PitchResult>.empty());
+      when(() => bridge.tunerAnalysisStream)
+          .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
+      when(() => bridge.dispose()).thenReturn(null);
 
-    await tester.pumpWidget(
+      await tester.pumpWidget(
         _wrap(
           const TunerScreen(
             useMicPermissionGate: false,
             showTranspositionControl: false,
           ),
+          locale: variant.locale,
+          themeMode: variant.themeMode,
           overrides: [
             pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
           ],
         ),
-    );
+      );
 
-    // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
-    // First pump lets async initialization complete, second pump captures a fixed frame.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+      // Avoid pumpAndSettle(): both screens contain a repeating listening animation.
+      // First pump lets async initialization complete, second pump captures a fixed frame.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    await expectLater(
-      find.byType(TunerScreen),
-      matchesGoldenFile('goldens/tuner_screen.png'),
-    );
-  });
+      await expectScreenGolden(
+        find.byType(TunerScreen),
+        variant.goldenPath('tuner_screen'),
+      );
+    });
+  }
 
   testWidgets('shows transposition selector on tuner screen', (tester) async {
     final bridge = _MockNativePitchBridge();

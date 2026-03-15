@@ -164,15 +164,14 @@ class RecordingRepository {
     Future<bool> Function(String key)? removeValue,
   })  : _prefs = prefs,
         _config = config,
-        _replaceAllData =
-            replaceAllData ??
-            ({
+        _replaceAllData = replaceAllData ??
+            (({
               required recordings,
               required practiceLogs,
             }) => AppDatabase.instance.replaceAllData(
-              recordings: recordings,
-              practiceLogs: practiceLogs,
-            ),
+                  recordings: recordings,
+                  practiceLogs: practiceLogs,
+                )),
         _queryAllRecordings =
             queryAllRecordings ?? AppDatabase.instance.queryAllRecordings,
         _queryAllPracticeLogs =

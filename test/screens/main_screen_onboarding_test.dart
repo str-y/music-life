@@ -18,7 +18,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
   PermissionService testPermissionService = defaultPermissionService,
-  List<Override> overrides = const <Override>[],
+  List<dynamic> overrides = const <dynamic>[],
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
   final prefs = await SharedPreferences.getInstance();
@@ -319,18 +319,28 @@ void main() {
       expect(find.byKey(const ValueKey('settings-cloud-restore')), findsOneWidget);
     });
 
-    testWidgets('matches main screen golden baseline', (tester) async {
-      await _pumpApp(
-        tester,
-        initialValues: const <String, Object>{_onboardingShownKey: true},
-      );
-      await tester.pump(const Duration(milliseconds: 600));
+    for (final variant in screenGoldenVariants) {
+      testWidgets('matches main screen golden baseline (${variant.name})',
+          (tester) async {
+        await prepareGoldenSurface(tester);
+        await _pumpApp(
+          tester,
+          initialValues: <String, Object>{
+            _onboardingShownKey: true,
+            AppConfig.defaultUseSystemThemeStorageKey: false,
+            AppConfig.defaultDarkModeStorageKey:
+                variant.themeMode == ThemeMode.dark,
+            AppConfig.defaultLocaleStorageKey: variant.locale.languageCode,
+          },
+        );
+        await tester.pump(const Duration(milliseconds: 600));
 
-      await expectScreenGolden(
-        find.byType(Scaffold).first,
-        'goldens/main_screen.png',
-      );
-    });
+        await expectScreenGolden(
+          find.byType(Scaffold).first,
+          variant.goldenPath('main_screen'),
+        );
+      });
+    }
   });
 }
 

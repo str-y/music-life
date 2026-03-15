@@ -29,16 +29,18 @@ class _AiPracticeInsightsScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
-    final libraryState = ref.watch(libraryProvider);
+    final libraryAsync = ref.watch(libraryProvider);
+    final libraryData = libraryAsync.asData?.value;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.aiPracticeInsightsTitle),
         actions: [
           if (settings.hasRewardedPremiumAccess &&
-              !libraryState.loading &&
-              !libraryState.hasError &&
-              (libraryState.logs.isNotEmpty || libraryState.recordings.isNotEmpty))
+              !libraryAsync.isLoading &&
+              !libraryAsync.hasError &&
+              (libraryData?.logs.isNotEmpty == true ||
+                  libraryData?.recordings.isNotEmpty == true))
             IconButton(
               tooltip: l10n.retry,
               onPressed: () => setState(() {
@@ -50,20 +52,21 @@ class _AiPracticeInsightsScreenState
         ],
       ),
       body: settings.hasRewardedPremiumAccess
-          ? _buildPremiumBody(context, libraryState)
+          ? _buildPremiumBody(context, libraryAsync)
           : _PremiumRequiredView(
               onUnlock: () => _unlockWithRewardedAd(context),
             ),
     );
   }
 
-  Widget _buildPremiumBody(BuildContext context, LibraryState libraryState) {
+  Widget _buildPremiumBody(
+      BuildContext context, AsyncValue<LibraryState> libraryAsync) {
     final l10n = AppLocalizations.of(context)!;
 
-    if (libraryState.loading) {
+    if (libraryAsync.isLoading) {
       return LoadingStateWidget(semanticsLabel: l10n.loadingLibrary);
     }
-    if (libraryState.hasError) {
+    if (libraryAsync.hasError) {
       return StatusMessageView(
         icon: Icons.error_outline,
         iconColor: Theme.of(context).colorScheme.error,
@@ -75,7 +78,9 @@ class _AiPracticeInsightsScreenState
         ),
       );
     }
-    if (libraryState.logs.isEmpty && libraryState.recordings.isEmpty) {
+    final libraryState = libraryAsync.asData?.value;
+    if (libraryState == null ||
+        (libraryState.logs.isEmpty && libraryState.recordings.isEmpty)) {
       return StatusMessageView(
         icon: Icons.insights_outlined,
         message: l10n.aiPracticeInsightsEmpty,

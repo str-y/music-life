@@ -18,16 +18,48 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   Future<void> update(AppSettings updated, {bool syncCloudBackup = true}) async {
-    state = updated;
     await _repo.save(updated);
+    state = updated;
     if (!syncCloudBackup ||
         !updated.cloudSyncEnabled ||
         !updated.hasRewardedPremiumAccess) {
       return;
     }
     final syncedAt = await ref.read(cloudSyncRepositoryProvider).syncNow();
-    state = updated.copyWith(lastCloudSyncAt: syncedAt);
-    await _repo.save(state);
+    final withSync = updated.copyWith(lastCloudSyncAt: syncedAt);
+    await _repo.save(withSync);
+    state = withSync;
+  }
+
+  Future<void> updateMetronomeSettings({
+    required int bpm,
+    required int timeSignatureNumerator,
+    required int timeSignatureDenominator,
+  }) {
+    return update(
+      state.copyWith(
+        metronomeBpm: bpm,
+        metronomeTimeSignatureNumerator: timeSignatureNumerator,
+        metronomeTimeSignatureDenominator: timeSignatureDenominator,
+      ),
+      syncCloudBackup: false,
+    );
+  }
+
+  Future<void> saveMetronomePreset(MetronomePreset preset) {
+    final updatedPresets = [...state.metronomePresets];
+    final existingIndex = updatedPresets.indexWhere(
+      (candidate) => candidate.name == preset.name,
+    );
+    if (existingIndex >= 0) {
+      updatedPresets[existingIndex] = preset;
+    } else {
+      updatedPresets.add(preset);
+    }
+    return update(
+      state.copyWith(metronomePresets: updatedPresets),
+      syncCloudBackup: false,
+    );
   }
 
   Future<void> unlockRewardedPremiumFor(
@@ -44,8 +76,7 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
 
   Future<void> installMetronomeSoundPack(String packId) async {
     final pack = findMetronomeSoundPackById(packId);
-    if (pack == null ||
-        (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
+    if (pack == null || (pack.premiumOnly && !state.hasRewardedPremiumAccess)) {
       return;
     }
     await update(

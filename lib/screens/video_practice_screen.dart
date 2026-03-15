@@ -415,7 +415,7 @@ class _PitchOverlay extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: cs.inverseSurface.withOpacity(0.86),
+          color: cs.inverseSurface.withValues(alpha: 0.86),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

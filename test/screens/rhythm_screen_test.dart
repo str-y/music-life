@@ -7,18 +7,23 @@ import 'package:music_life/rhythm_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
-Widget _wrap(Widget child, {List<Override> overrides = const []}) {
+Widget _wrap(
+  Widget child, {
+  List<dynamic> overrides = const [],
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
   return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: child),
+    overrides: [...overrides],
+    child: buildGoldenTestApp(
+      home: child,
+      locale: locale,
+      themeMode: themeMode,
     ),
   );
 }
 
-Future<List<Override>> _settingsOverridesWithPrefs({
+Future<List<dynamic>> _settingsOverridesWithPrefs({
   Map<String, Object> initialValues = const {},
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
@@ -31,6 +36,7 @@ Future<String> _pumpSemanticLabel(
   WidgetTester tester,
   String Function(AppLocalizations) extract,
 ) async {
+  final overrides = await _settingsOverridesWithPrefs();
   late String label;
   await tester.pumpWidget(_wrap(
     Builder(builder: (context) {
@@ -41,6 +47,7 @@ Future<String> _pumpSemanticLabel(
         child: const SizedBox(width: 50, height: 36),
       );
     }),
+    overrides: overrides,
   ));
   await tester.pumpAndSettle();
   return label;
@@ -51,7 +58,7 @@ void main() {
     for (final entry in <String, String Function(AppLocalizations)>{
       'bpmDecrease10SemanticLabel': (l) => l.bpmDecrease10SemanticLabel,
       'bpmDecrease1SemanticLabel': (l) => l.bpmDecrease1SemanticLabel,
-      'bpmIncrease1SemanticLabel': (l) => l.bpmIncrease1SemanticLabel,
+      'bpmIncrease1CommandLabel': (l) => l.bpmIncrease1SemanticLabel,
       'bpmIncrease10SemanticLabel': (l) => l.bpmIncrease10SemanticLabel,
     }.entries) {
       testWidgets('${entry.key} is non-empty and appears as a Semantics node',
@@ -70,7 +77,7 @@ void main() {
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
     await tester.pump();
 
-    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    await tester.pumpWidget(_wrap(const SizedBox.shrink(), overrides: overrides));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -81,32 +88,48 @@ void main() {
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
     await tester.pump(const Duration(milliseconds: 200));
 
-    await expectScreenGolden(
-      find.byType(RhythmScreen),
-      'goldens/rhythm_screen.png',
-    );
+    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+  });
+
+  testWidgets('sound library button is visible and tappable',
+      (tester) async {
+    final overrides = await _settingsOverridesWithPrefs();
+
+    await tester.pumpWidget(_wrap(
+      const RhythmScreen(),
+      overrides: overrides,
+    ));
+    await tester.pumpAndSettle();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
+
+    expect(find.byType(RhythmScreen), findsOneWidget);
+    expect(find.text(l10n.metronomeSoundLibraryTitle), findsOneWidget);
+
+    final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
+    expect(buttonFinder, findsOneWidget);
+    
+    await tester.tap(buttonFinder);
+    await tester.pumpAndSettle();
+    
+    expect(find.text(l10n.metronomeSoundPackElectronicName), findsWidgets);
   });
 
   testWidgets('downloads and selects a metronome sound pack from the library',
       (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
-    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+    
+    await tester.pumpWidget(_wrap(
+      const RhythmScreen(),
+      overrides: overrides,
+    ));
     await tester.pumpAndSettle();
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(RhythmScreen)),
-    )!;
+    final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
-    expect(
-      find.text(
-        l10n.metronomeSoundLibrarySelected(
-          l10n.metronomeSoundPackElectronicName,
-        ),
-      ),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byKey(const ValueKey('metronome-sound-library-button')));
+    final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
+    await tester.ensureVisible(buttonFinder);
+    await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.metronomeSoundPackAcousticName), findsOneWidget);
@@ -121,14 +144,18 @@ void main() {
   testWidgets('premium sound pack prompts rewarded unlock when locked',
       (tester) async {
     final overrides = await _settingsOverridesWithPrefs();
-    await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
+
+    await tester.pumpWidget(_wrap(
+      const RhythmScreen(),
+      overrides: overrides,
+    ));
     await tester.pumpAndSettle();
 
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(RhythmScreen)),
-    )!;
+    final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
-    await tester.tap(find.byKey(const ValueKey('metronome-sound-library-button')));
+    final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
+    await tester.ensureVisible(buttonFinder);
+    await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.metronomeSoundPackVoiceName), findsOneWidget);

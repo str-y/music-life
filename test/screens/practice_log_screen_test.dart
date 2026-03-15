@@ -7,21 +7,31 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
 import 'package:music_life/utils/practice_log_utils.dart';
+import 'golden_test_utils.dart';
 
-Widget _wrap(Widget child) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
+Widget _wrap(
+  Widget child, {
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
+  return buildGoldenTestApp(
+    locale: locale,
+    themeMode: themeMode,
     home: Scaffold(body: child),
   );
 }
 
-Widget _wrapScreen(Widget child, {List<Override> overrides = const []}) {
+Widget _wrapScreen(
+  Widget child, {
+  List<dynamic> overrides = const [],
+  Locale locale = const Locale('en'),
+  ThemeMode themeMode = ThemeMode.light,
+}) {
   return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
+    overrides: [...overrides.whereType<dynamic>().toList()],
+    child: buildGoldenTestApp(
+      locale: locale,
+      themeMode: themeMode,
       home: child,
     ),
   );
@@ -124,10 +134,49 @@ void main() {
   });
 
   group('PracticeLogScreen accessibility', () {
+    for (final variant in screenGoldenVariants) {
+      testWidgets('matches practice log screen golden (${variant.name})',
+          (tester) async {
+        await prepareGoldenSurface(tester);
+        final fixedNow = DateTime(2026, 2, 14);
+        final logs = [
+          PracticeLogEntry(
+            date: fixedNow,
+            durationMinutes: 30,
+            memo: 'Guitar: scales',
+          ),
+          PracticeLogEntry(
+            date: fixedNow.subtract(const Duration(days: 4)),
+            durationMinutes: 20,
+            memo: 'Piano: arpeggio',
+          ),
+        ];
+        final repo = _MockRecordingRepository();
+        when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+
+        await tester.pumpWidget(
+          _wrapScreen(
+            PracticeLogScreen(now: () => fixedNow),
+            locale: variant.locale,
+            themeMode: variant.themeMode,
+            overrides: [
+              recordingRepositoryProvider.overrideWithValue(repo),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await expectScreenGolden(
+          find.byType(PracticeLogScreen),
+          variant.goldenPath('practice_log_screen'),
+        );
+      });
+    }
+
     testWidgets(
         'month navigation buttons and analytics bars expose semantics labels',
         (tester) async {
-      final now = DateTime.now();
+      final now = DateTime(2026, 2, 14);
       final logs = [
         PracticeLogEntry(
           date: now,
@@ -145,7 +194,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrapScreen(
-          const PracticeLogScreen(),
+          PracticeLogScreen(now: () => now),
           overrides: [
             recordingRepositoryProvider.overrideWithValue(repo),
           ],
@@ -156,7 +205,7 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(PracticeLogScreen)),
       )!;
-      final weeklyTrend = buildWeeklyPracticeTrend(logs);
+      final weeklyTrend = buildWeeklyPracticeTrend(logs, now: now);
 
       expect(find.bySemanticsLabel(l10n.previousMonth), findsOneWidget);
       expect(find.bySemanticsLabel(l10n.nextMonth), findsOneWidget);
@@ -187,7 +236,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrapScreen(
-          const PracticeLogScreen(),
+          PracticeLogScreen(now: () => DateTime(2026, 2, 14)),
           overrides: [
             recordingRepositoryProvider.overrideWithValue(repo),
           ],

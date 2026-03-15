@@ -171,7 +171,7 @@ class HybridAiPracticeInsightsService implements AiPracticeInsightsService {
       );
 
       final response = await request.close().timeout(_requestTimeout);
-      final body = await response.transform(utf8.decoder).join();
+      final body = await response.transform(utf8.decoder).join().timeout(_requestTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }
@@ -219,7 +219,7 @@ class HybridAiPracticeInsightsService implements AiPracticeInsightsService {
       );
 
       final response = await request.close().timeout(_requestTimeout);
-      final body = await response.transform(utf8.decoder).join();
+      final body = await response.transform(utf8.decoder).join().timeout(_requestTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }
