@@ -1,7 +1,5 @@
 part of 'native_pitch_bridge.dart';
 
-VoidCallback? _onNativeResourceInitializationAttemptForTesting;
-
 /// Bridges the native C++ pitch-detection engine to a Dart [Stream].
 ///
 /// Features:
@@ -12,6 +10,17 @@ class NativePitchBridge implements Finalizable {
   static const int defaultFrameSize = AppConstants.audioFrameSize;
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
+  static bool _nativeLoggingConfigured = false;
+  static final _NativePitchResourceFactory _nativePitchResourceFactory =
+      _createNativeResources;
+  static VoidCallback? _onNativeResourceInitializationAttemptForTesting;
+  static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
+      NativeCallable<_MLNativeLogCallbackNative>.listener(
+    _onNativeLog,
+  );
+  static final NativeFinalizer _bufferFinalizer =
+      NativeFinalizer(malloc.nativeFree);
+
   final int _sampleRate;
   final int _frameSize;
   final double _threshold;

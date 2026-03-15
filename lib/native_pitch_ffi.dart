@@ -77,16 +77,6 @@ DynamicLibrary _loadNativeLib() {
   );
 }
 
-bool _nativeLoggingConfigured = false;
-final _NativePitchResourceFactory _nativePitchResourceFactory =
-    _createNativeResources;
-final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
-    NativeCallable<_MLNativeLogCallbackNative>.listener(
-  _onNativeLog,
-);
-
-final NativeFinalizer _bufferFinalizer = NativeFinalizer(malloc.nativeFree);
-
 _NativePitchResources _createNativeResources({
   required int sampleRate,
   required int frameSize,
@@ -116,14 +106,14 @@ _NativePitchResources _createNativeResources({
 }
 
 void _configureNativeLogging(DynamicLibrary lib) {
-  if (_nativeLoggingConfigured) return;
-  _nativeLoggingConfigured = true;
+  if (NativePitchBridge._nativeLoggingConfigured) return;
+  NativePitchBridge._nativeLoggingConfigured = true;
   try {
     lib
         .lookupFunction<_MLSetLogCallbackNative, _MLSetLogCallbackDart>(
           'ml_pitch_detector_set_log_callback',
         )
-        .call(_nativeLogCallback.nativeFunction);
+        .call(NativePitchBridge._nativeLogCallback.nativeFunction);
     lib
         .lookupFunction<_MLInstallCrashHandlersNative,
             _MLInstallCrashHandlersDart>(
@@ -131,7 +121,7 @@ void _configureNativeLogging(DynamicLibrary lib) {
         )
         .call();
   } catch (e, stack) {
-    _nativeLoggingConfigured = false;
+    NativePitchBridge._nativeLoggingConfigured = false;
     AppLogger.reportError(
       'Failed to configure native logging bridge',
       error: e,
