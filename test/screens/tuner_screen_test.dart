@@ -221,4 +221,32 @@ void main() {
       expect(find.bySemanticsLabel(waveformLabel), findsOneWidget);
     });
   });
+
+  testWidgets('dynamic theme energy visualization semantics are exposed',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.pitchStream)
+        .thenAnswer((_) => const Stream<PitchResult>.empty());
+    when(() => bridge.tunerAnalysisStream)
+        .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.pumpWidget(
+      _wrap(
+        const TunerScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    final l10n = AppLocalizations.of(tester.element(find.byType(TunerScreen)))!;
+    expect(l10n.dynamicThemeEnergySemanticLabel, isNotEmpty);
+    expect(
+      find.bySemanticsLabel(l10n.dynamicThemeEnergySemanticLabel),
+      findsOneWidget,
+    );
+  });
 }

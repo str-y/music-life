@@ -10,6 +10,7 @@ class ListeningIndicator extends StatelessWidget {
     super.key,
     required this.controller,
     this.color,
+    this.semanticLabel,
   });
 
   /// Animation controller that drives the pulse.  Should be repeating.
@@ -18,10 +19,13 @@ class ListeningIndicator extends StatelessWidget {
   /// Bar colour.  Defaults to [ColorScheme.primary] when null.
   final Color? color;
 
+  /// Accessibility label for the animated indicator.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     final barColor = color ?? Theme.of(context).colorScheme.primary;
-    return AnimatedBuilder(
+    final indicator = AnimatedBuilder(
       animation: controller,
       builder: (_, __) {
         return Row(
@@ -46,6 +50,14 @@ class ListeningIndicator extends StatelessWidget {
           }),
         );
       },
+    );
+    if (semanticLabel == null) {
+      return indicator;
+    }
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: indicator,
     );
   }
 }

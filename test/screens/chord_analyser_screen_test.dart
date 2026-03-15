@@ -238,6 +238,33 @@ void main() {
     });
   });
 
+  testWidgets('dynamic theme energy visualization semantics are exposed',
+      (tester) async {
+    final bridge = _MockNativePitchBridge();
+    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(() => bridge.chordStream)
+        .thenAnswer((_) => const Stream<String>.empty());
+    when(() => bridge.dispose()).thenReturn(null);
+
+    await tester.pumpWidget(
+      _wrap(
+        const ChordAnalyserScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(ChordAnalyserScreen)))!;
+    expect(l10n.dynamicThemeEnergySemanticLabel, isNotEmpty);
+    expect(
+      find.bySemanticsLabel(l10n.dynamicThemeEnergySemanticLabel),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('loads persisted history and filters by chord name', (tester) async {
     final bridge = _MockNativePitchBridge();
     final controller = StreamController<String>();

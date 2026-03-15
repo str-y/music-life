@@ -959,9 +959,19 @@
     }
   },
 
+  "dynamicThemeEnergySemanticLabel": "Dynamic theme energy visualization",
+  "@dynamicThemeEnergySemanticLabel": {
+    "description": "Accessibility label for animated visualizations that react to detected musical energy"
+  },
+
   "grooveTargetSemanticLabel": "Groove Target",
   "@grooveTargetSemanticLabel": {
     "description": "Accessibility label for the groove target area in the Rhythm screen"
+  },
+
+  "tapTempoRingSemanticLabel": "Tap tempo target ring",
+  "@tapTempoRingSemanticLabel": {
+    "description": "Accessibility label for the animated tap tempo ring visualisation in the Rhythm screen"
   },
 
   "grooveTargetTapHint": "Tap to rhythm",
