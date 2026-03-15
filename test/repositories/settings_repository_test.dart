@@ -27,6 +27,11 @@ void main() {
         AppConfig.defaultDynamicThemeIntensityStorageKey: 0.9,
         AppConfig.defaultReferencePitchStorageKey: 442.0,
         AppConfig.defaultTunerTranspositionStorageKey: 'Bb',
+        AppConfig.defaultMetronomeBpmStorageKey: 96,
+        AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 3,
+        AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 4,
+        AppConfig.defaultMetronomePresetsStorageKey:
+            '[{"name":"Practice 6/8","bpm":132,"timeSignatureNumerator":6,"timeSignatureDenominator":8}]',
         AppConfig.defaultCloudSyncEnabledStorageKey: true,
         AppConfig.defaultLastCloudSyncAtStorageKey: '2026-01-03T00:00:00.000Z',
         AppConfig.defaultRewardedPremiumExpiresAtStorageKey:
@@ -50,6 +55,20 @@ void main() {
       expect(settings.dynamicThemeIntensity, 0.9);
       expect(settings.referencePitch, 442.0);
       expect(settings.tunerTransposition, 'Bb');
+      expect(settings.metronomeBpm, 96);
+      expect(settings.metronomeTimeSignatureNumerator, 3);
+      expect(settings.metronomeTimeSignatureDenominator, 4);
+      expect(
+        settings.metronomePresets,
+        const [
+          MetronomePreset(
+            name: 'Practice 6/8',
+            bpm: 132,
+            timeSignatureNumerator: 6,
+            timeSignatureDenominator: 8,
+          ),
+        ],
+      );
       expect(settings.cloudSyncEnabled, isTrue);
       expect(
         settings.lastCloudSyncAt,
@@ -79,6 +98,17 @@ void main() {
         dynamicThemeIntensity: 0.4,
         referencePitch: 445.0,
         tunerTransposition: 'Eb',
+        metronomeBpm: 84,
+        metronomeTimeSignatureNumerator: 6,
+        metronomeTimeSignatureDenominator: 8,
+        metronomePresets: const [
+          MetronomePreset(
+            name: 'Gig',
+            bpm: 148,
+            timeSignatureNumerator: 4,
+            timeSignatureDenominator: 4,
+          ),
+        ],
         cloudSyncEnabled: true,
         lastCloudSyncAt: DateTime.utc(2026, 1, 3, 4, 5, 6),
         rewardedPremiumExpiresAt: DateTime.utc(2026, 1, 2, 3, 4, 5),
@@ -110,6 +140,21 @@ void main() {
       expect(
         prefs.getString(AppConfig.defaultTunerTranspositionStorageKey),
         'Eb',
+      );
+      expect(prefs.getInt(AppConfig.defaultMetronomeBpmStorageKey), 84);
+      expect(
+        prefs.getInt(AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey),
+        6,
+      );
+      expect(
+        prefs.getInt(
+          AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey,
+        ),
+        8,
+      );
+      expect(
+        prefs.getString(AppConfig.defaultMetronomePresetsStorageKey),
+        '[{"name":"Gig","bpm":148,"timeSignatureNumerator":4,"timeSignatureDenominator":4}]',
       );
       expect(prefs.getBool(AppConfig.defaultCloudSyncEnabledStorageKey), isTrue);
       expect(
@@ -154,9 +199,13 @@ void main() {
       expect(settings.dynamicThemeIntensity, 1.0);
     });
 
-    test('load falls back to the default sound pack when persisted selection is invalid',
-        () async {
+    test('load falls back to defaults for invalid metronome values', () async {
       SharedPreferences.setMockInitialValues({
+        AppConfig.defaultMetronomeBpmStorageKey: 999,
+        AppConfig.defaultMetronomeTimeSignatureNumeratorStorageKey: 1,
+        AppConfig.defaultMetronomeTimeSignatureDenominatorStorageKey: 16,
+        AppConfig.defaultMetronomePresetsStorageKey:
+            '[{"name":"","bpm":20,"timeSignatureNumerator":1,"timeSignatureDenominator":16}]',
         AppConfig.defaultMetronomeSoundPacksStorageKey: <String>['acoustic_kit'],
         AppConfig.defaultSelectedMetronomeSoundPackStorageKey: 'missing_pack',
       });
@@ -165,6 +214,10 @@ void main() {
 
       final settings = repository.load();
 
+      expect(settings.metronomeBpm, 240);
+      expect(settings.metronomeTimeSignatureNumerator, 2);
+      expect(settings.metronomeTimeSignatureDenominator, 4);
+      expect(settings.metronomePresets, isEmpty);
       expect(
         settings.installedMetronomeSoundPackIds,
         <String>[defaultMetronomeSoundPackId, 'acoustic_kit'],

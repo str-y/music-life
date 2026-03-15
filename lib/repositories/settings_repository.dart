@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,6 +7,61 @@ import '../metronome_sound_library.dart';
 import '../theme/dynamic_theme_mode.dart';
 
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
+const Set<int> _supportedMetronomeDenominators = <int>{4, 8};
+
+class MetronomePreset {
+  const MetronomePreset({
+    required this.name,
+    required this.bpm,
+    required this.timeSignatureNumerator,
+    required this.timeSignatureDenominator,
+  });
+
+  final String name;
+  final int bpm;
+  final int timeSignatureNumerator;
+  final int timeSignatureDenominator;
+
+  String get timeSignatureLabel =>
+      '$timeSignatureNumerator/$timeSignatureDenominator';
+
+  Map<String, Object> toJson() => {
+        'name': name,
+        'bpm': bpm,
+        'timeSignatureNumerator': timeSignatureNumerator,
+        'timeSignatureDenominator': timeSignatureDenominator,
+      };
+
+  factory MetronomePreset.fromJson(Map<String, dynamic> json) {
+    return MetronomePreset(
+      name: (json['name'] as String?)?.trim() ?? '',
+      bpm: _sanitizeMetronomeBpm(json['bpm'] as int?),
+      timeSignatureNumerator: _sanitizeTimeSignatureNumerator(
+        json['timeSignatureNumerator'] as int?,
+      ),
+      timeSignatureDenominator: _sanitizeTimeSignatureDenominator(
+        json['timeSignatureDenominator'] as int?,
+      ),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MetronomePreset &&
+          name == other.name &&
+          bpm == other.bpm &&
+          timeSignatureNumerator == other.timeSignatureNumerator &&
+          timeSignatureDenominator == other.timeSignatureDenominator;
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        bpm,
+        timeSignatureNumerator,
+        timeSignatureDenominator,
+      );
+}
 
 /// Immutable application settings persisted in local storage.
 class AppSettings {
@@ -22,6 +78,10 @@ class AppSettings {
   final bool cloudSyncEnabled;
   final DateTime? lastCloudSyncAt;
   final DateTime? rewardedPremiumExpiresAt;
+  final int metronomeBpm;
+  final int metronomeTimeSignatureNumerator;
+  final int metronomeTimeSignatureDenominator;
+  final List<MetronomePreset> metronomePresets;
   final List<String> installedMetronomeSoundPackIds;
   final String selectedMetronomeSoundPackId;
 
@@ -39,6 +99,10 @@ class AppSettings {
     this.cloudSyncEnabled = false,
     this.lastCloudSyncAt,
     this.rewardedPremiumExpiresAt,
+    this.metronomeBpm = 120,
+    this.metronomeTimeSignatureNumerator = 4,
+    this.metronomeTimeSignatureDenominator = 4,
+    this.metronomePresets = const <MetronomePreset>[],
     this.installedMetronomeSoundPackIds = const <String>[
       defaultMetronomeSoundPackId,
     ],
@@ -59,6 +123,10 @@ class AppSettings {
     bool? cloudSyncEnabled,
     DateTime? lastCloudSyncAt,
     DateTime? rewardedPremiumExpiresAt,
+    int? metronomeBpm,
+    int? metronomeTimeSignatureNumerator,
+    int? metronomeTimeSignatureDenominator,
+    List<MetronomePreset>? metronomePresets,
     List<String>? installedMetronomeSoundPackIds,
     String? selectedMetronomeSoundPackId,
     bool clearLastCloudSyncAt = false,
@@ -89,6 +157,18 @@ class AppSettings {
       rewardedPremiumExpiresAt: clearRewardedPremiumExpiresAt
           ? null
           : (rewardedPremiumExpiresAt ?? this.rewardedPremiumExpiresAt),
+      metronomeBpm: _sanitizeMetronomeBpm(metronomeBpm ?? this.metronomeBpm),
+      metronomeTimeSignatureNumerator: _sanitizeTimeSignatureNumerator(
+        metronomeTimeSignatureNumerator ??
+            this.metronomeTimeSignatureNumerator,
+      ),
+      metronomeTimeSignatureDenominator: _sanitizeTimeSignatureDenominator(
+        metronomeTimeSignatureDenominator ??
+            this.metronomeTimeSignatureDenominator,
+      ),
+      metronomePresets: List<MetronomePreset>.unmodifiable(
+        metronomePresets ?? this.metronomePresets,
+      ),
       installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
         installedMetronomeSoundPackIds ?? this.installedMetronomeSoundPackIds,
       ),
@@ -121,6 +201,12 @@ class AppSettings {
           cloudSyncEnabled == other.cloudSyncEnabled &&
           lastCloudSyncAt == other.lastCloudSyncAt &&
           rewardedPremiumExpiresAt == other.rewardedPremiumExpiresAt &&
+          metronomeBpm == other.metronomeBpm &&
+          metronomeTimeSignatureNumerator ==
+              other.metronomeTimeSignatureNumerator &&
+          metronomeTimeSignatureDenominator ==
+              other.metronomeTimeSignatureDenominator &&
+          listEquals(metronomePresets, other.metronomePresets) &&
           listEquals(
             installedMetronomeSoundPackIds,
             other.installedMetronomeSoundPackIds,
@@ -143,6 +229,10 @@ class AppSettings {
         cloudSyncEnabled,
         lastCloudSyncAt,
         rewardedPremiumExpiresAt,
+        metronomeBpm,
+        metronomeTimeSignatureNumerator,
+        metronomeTimeSignatureDenominator,
+        Object.hashAll(metronomePresets),
         Object.hashAll(installedMetronomeSoundPackIds),
         selectedMetronomeSoundPackId,
       );
@@ -192,6 +282,21 @@ class SettingsRepository {
       rewardedPremiumExpiresAt: _decodeDateTime(
         _prefs.getString(_config.rewardedPremiumExpiresAtStorageKey),
       ),
+      metronomeBpm: _sanitizeMetronomeBpm(
+        _prefs.getInt(_config.metronomeBpmStorageKey) ??
+            _config.defaultMetronomeBpm,
+      ),
+      metronomeTimeSignatureNumerator: _sanitizeTimeSignatureNumerator(
+        _prefs.getInt(_config.metronomeTimeSignatureNumeratorStorageKey) ??
+            _config.defaultMetronomeTimeSignatureNumerator,
+      ),
+      metronomeTimeSignatureDenominator: _sanitizeTimeSignatureDenominator(
+        _prefs.getInt(_config.metronomeTimeSignatureDenominatorStorageKey) ??
+            _config.defaultMetronomeTimeSignatureDenominator,
+      ),
+      metronomePresets: _decodeMetronomePresets(
+        _prefs.getString(_config.metronomePresetsStorageKey),
+      ),
       installedMetronomeSoundPackIds: normalizeInstalledMetronomeSoundPackIds(
         _prefs.getStringList(_config.metronomeSoundPacksStorageKey),
       ),
@@ -234,6 +339,28 @@ class SettingsRepository {
     await _prefs.setString(
       _config.tunerTranspositionStorageKey,
       settings.tunerTransposition,
+    );
+    await _prefs.setInt(
+      _config.metronomeBpmStorageKey,
+      _sanitizeMetronomeBpm(settings.metronomeBpm),
+    );
+    await _prefs.setInt(
+      _config.metronomeTimeSignatureNumeratorStorageKey,
+      _sanitizeTimeSignatureNumerator(
+        settings.metronomeTimeSignatureNumerator,
+      ),
+    );
+    await _prefs.setInt(
+      _config.metronomeTimeSignatureDenominatorStorageKey,
+      _sanitizeTimeSignatureDenominator(
+        settings.metronomeTimeSignatureDenominator,
+      ),
+    );
+    await _prefs.setString(
+      _config.metronomePresetsStorageKey,
+      jsonEncode(
+        settings.metronomePresets.map((preset) => preset.toJson()).toList(),
+      ),
     );
     await _prefs.setString(
       _config.dynamicThemeModeStorageKey,
@@ -289,4 +416,42 @@ class SettingsRepository {
     if (value == null || value.isEmpty) return null;
     return _supportedLocaleCodes.contains(value) ? value : null;
   }
+
+  List<MetronomePreset> _decodeMetronomePresets(String? value) {
+    if (value == null || value.isEmpty) return const <MetronomePreset>[];
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! List) return const <MetronomePreset>[];
+      return decoded
+          .whereType<Map>()
+          .map((preset) => Map<String, dynamic>.from(preset))
+          .map(MetronomePreset.fromJson)
+          .where((preset) => preset.name.isNotEmpty)
+          .toList(growable: false);
+    } on FormatException {
+      return const <MetronomePreset>[];
+    }
+  }
+}
+
+int _sanitizeMetronomeBpm(int? bpm) {
+  return (bpm ?? 120).clamp(30, 240).toInt();
+}
+
+int _sanitizeTimeSignatureNumerator(int? numerator) {
+  return (numerator ?? 4).clamp(2, 12).toInt();
+}
+
+int _sanitizeTimeSignatureDenominator(int? denominator) {
+  final value = denominator ?? 4;
+  return _supportedMetronomeDenominators.contains(value) ? value : 4;
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

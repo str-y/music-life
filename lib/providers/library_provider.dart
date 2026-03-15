@@ -93,7 +93,7 @@ DateTime _toDateOnly(DateTime date) => DateTime(date.year, date.month, date.day)
 // Notifier
 // ---------------------------------------------------------------------------
 
-class LibraryNotifier extends AutoDisposeAsyncNotifier<LibraryState> {
+class LibraryNotifier extends AsyncNotifier<LibraryState> {
   List<PracticeLogEntry> _memoizedLogs = const [];
   Map<String, MonthlyPracticeStats> _memoizedMonthlyLogStats = const {};
 
@@ -136,7 +136,7 @@ class LibraryNotifier extends AutoDisposeAsyncNotifier<LibraryState> {
 
   /// Prepends [entry] to the recordings list and persists the change.
   Future<void> addRecording(RecordingEntry entry) async {
-    final previous = state.valueOrNull;
+    final previous = state.asData?.value;
     if (previous == null) {
       throw StateError(
         'Cannot add recording: library data not loaded. '

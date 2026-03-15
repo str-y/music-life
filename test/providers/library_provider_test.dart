@@ -88,7 +88,7 @@ void main() {
 
       await container.read(libraryProvider.notifier).reload();
       final reloadedStats =
-          container.read(libraryProvider).valueOrNull!.monthlyLogStats;
+          container.read(libraryProvider).asData?.value!.monthlyLogStats;
 
       expect(identical(initialStats, reloadedStats), isTrue);
     });

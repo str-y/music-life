@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
+import "dart:typed_data";
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -129,7 +131,7 @@ Future<XFile> generateShareCardImage({
   footerPainter.paint(canvas, Offset(130, height - 160));
 
   final image = await recorder.endRecording().toImage(width, height);
-  final ui.ByteData? bytes;
+  final ByteData? bytes;
   try {
     bytes = await image.toByteData(format: ui.ImageByteFormat.png);
   } finally {

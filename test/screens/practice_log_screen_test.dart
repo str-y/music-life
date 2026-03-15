@@ -23,12 +23,12 @@ Widget _wrap(
 
 Widget _wrapScreen(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [...overrides.whereType<dynamic>().toList()],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,

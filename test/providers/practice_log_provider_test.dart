@@ -71,7 +71,7 @@ void main() {
             ),
         throwsA(isA<Exception>()),
       );
-      expect(container.read(practiceLogProvider).valueOrNull, existing);
+      expect(container.read(practiceLogProvider).asData?.value, existing);
     });
   });
 }

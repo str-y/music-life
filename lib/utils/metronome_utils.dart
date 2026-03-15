@@ -2,6 +2,19 @@
 Duration beatDurationFor(int bpm) =>
     Duration(microseconds: 60 * 1000 * 1000 ~/ bpm);
 
+/// Returns the duration of the selected metronome beat, adjusting quarter-note
+/// BPM to the requested [timeSignatureDenominator].
+Duration metronomeBeatDurationFor({
+  required int bpm,
+  required int timeSignatureDenominator,
+}) {
+  final quarterNoteDuration = beatDurationFor(bpm);
+  return Duration(
+    microseconds:
+        quarterNoteDuration.inMicroseconds * 4 ~/ timeSignatureDenominator,
+  );
+}
+
 /// Maps [elapsedMs] (time since the last beat) into a signed offset within
 /// the range `[-beatMs/2, +beatMs/2]`.
 ///

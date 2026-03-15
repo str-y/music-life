@@ -6,7 +6,7 @@ import '../services/service_error_handler.dart';
 import 'dependency_providers.dart';
 
 class PracticeLogNotifier
-    extends AutoDisposeAsyncNotifier<List<PracticeLogEntry>> {
+    extends AsyncNotifier<List<PracticeLogEntry>> {
   @override
   Future<List<PracticeLogEntry>> build() => _load();
 
@@ -38,7 +38,7 @@ class PracticeLogNotifier
   }
 
   Future<void> addEntry(PracticeLogEntry entry) async {
-    final previous = state.valueOrNull;
+    final previous = state.asData?.value;
     if (previous == null) {
       throw StateError(
         'Cannot add practice log entry: data not loaded. '

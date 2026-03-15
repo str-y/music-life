@@ -19,7 +19,7 @@ class CompositionLimitReachedException implements Exception {
   String toString() => 'Save limit of $max compositions reached.';
 }
 
-class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
+class CompositionNotifier extends AsyncNotifier<List<Composition>> {
   @override
   Future<List<Composition>> build() => _load();
 
@@ -47,7 +47,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
 
   /// Appends [composition] to the list and persists the change.
   Future<void> saveComposition(Composition composition) async {
-    final previous = state.valueOrNull;
+    final previous = state.asData?.value;
     if (previous == null) {
       throw StateError(
         'Cannot save composition: data not loaded. Please wait for initialization to complete.',
@@ -74,7 +74,7 @@ class CompositionNotifier extends AutoDisposeAsyncNotifier<List<Composition>> {
 
   /// Removes the composition with [id] from the list and persists the change.
   Future<void> deleteComposition(String id) async {
-    final previous = state.valueOrNull;
+    final previous = state.asData?.value;
     if (previous == null) {
       throw StateError(
         'Cannot delete composition: data not loaded. Please wait for initialization to complete.',

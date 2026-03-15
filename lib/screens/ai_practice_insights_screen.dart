@@ -30,7 +30,7 @@ class _AiPracticeInsightsScreenState
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(appSettingsProvider);
     final libraryAsync = ref.watch(libraryProvider);
-    final libraryData = libraryAsync.valueOrNull;
+    final libraryData = libraryAsync.asData?.value;
 
     return Scaffold(
       appBar: AppBar(
@@ -78,7 +78,7 @@ class _AiPracticeInsightsScreenState
         ),
       );
     }
-    final libraryState = libraryAsync.valueOrNull;
+    final libraryState = libraryAsync.asData?.value;
     if (libraryState == null ||
         (libraryState.logs.isEmpty && libraryState.recordings.isEmpty)) {
       return StatusMessageView(

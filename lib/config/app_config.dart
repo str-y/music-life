@@ -30,6 +30,12 @@ class AppConfig {
     this.dynamicThemeIntensityStorageKey = defaultDynamicThemeIntensityStorageKey,
     this.referencePitchStorageKey = defaultReferencePitchStorageKey,
     this.tunerTranspositionStorageKey = defaultTunerTranspositionStorageKey,
+    this.metronomeBpmStorageKey = defaultMetronomeBpmStorageKey,
+    this.metronomeTimeSignatureNumeratorStorageKey =
+        defaultMetronomeTimeSignatureNumeratorStorageKey,
+    this.metronomeTimeSignatureDenominatorStorageKey =
+        defaultMetronomeTimeSignatureDenominatorStorageKey,
+    this.metronomePresetsStorageKey = defaultMetronomePresetsStorageKey,
     this.cloudSyncEnabledStorageKey = defaultCloudSyncEnabledStorageKey,
     this.lastCloudSyncAtStorageKey = defaultLastCloudSyncAtStorageKey,
     this.cloudBackupBundleStorageKey = defaultCloudBackupBundleStorageKey,
@@ -44,6 +50,9 @@ class AppConfig {
     this.defaultDynamicThemeIntensity = 0.7,
     this.defaultReferencePitch = 440.0,
     this.defaultTunerTransposition = _defaultTunerTransposition,
+    this.defaultMetronomeBpm = 120,
+    this.defaultMetronomeTimeSignatureNumerator = 4,
+    this.defaultMetronomeTimeSignatureDenominator = 4,
   });
 
   static const int defaultAudioFrameSize = 2048;
@@ -82,6 +91,12 @@ class AppConfig {
       'dynamicThemeIntensity';
   static const String defaultReferencePitchStorageKey = 'referencePitch';
   static const String defaultTunerTranspositionStorageKey = 'tunerTransposition';
+  static const String defaultMetronomeBpmStorageKey = 'metronomeBpm';
+  static const String defaultMetronomeTimeSignatureNumeratorStorageKey =
+      'metronomeTimeSignatureNumerator';
+  static const String defaultMetronomeTimeSignatureDenominatorStorageKey =
+      'metronomeTimeSignatureDenominator';
+  static const String defaultMetronomePresetsStorageKey = 'metronomePresets';
   static const String defaultCloudSyncEnabledStorageKey = 'cloudSyncEnabled';
   static const String defaultLastCloudSyncAtStorageKey = 'lastCloudSyncAt';
   static const String defaultCloudBackupBundleStorageKey = 'cloudBackupBundle';
@@ -121,6 +136,10 @@ class AppConfig {
   final String dynamicThemeIntensityStorageKey;
   final String referencePitchStorageKey;
   final String tunerTranspositionStorageKey;
+  final String metronomeBpmStorageKey;
+  final String metronomeTimeSignatureNumeratorStorageKey;
+  final String metronomeTimeSignatureDenominatorStorageKey;
+  final String metronomePresetsStorageKey;
   final String cloudSyncEnabledStorageKey;
   final String lastCloudSyncAtStorageKey;
   final String cloudBackupBundleStorageKey;
@@ -134,6 +153,9 @@ class AppConfig {
   final double defaultDynamicThemeIntensity;
   final double defaultReferencePitch;
   final String defaultTunerTransposition;
+  final int defaultMetronomeBpm;
+  final int defaultMetronomeTimeSignatureNumerator;
+  final int defaultMetronomeTimeSignatureDenominator;
 
   AppLogLevel get effectiveLogLevel =>
       logLevel ?? (kReleaseMode ? AppLogLevel.info : AppLogLevel.debug);
