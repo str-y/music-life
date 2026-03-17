@@ -1,14 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app_settings_provider.dart';
-import 'dependency_providers.dart';
-import 'metronome_settings_provider.dart';
-import '../metronome_sound_library.dart';
-import '../models/premium_video_export.dart';
-import '../native_pitch_bridge.dart';
-import '../repositories/metronome_settings_repository.dart';
-import '../repositories/settings_repository.dart';
-
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/metronome_settings_provider.dart';
+import 'package:music_life/metronome_sound_library.dart';
+import 'package:music_life/models/premium_video_export.dart';
+import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
+import 'package:music_life/repositories/settings_repository.dart';
 const double _maxCentsOffsetForThemeEnergy = 50.0;
 final RegExp _noteNamePattern = RegExp(r'^[A-G](?:#|b)?');
 

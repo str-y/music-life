@@ -1,20 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_config.dart';
-import '../native_pitch_bridge.dart';
-import '../repositories/backup_repository.dart';
-import '../repositories/chord_history_repository.dart';
-import '../repositories/cloud_sync_repository.dart';
-import '../repositories/composition_repository.dart';
-import '../repositories/metronome_settings_repository.dart';
-import '../repositories/recording_repository.dart';
-import '../repositories/settings_repository.dart';
-import '../services/ai_practice_insights_service.dart';
-import '../services/permission_service.dart';
-import '../services/premium_video_export_service.dart';
-import '../services/recording_storage_service.dart';
-
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/repositories/backup_repository.dart';
+import 'package:music_life/repositories/chord_history_repository.dart';
+import 'package:music_life/repositories/cloud_sync_repository.dart';
+import 'package:music_life/repositories/composition_repository.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/repositories/settings_repository.dart';
+import 'package:music_life/services/ai_practice_insights_service.dart';
+import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/services/premium_video_export_service.dart';
+import 'package:music_life/services/recording_storage_service.dart';
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
 

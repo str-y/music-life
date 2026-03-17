@@ -2,10 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'dependency_providers.dart';
-import 'haptic_service_provider.dart';
-import '../native_pitch_bridge.dart';
-
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/haptic_service_provider.dart';
+import 'package:music_life/native_pitch_bridge.dart';
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------

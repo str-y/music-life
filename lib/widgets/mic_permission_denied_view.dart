@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../l10n/app_localizations.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
 /// A full-screen view shown when microphone permission has been denied.
 ///
 /// Provides an "Open Settings" button (to allow the permission in system

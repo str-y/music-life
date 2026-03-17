@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'dependency_providers.dart';
-import '../repositories/settings_repository.dart';
-
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/settings_repository.dart';
 class AppSettingsNotifier extends Notifier<AppSettings> {
   @override
   AppSettings build() {
