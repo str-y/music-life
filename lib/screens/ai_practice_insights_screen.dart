@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
-import '../providers/app_settings_controllers.dart';
-import '../providers/app_settings_provider.dart';
-import '../providers/dependency_providers.dart';
-import '../providers/library_provider.dart';
-import '../services/ai_practice_insights_service.dart';
-import '../services/ad_service.dart';
-import '../widgets/shared/loading_state_widget.dart';
-import '../widgets/shared/status_message_view.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/library_provider.dart';
+import 'package:music_life/services/ai_practice_insights_service.dart';
+import 'package:music_life/services/ad_service.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 
 class AiPracticeInsightsScreen extends ConsumerStatefulWidget {

@@ -7,16 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../l10n/app_localizations.dart';
-import '../providers/practice_log_provider.dart';
-import '../repositories/recording_repository.dart';
-import 'ai_practice_insights_screen.dart';
-import '../utils/app_logger.dart';
-import '../utils/practice_log_export.dart';
-import '../utils/practice_log_utils.dart';
-import '../utils/share_card_image.dart';
-import '../widgets/shared/async_value_state_view.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/practice_log_provider.dart';
+import 'package:music_life/repositories/recording_repository.dart';
+import 'package:music_life/screens/ai_practice_insights_screen.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/utils/practice_log_export.dart';
+import 'package:music_life/utils/practice_log_utils.dart';
+import 'package:music_life/utils/share_card_image.dart';
+import 'package:music_life/widgets/shared/async_value_state_view.dart';
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
 

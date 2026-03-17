@@ -5,21 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../app_constants.dart';
-import '../l10n/app_localizations.dart';
-import '../providers/app_settings_provider.dart';
-import '../providers/app_settings_controllers.dart';
-import '../providers/dependency_providers.dart';
-import '../providers/tuner_provider.dart';
-import '../services/ad_service.dart';
-import '../services/premium_video_export_service.dart';
-import '../utils/app_logger.dart';
-import '../utils/tuner_transposition.dart';
-import '../models/premium_video_export.dart';
-import '../widgets/shared/loading_state_widget.dart';
-import '../widgets/shared/status_message_view.dart';
-import '../widgets/shared/waveform_view.dart';
-
+import 'package:music_life/app_constants.dart';
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/tuner_provider.dart';
+import 'package:music_life/services/ad_service.dart';
+import 'package:music_life/services/premium_video_export_service.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/utils/tuner_transposition.dart';
+import 'package:music_life/models/premium_video_export.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
+import 'package:music_life/widgets/shared/waveform_view.dart';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 const List<double> _exportPreviewWaveform = <double>[
   0.18,

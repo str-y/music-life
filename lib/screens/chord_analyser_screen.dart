@@ -3,22 +3,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
-import '../app_constants.dart';
-import '../native_pitch_bridge.dart';
-import '../providers/app_settings_provider.dart';
-import '../providers/app_settings_controllers.dart';
-import '../providers/dependency_providers.dart';
-import '../repositories/chord_history_repository.dart';
-import '../utils/app_logger.dart';
-import '../utils/chord_utils.dart';
-import '../widgets/shared/chord_card.dart';
-import '../widgets/shared/loading_state_widget.dart';
-import '../widgets/shared/status_message_view.dart';
-import '../widgets/listening_indicator.dart';
-import '../widgets/mic_permission_denied_view.dart';
-import '../widgets/mic_permission_gate.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
+import 'package:music_life/app_constants.dart';
+import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/chord_history_repository.dart';
+import 'package:music_life/utils/app_logger.dart';
+import 'package:music_life/utils/chord_utils.dart';
+import 'package:music_life/widgets/shared/chord_card.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
+import 'package:music_life/widgets/listening_indicator.dart';
+import 'package:music_life/widgets/mic_permission_denied_view.dart';
+import 'package:music_life/widgets/mic_permission_gate.dart';
 class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key, this.useMicPermissionGate = true});
 
