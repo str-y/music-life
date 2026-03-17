@@ -111,6 +111,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           // ── Top half: metronome controls ────────────────────────────────
           Expanded(
             child: RepaintBoundary(
+              key: const ValueKey('metronome-controls-repaint-boundary'),
               child: MetronomeControls(
                 rhythmState: rhythmState,
                 timeSignatureNumerators: _timeSignatureNumerators,
@@ -126,12 +127,15 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
           const Divider(height: 1),
           // ── Bottom half: groove analysis target ─────────────────────────
           Expanded(
-            child: GrooveAnalysisSection(
-              colorScheme: colorScheme,
-              rhythmState: rhythmState,
-              beatPulseAnimation: _beatPulseAnim,
-              tapRingAnimation: _tapRingAnim,
-              onTap: ref.read(rhythmProvider.notifier).onGrooveTap,
+            child: RepaintBoundary(
+              key: const ValueKey('groove-analysis-repaint-boundary'),
+                child: GrooveAnalysisSection(
+                  colorScheme: colorScheme,
+                  rhythmState: rhythmState,
+                  beatPulseAnimation: _beatPulseAnim,
+                  tapRingAnimation: _tapRingAnim,
+                  onTap: ref.read(rhythmProvider.notifier).onGrooveTap,
+                ),
             ),
           ),
         ],

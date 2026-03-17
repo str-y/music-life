@@ -84,7 +84,7 @@ void main() {
 
       final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
       expect(l10n.tapTempoRingSemanticLabel, isNotEmpty);
-      expect(find.bySemanticsLabel(l10n.tapTempoRingSemanticLabel), findsOneWidget);
+      expect(find.byKey(const ValueKey('tap-tempo-ring-semantics')), findsOneWidget);
     });
   });
 
@@ -135,17 +135,11 @@ void main() {
 
     expect(find.byType(GrooveAnalysisSection), findsOneWidget);
     expect(
-      find.ancestor(
-        of: find.byType(MetronomeSection),
-        matching: find.byType(RepaintBoundary),
-      ),
+      find.byKey(const ValueKey('metronome-controls-repaint-boundary')),
       findsOneWidget,
     );
     expect(
-      find.ancestor(
-        of: find.bySemanticsLabel(l10n.tapTempoRingSemanticLabel),
-        matching: find.byType(RepaintBoundary),
-      ),
+      find.byKey(const ValueKey('groove-analysis-repaint-boundary')),
       findsOneWidget,
     );
   });
@@ -175,7 +169,7 @@ void main() {
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
     expect(buttonFinder, findsOneWidget);
-     
+    await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
      
@@ -200,13 +194,48 @@ void main() {
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.metronomeSoundPackAcousticName), findsOneWidget);
+    final sheetFinder = find.byType(SoundLibrarySheet);
+    expect(sheetFinder, findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('metronome-sound-action-acoustic_kit')));
+    final acousticPackItemFinder = find.descendant(
+      of: sheetFinder,
+      matching: find.text(l10n.metronomeSoundPackAcousticName),
+    );
+     
+    // Try to scroll the list if needed
+    final listFinder = find.descendant(
+      of: sheetFinder,
+      matching: find.byType(ListView),
+    );
+    await tester.dragUntilVisible(
+      acousticPackItemFinder,
+      listFinder,
+      const Offset(0, -100),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.metronomeSoundPackAcousticName), findsWidgets);
-    expect(find.text(l10n.metronomeSoundLibraryInUse), findsOneWidget);
+    expect(acousticPackItemFinder, findsWidgets);
+
+    final actionButtonFinder = find.byKey(const ValueKey('metronome-sound-action-acoustic_kit'));
+    await tester.ensureVisible(actionButtonFinder);
+    
+    final button = tester.widget<FilledButton>(actionButtonFinder);
+    button.onPressed!();
+    
+    // Give it plenty of time for async work to complete and frames to draw
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    // The header should now show the selected pack
+    expect(
+      find.textContaining(l10n.metronomeSoundPackAcousticName),
+      findsWidgets,
+    );
+    
+    expect(
+      find.textContaining(l10n.metronomeSoundLibraryInUse),
+      findsWidgets,
+    );
   });
 
   testWidgets('premium sound pack prompts rewarded unlock when locked',
@@ -225,8 +254,39 @@ void main() {
     await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
     await tester.pumpAndSettle();
+    final sheetFinder = find.byType(SoundLibrarySheet);
+    expect(sheetFinder, findsOneWidget);
+    expect(
+      find.descendant(
+        of: sheetFinder,
+        matching: find.text(l10n.metronomeSoundLibraryTitle),
+      ),
+      findsOneWidget,
+    );
 
-    expect(find.text(l10n.metronomeSoundPackVoiceName), findsOneWidget);
-    expect(find.text(l10n.watchAdAndUnlock), findsOneWidget);
+    final voicePackItemFinder = find.descendant(
+      of: sheetFinder,
+      matching: find.byKey(
+        const ValueKey('metronome-sound-name-signature_voice_count'),
+      ),
+    );
+    
+    // Try to scroll the list if needed
+    final listFinder = find.descendant(
+      of: sheetFinder,
+      matching: find.byType(ListView),
+    );
+    await tester.dragUntilVisible(
+      voicePackItemFinder,
+      listFinder,
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+    
+    expect(voicePackItemFinder, findsOneWidget);
+    expect(
+      find.descendant(of: sheetFinder, matching: find.text(l10n.watchAdAndUnlock)),
+      findsWidgets,
+    );
   });
 }

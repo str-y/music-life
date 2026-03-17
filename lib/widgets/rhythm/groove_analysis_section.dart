@@ -58,6 +58,7 @@ class GrooveAnalysisSection extends StatelessWidget {
               Expanded(
                 child: RepaintBoundary(
                   child: Semantics(
+                    key: const ValueKey('tap-tempo-ring-semantics'),
                     label: l10n.tapTempoRingSemanticLabel,
                     excludeSemantics: true,
                     child: AnimatedBuilder(

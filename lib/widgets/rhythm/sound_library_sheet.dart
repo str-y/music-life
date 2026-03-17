@@ -133,6 +133,9 @@ class SoundLibrarySheet extends ConsumerWidget {
                                     children: [
                                       Text(
                                         _soundPackName(l10n, pack),
+                                        key: ValueKey(
+                                          'metronome-sound-name-${pack.id}',
+                                        ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium,
@@ -272,16 +275,15 @@ Future<void> _handleSoundPackAction({
     await ref.read(metronomeSettingsControllerProvider).installSoundPack(pack.id);
   }
   await ref.read(metronomeSettingsControllerProvider).selectSoundPack(pack.id);
-  if (!context.mounted) {
-    return;
-  }
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        l10n.metronomeSoundLibraryDownloaded(_soundPackName(l10n, pack)),
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          l10n.metronomeSoundLibraryDownloaded(_soundPackName(l10n, pack)),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _StatusChip extends StatelessWidget {
