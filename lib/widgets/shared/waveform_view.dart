@@ -3,8 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
-
+import 'package:music_life/l10n/app_localizations.dart';
 /// A shared waveform renderer for recorded and live-preview audio.
 ///
 /// Use [isPlaying] for playback-driven animation and [animate] for non-playback

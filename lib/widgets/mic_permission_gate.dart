@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../services/permission_service.dart';
-import 'mic_permission_denied_view.dart';
+import 'package:music_life/services/permission_service.dart';
+import 'package:music_life/widgets/mic_permission_denied_view.dart';
 
 enum _GateStatus { loading, denied, granted }
 
