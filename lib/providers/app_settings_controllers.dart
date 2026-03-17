@@ -157,7 +157,7 @@ class CloudSyncController {
   AppSettingsNotifier get _notifier => _ref.read(appSettingsProvider.notifier);
 
   Future<DateTime?> syncBackupIfEligible({AppSettings? settings}) async {
-    final currentSettings = settings ?? _ref.read(appSettingsProvider);
+    final AppSettings currentSettings = settings ?? _ref.read(appSettingsProvider);
     if (!currentSettings.cloudSyncEnabled ||
         !currentSettings.hasRewardedPremiumAccess) {
       return null;

@@ -128,6 +128,7 @@
   "play": "再生",
   "pause": "一時停止",
   "rhythmTitle": "リズム & メトロノーム",
+  "tapTempoRingSemanticLabel": "タップテンポ・リング",
   "rhythmSubtitle": "メトロノームとグルーヴ解析",
   "metronomeSoundLibraryTitle": "サウンドライブラリ",
   "metronomeSoundLibrarySubtitle": "スタジオ品質のクリック音源をダウンロードし、プレミアムの著名ドラマー監修サンプルを開放して、現在のテンポに合う音色へ切り替えます。",

@@ -589,6 +589,11 @@
     "description": "Title of the Rhythm & Metronome screen"
   },
 
+  "tapTempoRingSemanticLabel": "Tap Tempo Ring",
+  "@tapTempoRingSemanticLabel": {
+    "description": "Accessibility label for the tap tempo ring interaction area"
+  },
+
   "rhythmSubtitle": "Metronome and groove analysis",
   "@rhythmSubtitle": {
     "description": "Subtitle for the Rhythm card on the main screen"
@@ -713,158 +718,6 @@
   "@metronomeSoundLatencyBalanced": {
     "description": "Label for a balanced latency playback profile"
   },
-  "metronomeSoundLatencyPreloaded": "Preloaded voice cache",
-  "@metronomeSoundLatencyPreloaded": {
-    "description": "Label for a preloaded playback profile"
-  },
-
-  "metronomeSoundLibraryTitle": "Sound library",
-  "@metronomeSoundLibraryTitle": {
-    "description": "Title for the metronome sound library manager"
-  },
-
-  "metronomeSoundLibrarySubtitle": "Download studio-ready click packs, unlock premium artist samples, and switch to the best match for the current tempo.",
-  "@metronomeSoundLibrarySubtitle": {
-    "description": "Subtitle describing the metronome sound library"
-  },
-
-  "metronomeSoundLibraryManage": "Manage sound library",
-  "@metronomeSoundLibraryManage": {
-    "description": "Tooltip for opening the metronome sound library sheet"
-  },
-
-  "metronomeSoundLibrarySelected": "Current sound: {packName}",
-  "@metronomeSoundLibrarySelected": {
-    "description": "Label describing the currently selected metronome sound pack",
-    "placeholders": {
-      "packName": {}
-    }
-  },
-
-  "metronomeSoundLibraryRecommendation": "Recommended now: {packName}",
-  "@metronomeSoundLibraryRecommendation": {
-    "description": "Label describing the recommended metronome sound pack",
-    "placeholders": {
-      "packName": {}
-    }
-  },
-
-  "metronomeSoundLibraryRecommendedChip": "Recommended",
-  "@metronomeSoundLibraryRecommendedChip": {
-    "description": "Chip label for a recommended sound pack"
-  },
-
-  "metronomeSoundLibraryPremiumChip": "Premium",
-  "@metronomeSoundLibraryPremiumChip": {
-    "description": "Chip label for a premium sound pack"
-  },
-
-  "metronomeSoundLibraryInstalledChip": "Installed",
-  "@metronomeSoundLibraryInstalledChip": {
-    "description": "Chip label for an installed sound pack"
-  },
-
-  "metronomeSoundLibraryDownload": "Download",
-  "@metronomeSoundLibraryDownload": {
-    "description": "Action label to download a metronome sound pack"
-  },
-
-  "metronomeSoundLibraryUse": "Use sound",
-  "@metronomeSoundLibraryUse": {
-    "description": "Action label to select an installed sound pack"
-  },
-
-  "metronomeSoundLibraryInUse": "In use",
-  "@metronomeSoundLibraryInUse": {
-    "description": "Action label shown for the currently selected sound pack"
-  },
-
-  "metronomeSoundLibraryDownloaded": "{packName} is ready for low-latency playback.",
-  "@metronomeSoundLibraryDownloaded": {
-    "description": "Snackbar message shown after downloading or selecting a metronome sound pack",
-    "placeholders": {
-      "packName": {}
-    }
-  },
-
-  "metronomeSoundLibraryUnlocked": "{packName} premium pack unlocked and downloaded.",
-  "@metronomeSoundLibraryUnlocked": {
-    "description": "Snackbar message shown after unlocking a premium sound pack",
-    "placeholders": {
-      "packName": {}
-    }
-  },
-
-  "metronomeSoundPackElectronicName": "Electronic precision click",
-  "@metronomeSoundPackElectronicName": {
-    "description": "Name of the default electronic metronome sound pack"
-  },
-
-  "metronomeSoundPackElectronicDescription": "Dry electronic pulses with ultra-low latency for tight practice and silent stages.",
-  "@metronomeSoundPackElectronicDescription": {
-    "description": "Description of the default electronic metronome sound pack"
-  },
-
-  "metronomeSoundPackAcousticName": "Studio acoustic kit",
-  "@metronomeSoundPackAcousticName": {
-    "description": "Name of the acoustic drum metronome sound pack"
-  },
-
-  "metronomeSoundPackAcousticDescription": "Close-mic kick and snare accents for natural backbeats and rehearsal-friendly feel.",
-  "@metronomeSoundPackAcousticDescription": {
-    "description": "Description of the acoustic drum metronome sound pack"
-  },
-
-  "metronomeSoundPackPercussionName": "Percussion clave accents",
-  "@metronomeSoundPackPercussionName": {
-    "description": "Name of the percussion metronome sound pack"
-  },
-
-  "metronomeSoundPackPercussionDescription": "Bright wood and shaker layers that stay clear at higher tempos and dense subdivisions.",
-  "@metronomeSoundPackPercussionDescription": {
-    "description": "Description of the percussion metronome sound pack"
-  },
-
-  "metronomeSoundPackVoiceName": "Signature drummer count-in",
-  "@metronomeSoundPackVoiceName": {
-    "description": "Name of the premium voice count metronome sound pack"
-  },
-
-  "metronomeSoundPackVoiceDescription": "Premium spoken count-ins and stick cues supervised by a featured drummer for confident slow-groove practice.",
-  "@metronomeSoundPackVoiceDescription": {
-    "description": "Description of the premium voice count metronome sound pack"
-  },
-
-  "metronomeSoundTypeElectronic": "Electronic",
-  "@metronomeSoundTypeElectronic": {
-    "description": "Label for electronic metronome sound type"
-  },
-
-  "metronomeSoundTypeAcoustic": "Acoustic kit",
-  "@metronomeSoundTypeAcoustic": {
-    "description": "Label for acoustic drum metronome sound type"
-  },
-
-  "metronomeSoundTypePercussion": "Percussion",
-  "@metronomeSoundTypePercussion": {
-    "description": "Label for percussion metronome sound type"
-  },
-
-  "metronomeSoundTypeVoice": "Voice count",
-  "@metronomeSoundTypeVoice": {
-    "description": "Label for voice count metronome sound type"
-  },
-
-  "metronomeSoundLatencyUltraLow": "Ultra-low latency",
-  "@metronomeSoundLatencyUltraLow": {
-    "description": "Label for an ultra low latency playback profile"
-  },
-
-  "metronomeSoundLatencyBalanced": "Balanced latency",
-  "@metronomeSoundLatencyBalanced": {
-    "description": "Label for a balanced latency playback profile"
-  },
-
   "metronomeSoundLatencyPreloaded": "Preloaded voice cache",
   "@metronomeSoundLatencyPreloaded": {
     "description": "Label for a preloaded playback profile"
