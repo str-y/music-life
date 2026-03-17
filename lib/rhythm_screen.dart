@@ -48,10 +48,12 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   /// Animation controller for the target ring pulse on each beat.
   late final AnimationController _beatPulseCtrl;
+  late final CurvedAnimation _beatPulseCurve;
   late final Animation<double> _beatPulseAnim;
 
   /// Animation controller for the user-tap impact ring.
   late final AnimationController _tapRingCtrl;
+  late final CurvedAnimation _tapRingCurve;
   late final Animation<double> _tapRingAnim;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -63,17 +65,15 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _beatPulseAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _beatPulseCtrl, curve: Curves.easeOut),
-    );
+    _beatPulseCurve = CurvedAnimation(parent: _beatPulseCtrl, curve: Curves.easeOut);
+    _beatPulseAnim = Tween<double>(begin: 0, end: 1).animate(_beatPulseCurve);
 
     _tapRingCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _tapRingAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _tapRingCtrl, curve: Curves.easeOut),
-    );
+    _tapRingCurve = CurvedAnimation(parent: _tapRingCtrl, curve: Curves.easeOut);
+    _tapRingAnim = Tween<double>(begin: 0, end: 1).animate(_tapRingCurve);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -89,7 +89,9 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
   @override
   void dispose() {
     _beatPulseCtrl.dispose();
+    _beatPulseCurve.dispose();
     _tapRingCtrl.dispose();
+    _tapRingCurve.dispose();
     super.dispose();
   }
 
@@ -922,5 +924,8 @@ class _GrooveTargetPainter extends CustomPainter {
       old.beatPhase != beatPhase ||
       old.tapPhase != tapPhase ||
       old.offsetMs != offsetMs ||
-      old.isPlaying != isPlaying;
+      old.isPlaying != isPlaying ||
+      old.beatDurationMs != beatDurationMs ||
+      old.primaryColor != primaryColor ||
+      old.errorColor != errorColor;
 }

@@ -13,8 +13,8 @@ class MetronomeSettingsNotifier extends Notifier<MetronomeSettings> {
       ref.read(metronomeSettingsRepositoryProvider);
 
   Future<void> save(MetronomeSettings updated) async {
-    await _repo.save(updated);
     state = updated;
+    await _repo.save(updated);
   }
 }
 

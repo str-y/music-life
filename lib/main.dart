@@ -18,10 +18,6 @@ import 'utils/app_logger.dart';
 
 const double _themeContrastLevel = 0.5;
 
-Future<void> main() async {
-  await runMusicLifeApp(AppConfig.prod());
-}
-
 Future<void> runMusicLifeApp(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLogger.minimumLevel = config.effectiveLogLevel;
@@ -50,6 +46,9 @@ Future<void> runMusicLifeApp(AppConfig config) async {
       ],
       child: const MusicLifeApp(),
     ),
+  );
+}
+
 typedef AppErrorReporter =
     void Function(
       String message, {

@@ -61,7 +61,6 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
   /// Ordered list of recently detected chords (newest first).
   final List<_ChordEntry> _history = [];
 
-  final TextEditingController _chordFilterController = TextEditingController();
   DateTime? _selectedFilterDate;
   String _chordNameFilter = '';
 
@@ -174,7 +173,8 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     final localizations = AppLocalizations.of(context)!;
     final initialDate = _selectedFilterDate;
     final initialChordName = _chordNameFilter;
-    _chordFilterController.text = initialChordName;
+    final chordFilterController =
+        TextEditingController(text: initialChordName);
     DateTime? pendingDate = initialDate;
 
     final action = await showModalBottomSheet<_HistoryFilterAction>(
@@ -199,7 +199,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
-                    controller: _chordFilterController,
+                    controller: chordFilterController,
                     decoration: InputDecoration(
                       labelText: localizations.filterByChordName,
                     ),
@@ -258,12 +258,15 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       },
     );
 
+    final appliedText = chordFilterController.text.trim();
+    chordFilterController.dispose();
+
     if (!mounted || action == null) return;
 
     if (action == _HistoryFilterAction.apply) {
       setState(() {
         _selectedFilterDate = pendingDate;
-        _chordNameFilter = _chordFilterController.text.trim();
+        _chordNameFilter = appliedText;
       });
       await _loadHistory();
       return;
@@ -272,7 +275,6 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     setState(() {
       _selectedFilterDate = null;
       _chordNameFilter = '';
-      _chordFilterController.clear();
     });
     await _loadHistory();
   }
@@ -305,7 +307,6 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _idleTimer?.cancel();
     _subscription?.cancel();
     _bridge?.dispose();
-    _chordFilterController.dispose();
     _listeningCtrl.dispose();
     super.dispose();
   }

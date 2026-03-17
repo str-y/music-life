@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import "dart:typed_data";
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;

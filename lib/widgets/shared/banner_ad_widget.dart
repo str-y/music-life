@@ -34,7 +34,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
       MediaQuery.of(context).size.width.truncate(),
     );
 
-    if (size == null) return;
+    if (size == null || !mounted) return;
 
     _bannerAd = BannerAd(
       adUnitId: adService.bannerAdUnitId,

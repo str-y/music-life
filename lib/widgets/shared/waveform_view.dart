@@ -146,7 +146,7 @@ class WaveformPainter extends CustomPainter {
       basePath = _buildBasePath(data, size);
       _pathCache[cacheKey] = basePath;
     }
-    final pictureKey = '$cacheKey:${color.value}';
+    final pictureKey = '$cacheKey:${color.toARGB32()}';
     var picture = _pictureCache.remove(pictureKey);
     if (picture != null) {
       _pictureCache[pictureKey] = picture;

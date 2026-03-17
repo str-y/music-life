@@ -183,6 +183,7 @@ class CalendarGrid extends StatelessWidget {
 
     final totalCells = firstWeekday + daysInMonth;
     final rowCount = (totalCells / 7).ceil();
+    final now = DateTime.now();
 
     return Column(
       children: [
@@ -224,9 +225,9 @@ class CalendarGrid extends StatelessWidget {
                 return const Expanded(child: SizedBox(height: 44));
               }
               final hasPractice = practiceDays.contains(day);
-              final isToday = DateTime.now().year == year &&
-                  DateTime.now().month == month &&
-                  DateTime.now().day == day;
+              final isToday = now.year == year &&
+                  now.month == month &&
+                  now.day == day;
               return Expanded(
                 child: DayCell(
                   day: day,

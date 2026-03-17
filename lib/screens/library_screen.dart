@@ -535,11 +535,12 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
                       ? l10n.newRecording
                       : _titleCtrl.text.trim();
                   _preserveRecordingFile = true;
+                  final now = DateTime.now();
                   Navigator.of(context).pop(
                     RecordingEntry(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      id: now.millisecondsSinceEpoch.toString(),
                       title: title,
-                      recordedAt: DateTime.now(),
+                      recordedAt: now,
                       durationSeconds: _durationSeconds,
                       waveformData: _waveformData,
                       audioFilePath: _recordingPath,

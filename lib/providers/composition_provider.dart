@@ -55,7 +55,6 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
     state = AsyncValue.data(updated);
     try {
       await _repo.saveOne(composition);
-      await _syncCloudBackupIfEnabled();
     } catch (e, st) {
       ServiceErrorHandler.report(
         'CompositionNotifier: failed to save composition',
@@ -64,6 +63,15 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
       );
       state = AsyncValue.data(previous);
       rethrow;
+    }
+    try {
+      await _syncCloudBackupIfEnabled();
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'CompositionNotifier: cloud sync failed after saving composition',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -79,7 +87,6 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
     state = AsyncValue.data(updated);
     try {
       await _repo.deleteOne(id);
-      await _syncCloudBackupIfEnabled();
     } catch (e, st) {
       ServiceErrorHandler.report(
         'CompositionNotifier: failed to delete composition',
@@ -88,6 +95,15 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
       );
       state = AsyncValue.data(previous);
       rethrow;
+    }
+    try {
+      await _syncCloudBackupIfEnabled();
+    } catch (e, st) {
+      ServiceErrorHandler.report(
+        'CompositionNotifier: cloud sync failed after deleting composition',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }
