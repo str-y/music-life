@@ -1,9 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/app_config.dart';
-import '../models/premium_video_export.dart';
-import '../theme/dynamic_theme_mode.dart';
-
+import 'package:music_life/config/app_config.dart';
+import 'package:music_life/models/premium_video_export.dart';
+import 'package:music_life/theme/dynamic_theme_mode.dart';
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
 
 /// Immutable application settings persisted in local storage.

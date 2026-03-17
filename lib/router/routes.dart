@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../rhythm_screen.dart';
-import '../screens/chord_analyser_screen.dart';
-import '../screens/composition_helper_screen.dart';
-import '../screens/library_screen.dart';
-import '../screens/main_screen.dart';
-import '../screens/practice_log_screen.dart';
-import '../screens/tuner_screen.dart';
-import '../screens/video_practice_screen.dart';
-
+import 'package:music_life/rhythm_screen.dart';
+import 'package:music_life/screens/chord_analyser_screen.dart';
+import 'package:music_life/screens/composition_helper_screen.dart';
+import 'package:music_life/screens/library_screen.dart';
+import 'package:music_life/screens/main_screen.dart';
+import 'package:music_life/screens/practice_log_screen.dart';
+import 'package:music_life/screens/tuner_screen.dart';
+import 'package:music_life/screens/video_practice_screen.dart';
 part 'routes.g.dart';
 
 @TypedGoRoute<HomeRoute>(path: '/')

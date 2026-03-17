@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../utils/app_logger.dart';
-
+import 'package:music_life/utils/app_logger.dart';
 /// Shared helper for reporting service-layer errors and user notifications.
 class ServiceErrorHandler {
   const ServiceErrorHandler._();

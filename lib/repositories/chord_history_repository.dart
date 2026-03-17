@@ -1,5 +1,4 @@
-import '../data/app_database.dart';
-
+import 'package:music_life/data/app_database.dart';
 abstract interface class ChordHistoryStore {
   Future<void> addEntry(Map<String, Object?> row);
 

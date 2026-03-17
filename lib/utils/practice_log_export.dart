@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../repositories/recording_repository.dart';
-
+import 'package:music_life/repositories/recording_repository.dart';
 /// Formats a practice-log date as `yyyy/MM/dd`.
 String formatPracticeLogDate(DateTime dt) =>
     '${dt.year}/${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}';
