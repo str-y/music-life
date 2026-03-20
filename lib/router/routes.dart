@@ -109,12 +109,9 @@ CustomTransitionPage<void> slideUpPage({
     key: state.pageKey,
     child: child,
     transitionsBuilder: (context, animation, _, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
+      final curved = animation.drive(CurveTween(curve: Curves.easeOutCubic));
       return FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
         child: SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(0, 0.06),

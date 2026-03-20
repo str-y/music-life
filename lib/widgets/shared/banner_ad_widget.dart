@@ -48,6 +48,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
+          _bannerAd = null;
         },
       ),
     )..load();

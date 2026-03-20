@@ -23,7 +23,6 @@ typedef UpdateMetronomeSettingsCallback =
 class MetronomeControls extends ConsumerWidget {
   const MetronomeControls({
     super.key,
-    required this.rhythmState,
     required this.timeSignatureNumerators,
     required this.timeSignatureDenominators,
     required this.beatPulseAnimation,
@@ -33,7 +32,6 @@ class MetronomeControls extends ConsumerWidget {
     required this.onUpdateMetronomeSettings,
   });
 
-  final RhythmState rhythmState;
   final List<int> timeSignatureNumerators;
   final List<int> timeSignatureDenominators;
   final Animation<double> beatPulseAnimation;
@@ -48,15 +46,34 @@ class MetronomeControls extends ConsumerWidget {
     final hasPremiumAccess = ref.watch(
       appSettingsProvider.select((settings) => settings.hasRewardedPremiumAccess),
     );
+    final rhythmState = ref.watch(rhythmProvider);
+    final bpm = rhythmState.bpm;
+    final isPlaying = rhythmState.isPlaying;
+    final numerator = rhythmState.timeSignatureNumerator;
+    final denominator = rhythmState.timeSignatureDenominator;
+
     final settings = ref.watch(metronomeSettingsProvider);
     final presetOptions = _buildPresetOptions(l10n, settings);
-    final selectedPreset = _findMatchingPreset(presetOptions, rhythmState);
+    
+    // Internal helper for preset matching
+    MetronomePresetOption? findMatching() {
+      for (final option in presetOptions) {
+        if (option.preset.bpm == bpm &&
+            option.preset.timeSignatureNumerator == numerator &&
+            option.preset.timeSignatureDenominator == denominator) {
+          return option;
+        }
+      }
+      return null;
+    }
+
+    final selectedPreset = findMatching();
     final selectedPack = resolveSelectedMetronomeSoundPack(
       selectedId: settings.selectedSoundPackId,
       installedIds: settings.installedSoundPackIds,
       hasPremiumAccess: hasPremiumAccess,
     );
-    final recommendedPack = recommendMetronomeSoundPack(rhythmState.bpm);
+    final recommendedPack = recommendMetronomeSoundPack(bpm);
 
     return MetronomeSection(
       presetOptions: presetOptions,
@@ -71,17 +88,17 @@ class MetronomeControls extends ConsumerWidget {
       onSavePreset: onSavePreset,
       timeSignatureNumerators: timeSignatureNumerators,
       timeSignatureDenominators: timeSignatureDenominators,
-      selectedNumerator: rhythmState.timeSignatureNumerator,
-      selectedDenominator: rhythmState.timeSignatureDenominator,
+      selectedNumerator: numerator,
+      selectedDenominator: denominator,
       onNumeratorChanged: (value) {
         if (value == null) {
           return;
         }
         unawaited(
           onUpdateMetronomeSettings(
-            bpm: rhythmState.bpm,
+            bpm: bpm,
             numerator: value,
-            denominator: rhythmState.timeSignatureDenominator,
+            denominator: denominator,
           ),
         );
       },
@@ -91,14 +108,14 @@ class MetronomeControls extends ConsumerWidget {
         }
         unawaited(
           onUpdateMetronomeSettings(
-            bpm: rhythmState.bpm,
-            numerator: rhythmState.timeSignatureNumerator,
+            bpm: bpm,
+            numerator: numerator,
             denominator: value,
           ),
         );
       },
-      bpm: rhythmState.bpm,
-      isPlaying: rhythmState.isPlaying,
+      bpm: bpm,
+      isPlaying: isPlaying,
       beatPulseAnimation: beatPulseAnimation,
       onDecrease10: () => onChangeBpm(-10),
       onDecrease1: () => onChangeBpm(-1),
@@ -111,7 +128,7 @@ class MetronomeControls extends ConsumerWidget {
         unawaited(
           showSoundLibrarySheet(
             context: context,
-            bpm: rhythmState.bpm,
+            bpm: bpm,
           ),
         );
       },
@@ -179,21 +196,6 @@ List<MetronomePresetOption> _buildPresetOptions(
   return [...builtInPresets, ...customPresets];
 }
 
-MetronomePresetOption? _findMatchingPreset(
-  List<MetronomePresetOption> presetOptions,
-  RhythmState rhythmState,
-) {
-  for (final option in presetOptions) {
-    if (option.preset.bpm == rhythmState.bpm &&
-        option.preset.timeSignatureNumerator ==
-            rhythmState.timeSignatureNumerator &&
-        option.preset.timeSignatureDenominator ==
-            rhythmState.timeSignatureDenominator) {
-      return option;
-    }
-  }
-  return null;
-}
 
 MetronomePresetOption? _findPresetOption(
   List<MetronomePresetOption> presetOptions,

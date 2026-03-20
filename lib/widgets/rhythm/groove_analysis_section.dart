@@ -1,34 +1,43 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
 
-class GrooveAnalysisSection extends StatelessWidget {
+class GrooveAnalysisSection extends ConsumerWidget {
   const GrooveAnalysisSection({
     super.key,
     required this.colorScheme,
-    required this.rhythmState,
     required this.beatPulseAnimation,
     required this.tapRingAnimation,
     required this.onTap,
   });
 
   final ColorScheme colorScheme;
-  final RhythmState rhythmState;
   final Animation<double> beatPulseAnimation;
   final Animation<double> tapRingAnimation;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final scoreRatio = rhythmState.timingScore / 100.0;
-    final offsetLabel = rhythmState.isPlaying
-        ? (rhythmState.lastOffsetMs >= 0
-            ? '+${rhythmState.lastOffsetMs.toStringAsFixed(0)} ms'
-            : '${rhythmState.lastOffsetMs.toStringAsFixed(0)} ms')
+    
+    final state = ref.watch(rhythmProvider);
+    final bpm = state.bpm;
+    final isPlaying = state.isPlaying;
+    final numerator = state.timeSignatureNumerator;
+    final denominator = state.timeSignatureDenominator;
+    final timingScore = state.timingScore;
+    final lastOffsetMs = state.lastOffsetMs;
+    final beatDuration = state.beatDuration;
+
+    final scoreRatio = timingScore / 100.0;
+    final offsetLabel = isPlaying
+        ? (lastOffsetMs >= 0
+            ? '+${lastOffsetMs.toStringAsFixed(0)} ms'
+            : '${lastOffsetMs.toStringAsFixed(0)} ms')
         : '---';
     final scoreColor = Color.lerp(
       colorScheme.error,
@@ -71,10 +80,9 @@ class GrooveAnalysisSection extends StatelessWidget {
                           painter: GrooveTargetPainter(
                             beatPhase: beatPulseAnimation.value,
                             tapPhase: tapRingAnimation.value,
-                            offsetMs: rhythmState.lastOffsetMs,
-                            beatDurationMs: rhythmState.beatDuration.inMilliseconds
-                                .toDouble(),
-                            isPlaying: rhythmState.isPlaying,
+                            offsetMs: lastOffsetMs,
+                            beatDurationMs: beatDuration.inMilliseconds.toDouble(),
+                            isPlaying: isPlaying,
                             primaryColor: colorScheme.primary,
                             errorColor: colorScheme.error,
                           ),
@@ -119,7 +127,7 @@ class GrooveAnalysisSection extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          rhythmState.timingScore.toStringAsFixed(1),
+                          timingScore.toStringAsFixed(1),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -128,7 +136,7 @@ class GrooveAnalysisSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (rhythmState.isPlaying)
+                    if (isPlaying)
                       Text(
                         l10n.tapRhythmHint,
                         style: TextStyle(

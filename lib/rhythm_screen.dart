@@ -99,7 +99,6 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
       }
     });
 
-    final rhythmState = ref.watch(rhythmProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -113,13 +112,12 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
             child: RepaintBoundary(
               key: const ValueKey('metronome-controls-repaint-boundary'),
               child: MetronomeControls(
-                rhythmState: rhythmState,
                 timeSignatureNumerators: _timeSignatureNumerators,
                 timeSignatureDenominators: _timeSignatureDenominators,
                 beatPulseAnimation: _beatPulseAnim,
                 onPresetApplied: _applyPreset,
-                onSavePreset: () => _showSavePresetDialog(rhythmState),
-                onChangeBpm: (delta) => _changeBpm(rhythmState, delta),
+                onSavePreset: _showSavePresetDialog,
+                onChangeBpm: _changeBpm,
                 onUpdateMetronomeSettings: _updateMetronomeSettings,
               ),
             ),
@@ -131,7 +129,6 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
               key: const ValueKey('groove-analysis-repaint-boundary'),
                 child: GrooveAnalysisSection(
                   colorScheme: colorScheme,
-                  rhythmState: rhythmState,
                   beatPulseAnimation: _beatPulseAnim,
                   tapRingAnimation: _tapRingAnim,
                   onTap: ref.read(rhythmProvider.notifier).onGrooveTap,
@@ -143,7 +140,8 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     );
   }
 
-  Future<void> _showSavePresetDialog(RhythmState rhythmState) async {
+  Future<void> _showSavePresetDialog() async {
+    final rhythmState = ref.read(rhythmProvider);
     final l10n = AppLocalizations.of(context)!;
     final customPresetCount = ref.read(metronomeSettingsProvider).presets.length;
     final controller = TextEditingController(
@@ -203,7 +201,8 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     );
   }
 
-  Future<void> _changeBpm(RhythmState rhythmState, int delta) {
+  Future<void> _changeBpm(int delta) {
+    final rhythmState = ref.read(rhythmProvider);
     final nextBpm = (rhythmState.bpm + delta).clamp(30, 240).toInt();
     return _updateMetronomeSettings(
       bpm: nextBpm,
