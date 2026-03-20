@@ -168,36 +168,39 @@ class MetronomeSettingsRepository {
   }
 
   Future<void> save(MetronomeSettings settings) async {
-    await _prefs.setInt(
-      _config.metronomeBpmStorageKey,
-      sanitizeMetronomeBpm(settings.bpm),
-    );
-    await _prefs.setInt(
-      _config.metronomeTimeSignatureNumeratorStorageKey,
-      sanitizeTimeSignatureNumerator(settings.timeSignatureNumerator),
-    );
-    await _prefs.setInt(
-      _config.metronomeTimeSignatureDenominatorStorageKey,
-      sanitizeTimeSignatureDenominator(settings.timeSignatureDenominator),
-    );
-    await _prefs.setString(
-      _config.metronomePresetsStorageKey,
-      jsonEncode(settings.presets.map((preset) => preset.toJson()).toList()),
-    );
     final installedSoundPackIds = normalizeInstalledMetronomeSoundPackIds(
       settings.installedSoundPackIds,
     );
-    await _prefs.setStringList(
-      _config.metronomeSoundPacksStorageKey,
-      installedSoundPackIds,
-    );
-    await _prefs.setString(
-      _config.selectedMetronomeSoundPackStorageKey,
-      normalizeSelectedMetronomeSoundPackId(
-        settings.selectedSoundPackId,
+
+    await Future.wait([
+      _prefs.setInt(
+        _config.metronomeBpmStorageKey,
+        sanitizeMetronomeBpm(settings.bpm),
+      ),
+      _prefs.setInt(
+        _config.metronomeTimeSignatureNumeratorStorageKey,
+        sanitizeTimeSignatureNumerator(settings.timeSignatureNumerator),
+      ),
+      _prefs.setInt(
+        _config.metronomeTimeSignatureDenominatorStorageKey,
+        sanitizeTimeSignatureDenominator(settings.timeSignatureDenominator),
+      ),
+      _prefs.setString(
+        _config.metronomePresetsStorageKey,
+        jsonEncode(settings.presets.map((preset) => preset.toJson()).toList()),
+      ),
+      _prefs.setStringList(
+        _config.metronomeSoundPacksStorageKey,
         installedSoundPackIds,
       ),
-    );
+      _prefs.setString(
+        _config.selectedMetronomeSoundPackStorageKey,
+        normalizeSelectedMetronomeSoundPackId(
+          settings.selectedSoundPackId,
+          installedSoundPackIds,
+        ),
+      ),
+    ]);
   }
 
   List<MetronomePreset> _decodeMetronomePresets(String? value) {

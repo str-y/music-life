@@ -11,8 +11,8 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   Future<void> save(AppSettings updated) async {
-    await _repo.save(updated);
     state = updated;
+    await _repo.save(updated);
   }
 
   void setTransient(AppSettings updated) {
