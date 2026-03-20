@@ -640,6 +640,10 @@
   "@metronomeSoundLibraryDownload": {
     "description": "Action label to download a metronome sound pack"
   },
+  "installing": "Installing...",
+  "@installing": {
+    "description": "Label shown when a sound pack is being downloaded or installed"
+  },
   "metronomeSoundLibraryUse": "Use sound",
   "@metronomeSoundLibraryUse": {
     "description": "Action label to select an installed sound pack"

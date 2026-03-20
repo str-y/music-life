@@ -6,6 +6,7 @@ import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/metronome_settings_provider.dart';
+import 'package:music_life/providers/metronome_sound_library_controller.dart';
 import 'package:music_life/services/ad_service.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
@@ -36,6 +37,8 @@ class SoundLibrarySheet extends ConsumerWidget {
       appSettingsProvider.select((settings) => settings.hasRewardedPremiumAccess),
     );
     final settings = ref.watch(metronomeSettingsProvider);
+    final libraryState = ref.watch(metronomeSoundLibraryControllerProvider);
+    
     final selectedPack = resolveSelectedMetronomeSoundPack(
       selectedId: settings.selectedSoundPackId,
       installedIds: settings.installedSoundPackIds,
@@ -109,6 +112,7 @@ class SoundLibrarySheet extends ConsumerWidget {
                     final isSelected = selectedPack.id == pack.id && isInstalled;
                     final isRecommended = recommendedPack.id == pack.id;
                     final isLocked = pack.premiumOnly && !hasPremiumAccess;
+                    final isInstalling = libraryState.installingPackId == pack.id;
 
                     return Card(
                       child: Padding(
@@ -183,38 +187,48 @@ class SoundLibrarySheet extends ConsumerWidget {
                             const SizedBox(height: 12),
                             Align(
                               alignment: Alignment.centerRight,
-                              child: FilledButton.icon(
-                                key: ValueKey(
-                                  'metronome-sound-action-${pack.id}',
+                                child: FilledButton.icon(
+                                  key: ValueKey(
+                                    'metronome-sound-action-${pack.id}',
+                                  ),
+                                  onPressed: (isSelected || isInstalling)
+                                      ? null
+                                      : () => _handleSoundPackAction(
+                                            context: context,
+                                            ref: ref,
+                                            pack: pack,
+                                            isLocked: isLocked,
+                                          ),
+                                  icon: isInstalling
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Icon(
+                                          isSelected
+                                              ? Icons.check_circle
+                                              : isLocked
+                                                  ? Icons.ondemand_video
+                                                  : isInstalled
+                                                      ? Icons.graphic_eq
+                                                      : Icons.download,
+                                        ),
+                                  label: Text(
+                                    isSelected
+                                        ? l10n.metronomeSoundLibraryInUse
+                                        : isInstalling
+                                            ? l10n.installing
+                                            : isLocked
+                                                ? l10n.watchAdAndUnlock
+                                                : isInstalled
+                                                    ? l10n.metronomeSoundLibraryUse
+                                                    : l10n
+                                                        .metronomeSoundLibraryDownload,
+                                  ),
                                 ),
-                                onPressed: () => _handleSoundPackAction(
-                                  context: context,
-                                  ref: ref,
-                                  pack: pack,
-                                  isInstalled: isInstalled,
-                                  isSelected: isSelected,
-                                  isLocked: isLocked,
-                                ),
-                                icon: Icon(
-                                  isSelected
-                                      ? Icons.check_circle
-                                      : isLocked
-                                          ? Icons.ondemand_video
-                                          : isInstalled
-                                              ? Icons.graphic_eq
-                                              : Icons.download,
-                                ),
-                                label: Text(
-                                  isSelected
-                                      ? l10n.metronomeSoundLibraryInUse
-                                      : isLocked
-                                          ? l10n.watchAdAndUnlock
-                                          : isInstalled
-                                              ? l10n.metronomeSoundLibraryUse
-                                              : l10n
-                                                  .metronomeSoundLibraryDownload,
-                                ),
-                              ),
                             ),
                           ],
                         ),
@@ -235,53 +249,34 @@ Future<void> _handleSoundPackAction({
   required BuildContext context,
   required WidgetRef ref,
   required MetronomeSoundPack pack,
-  required bool isInstalled,
-  required bool isSelected,
   required bool isLocked,
 }) async {
   final l10n = AppLocalizations.of(context)!;
-  if (isSelected) {
-    return;
-  }
-  if (isLocked) {
-    final rewarded = await ref.read(adServiceProvider).showRewardedAd(
-      onUserEarnedReward: (_) {},
-    );
-    if (!context.mounted) {
-      return;
-    }
-    if (!rewarded) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.rewardedAdNotReady)),
+  
+  final success = await ref
+      .read(metronomeSoundLibraryControllerProvider.notifier)
+      .handleSoundPackAction(
+        pack: pack,
+        isLocked: isLocked,
+        rewardedDuration: _rewardedPremiumDuration,
       );
-      return;
-    }
-    await ref
-        .read(premiumSettingsControllerProvider)
-        .unlockRewardedPremiumFor(_rewardedPremiumDuration);
-    await ref.read(metronomeSettingsControllerProvider).installSoundPack(pack.id);
-    await ref.read(metronomeSettingsControllerProvider).selectSoundPack(pack.id);
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.metronomeSoundLibraryUnlocked(_soundPackName(l10n, pack))),
-      ),
-    );
-    return;
-  }
-  if (!isInstalled) {
-    await ref.read(metronomeSettingsControllerProvider).installSoundPack(pack.id);
-  }
-  await ref.read(metronomeSettingsControllerProvider).selectSoundPack(pack.id);
-  if (context.mounted) {
+
+  if (!context.mounted) return;
+
+  if (success) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          l10n.metronomeSoundLibraryDownloaded(_soundPackName(l10n, pack)),
+          isLocked
+              ? l10n.metronomeSoundLibraryUnlocked(_soundPackName(l10n, pack))
+              : l10n.metronomeSoundLibraryDownloaded(_soundPackName(l10n, pack)),
         ),
       ),
+    );
+  } else if (isLocked) {
+    // If it failed and was locked, it likely failed at the ad stage
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.rewardedAdNotReady)),
     );
   }
 }

@@ -140,6 +140,7 @@
   "metronomeSoundLibraryInstalledChip": "インストール済み",
   "metronomeSoundLibraryDownload": "ダウンロード",
   "metronomeSoundLibraryUse": "この音源を使う",
+  "installing": "インストール中...",
   "metronomeSoundLibraryInUse": "使用中",
   "metronomeSoundLibraryDownloaded": "{packName} を低遅延再生向けに準備しました。",
   "metronomeSoundLibraryUnlocked": "{packName} のプレミアム音源を開放してダウンロードしました。",
