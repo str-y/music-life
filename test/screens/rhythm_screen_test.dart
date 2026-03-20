@@ -216,15 +216,25 @@ void main() {
 
     expect(acousticPackItemFinder, findsWidgets);
 
+    // Ensure stable surface size
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final actionButtonFinder = find.byKey(const ValueKey('metronome-sound-action-acoustic_kit'));
-    await tester.ensureVisible(actionButtonFinder);
+    await tester.dragUntilVisible(
+      actionButtonFinder,
+      find.descendant(of: sheetFinder, matching: find.byType(ListView)),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
     
-    final button = tester.widget<FilledButton>(actionButtonFinder);
-    button.onPressed!();
+    // Natural tap via hit-testing on the center of the button
+    await tester.tapAt(tester.getCenter(actionButtonFinder));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     
     // Give it plenty of time for async work to complete and frames to draw
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // The header should now show the selected pack
     expect(
