@@ -24,14 +24,10 @@ class GrooveAnalysisSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     
-    final state = ref.watch(rhythmProvider);
-    final bpm = state.bpm;
-    final isPlaying = state.isPlaying;
-    final numerator = state.timeSignatureNumerator;
-    final denominator = state.timeSignatureDenominator;
-    final timingScore = state.timingScore;
-    final lastOffsetMs = state.lastOffsetMs;
-    final beatDuration = state.beatDuration;
+    final timingScore = ref.watch(rhythmProvider.select<double>((s) => s.timingScore));
+    final lastOffsetMs = ref.watch(rhythmProvider.select<double>((s) => s.lastOffsetMs));
+    final isPlaying = ref.watch(rhythmProvider.select<bool>((s) => s.isPlaying));
+    final beatDuration = ref.watch(rhythmProvider.select<Duration>((s) => s.beatDuration));
 
     final scoreRatio = timingScore / 100.0;
     final offsetLabel = isPlaying

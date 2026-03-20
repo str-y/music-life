@@ -46,11 +46,10 @@ class MetronomeControls extends ConsumerWidget {
     final hasPremiumAccess = ref.watch(
       appSettingsProvider.select((settings) => settings.hasRewardedPremiumAccess),
     );
-    final rhythmState = ref.watch(rhythmProvider);
-    final bpm = rhythmState.bpm;
-    final isPlaying = rhythmState.isPlaying;
-    final numerator = rhythmState.timeSignatureNumerator;
-    final denominator = rhythmState.timeSignatureDenominator;
+    final bpm = ref.watch(rhythmProvider.select<int>((s) => s.bpm));
+    final isPlaying = ref.watch(rhythmProvider.select<bool>((s) => s.isPlaying));
+    final numerator = ref.watch(rhythmProvider.select<int>((s) => s.timeSignatureNumerator));
+    final denominator = ref.watch(rhythmProvider.select<int>((s) => s.timeSignatureDenominator));
 
     final settings = ref.watch(metronomeSettingsProvider);
     final presetOptions = _buildPresetOptions(l10n, settings);
