@@ -80,10 +80,10 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   @override
   void dispose() {
-    _beatPulseCtrl.dispose();
     _beatPulseCurve.dispose();
-    _tapRingCtrl.dispose();
     _tapRingCurve.dispose();
+    _beatPulseCtrl.dispose();
+    _tapRingCtrl.dispose();
     super.dispose();
   }
 

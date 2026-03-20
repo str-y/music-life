@@ -96,6 +96,7 @@ Future<XFile> generateShareCardImage({
     maxLines: 2,
   )..layout(maxWidth: 820);
   titlePainter.paint(canvas, const Offset(130, 140));
+  titlePainter.dispose();
 
   var y = 280.0;
   for (final line in lines.where((line) => line.trim().isNotEmpty)) {
@@ -114,6 +115,7 @@ Future<XFile> generateShareCardImage({
     )..layout(maxWidth: 820);
     linePainter.paint(canvas, Offset(130, y));
     y += linePainter.height + 28;
+    linePainter.dispose();
   }
 
   final footerPainter = TextPainter(
@@ -128,6 +130,7 @@ Future<XFile> generateShareCardImage({
     textDirection: TextDirection.ltr,
   )..layout(maxWidth: 820);
   footerPainter.paint(canvas, Offset(130, height - 160));
+  footerPainter.dispose();
 
   final image = await recorder.endRecording().toImage(width, height);
   final ByteData? bytes;

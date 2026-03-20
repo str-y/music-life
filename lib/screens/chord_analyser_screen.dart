@@ -176,106 +176,108 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
         TextEditingController(text: initialChordName);
     DateTime? pendingDate = initialDate;
 
-    final action = await showModalBottomSheet<_HistoryFilterAction>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final dateLabel = pendingDate == null
-                ? '-'
-                : formatDateYMD(pendingDate!);
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: chordFilterController,
-                    decoration: InputDecoration(
-                      labelText: localizations.filterByChordName,
+    try {
+      final action = await showModalBottomSheet<_HistoryFilterAction>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              final dateLabel = pendingDate == null
+                  ? '-'
+                  : formatDateYMD(pendingDate!);
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: chordFilterController,
+                      decoration: InputDecoration(
+                        labelText: localizations.filterByChordName,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('${localizations.practiceDate}: $dateLabel'),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      OutlinedButton(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: pendingDate ?? DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            setModalState(() => pendingDate = picked);
-                          }
-                        },
-                        child: Text(localizations.practiceDate),
-                      ),
-                      TextButton(
-                        onPressed: () => setModalState(() => pendingDate = null),
-                        child: Text(localizations.clearDateFilter),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context)
-                            .pop(_HistoryFilterAction.clear),
-                        child: Text(localizations.clearFilter),
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(localizations.cancel),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context)
-                            .pop(_HistoryFilterAction.apply),
-                        child: Text(localizations.save),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+                    const SizedBox(height: 12),
+                    Text('${localizations.practiceDate}: $dateLabel'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: pendingDate ?? DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null && context.mounted) {
+                              setModalState(() => pendingDate = picked);
+                            }
+                          },
+                          child: Text(localizations.practiceDate),
+                        ),
+                        TextButton(
+                          onPressed: () => setModalState(() => pendingDate = null),
+                          child: Text(localizations.clearDateFilter),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context)
+                              .pop(_HistoryFilterAction.clear),
+                          child: Text(localizations.clearFilter),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(localizations.cancel),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context)
+                              .pop(_HistoryFilterAction.apply),
+                          child: Text(localizations.save),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
 
-    final appliedText = chordFilterController.text.trim();
-    chordFilterController.dispose();
+      final appliedText = chordFilterController.text.trim();
+      if (!mounted || action == null) return;
 
-    if (!mounted || action == null) return;
+      if (action == _HistoryFilterAction.apply) {
+        setState(() {
+          _selectedFilterDate = pendingDate;
+          _chordNameFilter = appliedText;
+        });
+        await _loadHistory();
+        return;
+      }
 
-    if (action == _HistoryFilterAction.apply) {
       setState(() {
-        _selectedFilterDate = pendingDate;
-        _chordNameFilter = appliedText;
+        _selectedFilterDate = null;
+        _chordNameFilter = '';
       });
       await _loadHistory();
-      return;
+    } finally {
+      chordFilterController.dispose();
     }
-
-    setState(() {
-      _selectedFilterDate = null;
-      _chordNameFilter = '';
-    });
-    await _loadHistory();
   }
 
   /// Called when the [NativePitchBridge] reports a runtime error.
@@ -538,9 +540,9 @@ class _ChordHistoryTile extends StatelessWidget {
     final timeLabel = formatTimeHMS(entry.time);
 
     return SizeTransition(
-      sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+      sizeFactor: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
       child: FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
         child: Semantics(
           label: '${entry.chord}, $timeLabel',
           excludeSemantics: true,

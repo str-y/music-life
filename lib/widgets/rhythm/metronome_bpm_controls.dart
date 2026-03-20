@@ -38,9 +38,7 @@ class MetronomeBpmControls extends StatelessWidget {
               position: Tween<Offset>(
                 begin: const Offset(0, -0.3),
                 end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
-              ),
+              ).animate(animation.drive(CurveTween(curve: Curves.easeOut))),
               child: child,
             ),
           ),
