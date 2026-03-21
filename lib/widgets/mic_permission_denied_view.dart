@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
+import 'package:permission_handler/permission_handler.dart';
 /// A full-screen view shown when microphone permission has been denied.
 ///
 /// Provides an "Open Settings" button (to allow the permission in system
 /// settings) and an optional [onRetry] callback to re-request the permission.
 class MicPermissionDeniedView extends StatelessWidget {
-  const MicPermissionDeniedView({super.key, required this.onRetry});
+  const MicPermissionDeniedView({required this.onRetry, super.key});
 
   final VoidCallback onRetry;
 

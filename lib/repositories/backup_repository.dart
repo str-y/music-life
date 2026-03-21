@@ -144,11 +144,6 @@ class BackupBundle {
     required this.compositionRows,
   });
 
-  final List<Map<String, Object?>> recordingRows;
-  final List<Map<String, Object?>> practiceLogRows;
-  final List<Map<String, Object?>> practiceLogEntryRows;
-  final List<Map<String, Object?>> compositionRows;
-
   factory BackupBundle.fromDatabaseRows({
     required List<Map<String, Object?>> recordings,
     required List<Map<String, Object?>> practiceLogs,
@@ -196,27 +191,6 @@ class BackupBundle {
           )
           .toList(),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'version': 1,
-      'exported_at': DateTime.now().toIso8601String(),
-      'recordings': recordingRows.map((row) {
-        final waveform = row['waveform_data'] as Uint8List;
-        return {
-          'id': row['id'],
-          'title': row['title'],
-          'recorded_at': row['recorded_at'],
-          'duration_seconds': row['duration_seconds'],
-          'waveform_data_base64': base64Encode(waveform),
-          'audio_file_path': row['audio_file_path'],
-        };
-      }).toList(),
-      'practice_logs': practiceLogRows,
-      'practice_log_entries': practiceLogEntryRows,
-      'compositions': compositionRows,
-    };
   }
 
   factory BackupBundle.fromJson(Map<String, dynamic> json) {
@@ -269,5 +243,31 @@ class BackupBundle {
       practiceLogEntryRows: practiceLogEntries,
       compositionRows: compositions,
     );
+  }
+
+  final List<Map<String, Object?>> recordingRows;
+  final List<Map<String, Object?>> practiceLogRows;
+  final List<Map<String, Object?>> practiceLogEntryRows;
+  final List<Map<String, Object?>> compositionRows;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'version': 1,
+      'exported_at': DateTime.now().toIso8601String(),
+      'recordings': recordingRows.map((row) {
+        final waveform = row['waveform_data']! as Uint8List;
+        return {
+          'id': row['id'],
+          'title': row['title'],
+          'recorded_at': row['recorded_at'],
+          'duration_seconds': row['duration_seconds'],
+          'waveform_data_base64': base64Encode(waveform),
+          'audio_file_path': row['audio_file_path'],
+        };
+      }).toList(),
+      'practice_logs': practiceLogRows,
+      'practice_log_entries': practiceLogEntryRows,
+      'compositions': compositionRows,
+    };
   }
 }

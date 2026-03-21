@@ -16,17 +16,7 @@ class MetronomePresetOption {
 
 class MetronomePresetControls extends StatelessWidget {
   const MetronomePresetControls({
-    super.key,
-    required this.presetOptions,
-    required this.selectedPresetId,
-    required this.onPresetSelected,
-    required this.onSavePreset,
-    required this.timeSignatureNumerators,
-    required this.timeSignatureDenominators,
-    required this.selectedNumerator,
-    required this.selectedDenominator,
-    required this.onNumeratorChanged,
-    required this.onDenominatorChanged,
+    required this.presetOptions, required this.selectedPresetId, required this.onPresetSelected, required this.onSavePreset, required this.timeSignatureNumerators, required this.timeSignatureDenominators, required this.selectedNumerator, required this.selectedDenominator, required this.onNumeratorChanged, required this.onDenominatorChanged, super.key,
   });
 
   final List<MetronomePresetOption> presetOptions;
@@ -52,7 +42,7 @@ class MetronomePresetControls extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<String>(
                 key: const ValueKey('metronome-preset-dropdown'),
-                value: selectedPresetId,
+                initialValue: selectedPresetId,
                 decoration: InputDecoration(labelText: l10n.metronomePresetLabel),
                 hint: Text(l10n.metronomePresetHint),
                 items: presetOptions
@@ -86,7 +76,7 @@ class MetronomePresetControls extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<int>(
                 key: const ValueKey('time-signature-numerator-dropdown'),
-                value: selectedNumerator,
+                initialValue: selectedNumerator,
                 decoration: const InputDecoration(isDense: true),
                 items: timeSignatureNumerators
                     .map(
@@ -106,7 +96,7 @@ class MetronomePresetControls extends StatelessWidget {
             Expanded(
               child: DropdownButtonFormField<int>(
                 key: const ValueKey('time-signature-denominator-dropdown'),
-                value: selectedDenominator,
+                initialValue: selectedDenominator,
                 decoration: const InputDecoration(isDense: true),
                 items: timeSignatureDenominators
                     .map(

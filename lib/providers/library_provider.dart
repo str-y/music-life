@@ -213,7 +213,7 @@ class LibraryNotifier extends AsyncNotifier<LibraryState> {
 // Provider
 // ---------------------------------------------------------------------------
 
-final libraryProvider =
+final AsyncNotifierProvider<LibraryNotifier, LibraryState> libraryProvider =
     AsyncNotifierProvider.autoDispose<LibraryNotifier, LibraryState>(
   LibraryNotifier.new,
 );

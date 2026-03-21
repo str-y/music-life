@@ -18,7 +18,7 @@ void main() {
 
     test('startMetronome emits beats from monotonic elapsed time', () {
       final factory = _FakeRhythmTickerFactory();
-      var now = DateTime.utc(2026, 3, 11, 13);
+      final now = DateTime.utc(2026, 3, 11, 13);
       final container = ProviderContainer(
         overrides: [
           rhythmClockProvider.overrideWithValue(() => now),

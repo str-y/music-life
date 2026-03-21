@@ -92,7 +92,7 @@ void main() {
 
     expect(restored.recordingRows.single['id'], 'r1');
     expect(
-      (restored.recordingRows.single['waveform_data'] as Uint8List).toList(),
+      (restored.recordingRows.single['waveform_data']! as Uint8List).toList(),
       [1, 2, 3, 4],
     );
     expect(restored.recordingRows.single['audio_file_path'], '/tmp/rec-1.m4a');
@@ -192,7 +192,7 @@ void main() {
       expect(store.replaceAllCalls, 1);
       expect(store.importedRecordings!.single['id'], 'r1');
       expect(
-        (store.importedRecordings!.single['waveform_data'] as Uint8List).toList(),
+        (store.importedRecordings!.single['waveform_data']! as Uint8List).toList(),
         [1, 2, 3, 4],
       );
       expect(store.importedPracticeLogs!.single['memo'], 'Warmup');

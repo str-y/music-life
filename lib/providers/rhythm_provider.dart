@@ -189,7 +189,7 @@ class RhythmNotifier extends Notifier<RhythmState> {
   }
 }
 
-final rhythmProvider =
+final NotifierProvider<RhythmNotifier, RhythmState> rhythmProvider =
     NotifierProvider.autoDispose<RhythmNotifier, RhythmState>(
       RhythmNotifier.new,
     );
@@ -198,5 +198,5 @@ int _clampBpm(int bpm) {
   return bpm.clamp(
     AppConstants.metronomeMinBpm,
     AppConstants.metronomeMaxBpm,
-  ).toInt();
+  );
 }

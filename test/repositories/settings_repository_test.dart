@@ -68,7 +68,7 @@ void main() {
         themeColorNote: 'A',
         dynamicThemeMode: DynamicThemeMode.classical,
         dynamicThemeIntensity: 0.4,
-        referencePitch: 445.0,
+        referencePitch: 445,
         tunerTransposition: 'Eb',
         hapticFeedbackEnabled: false,
         cloudSyncEnabled: true,

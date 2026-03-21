@@ -12,7 +12,7 @@ void main() {
           memo: 'Warmups',
         ),
         PracticeLogEntry(
-          date: DateTime(2026, 2, 1),
+          date: DateTime(2026, 2),
           durationMinutes: 30,
           memo: 'Scales',
         ),
@@ -29,7 +29,7 @@ void main() {
     test('outputs header and rows', () {
       final csv = buildPracticeLogCsv([
         PracticeLogEntry(
-          date: DateTime(2026, 2, 1),
+          date: DateTime(2026, 2),
           durationMinutes: 30,
           memo: 'Scales',
         ),

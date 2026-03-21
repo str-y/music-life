@@ -1,24 +1,24 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import "package:permission_handler/permission_handler.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:record/record.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/providers/haptic_service_provider.dart';
 import 'package:music_life/providers/library_provider.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/router/routes.dart';
+import 'package:music_life/screens/library/log_tab.dart';
+import 'package:music_life/screens/library/recordings_tab.dart';
 import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/services/recording_storage_service.dart';
 import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/widgets/shared/async_value_state_view.dart';
 import 'package:music_life/widgets/shared/waveform_view.dart';
-import 'package:music_life/screens/library/log_tab.dart';
-import 'package:music_life/screens/library/recordings_tab.dart';
+import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 typedef AudioRecorderFactory = AudioRecorder Function();
 
@@ -39,7 +39,7 @@ List<double> downsampleWaveform(List<double> source, int targetPoints) {
     for (var j = start; j < boundedEnd; j++) {
       sum += source[j];
     }
-    return (sum / (boundedEnd - start)).clamp(0.0, 1.0).toDouble();
+    return (sum / (boundedEnd - start)).clamp(0.0, 1.0);
   });
 }
 
@@ -54,8 +54,8 @@ int _boundWaveformEnd({
 }
 
 List<double> _downsampleWaveformInIsolate(Map<String, Object> args) {
-  final source = (args['source'] as List).cast<double>();
-  final targetPoints = args['targetPoints'] as int;
+  final source = (args['source']! as List).cast<double>();
+  final targetPoints = args['targetPoints']! as int;
   return downsampleWaveform(source, targetPoints);
 }
 
@@ -111,9 +111,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   }
 
   Future<void> _showAddDialog() async {
-    final RecordingStorageService storageService =
+    final storageService =
         widget.recordingStorageService ??
         ref.read(recordingStorageServiceProvider);
+    if (storageService == null) return;
+    
     final result = await showDialog<RecordingEntry>(
       context: context,
       builder: (_) => _AddRecordingDialog(
@@ -213,7 +215,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             return const SizedBox.shrink();
           }
           return FloatingActionButton(
-            onPressed: () => _showAddDialog(),
+            onPressed: _showAddDialog,
             tooltip: AppLocalizations.of(context)!.newRecording,
             child: const Icon(Icons.add),
           );
@@ -245,7 +247,7 @@ class _AddRecordingDialog extends StatefulWidget {
 }
 
 class _AddRecordingDialogState extends State<_AddRecordingDialog> {
-  static const double _amplitudeFloorDb = -60.0;
+  static const double _amplitudeFloorDb = -60;
   static const int _amplitudeSamplesPerUiUpdate = 3;
   final _titleCtrl = TextEditingController();
   final List<double> _amplitudeData = [];
@@ -343,8 +345,6 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
       _recordingPath = path;
       await _recorder.start(
         const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          sampleRate: 44100,
           numChannels: 1,
         ),
         path: path,
@@ -364,7 +364,7 @@ class _AddRecordingDialogState extends State<_AddRecordingDialog> {
         // Convert dBFS (typically in [-60, 0]) into normalized [0, 1] waveform.
         final normalised = ((amp.current - _amplitudeFloorDb) / -_amplitudeFloorDb)
             .clamp(0.0, 1.0)
-            .toDouble();
+            ;
         _amplitudeData.add(normalised);
         _samplesSinceUiUpdate++;
         if (mounted && _samplesSinceUiUpdate >= _amplitudeSamplesPerUiUpdate) {

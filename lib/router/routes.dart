@@ -12,7 +12,7 @@ import 'package:music_life/screens/video_practice_screen.dart';
 part 'routes.g.dart';
 
 @TypedGoRoute<HomeRoute>(path: '/')
-class HomeRoute extends GoRouteData {
+class HomeRoute extends GoRouteData with $HomeRoute {
   const HomeRoute();
 
   @override
@@ -20,7 +20,7 @@ class HomeRoute extends GoRouteData {
 }
 
 @TypedGoRoute<TunerRoute>(path: '/tuner')
-class TunerRoute extends GoRouteData {
+class TunerRoute extends GoRouteData with $TunerRoute {
   const TunerRoute();
 
   @override
@@ -29,7 +29,7 @@ class TunerRoute extends GoRouteData {
 }
 
 @TypedGoRoute<PracticeLogRoute>(path: '/practice-log')
-class PracticeLogRoute extends GoRouteData {
+class PracticeLogRoute extends GoRouteData with $PracticeLogRoute {
   const PracticeLogRoute();
 
   @override
@@ -38,7 +38,7 @@ class PracticeLogRoute extends GoRouteData {
 }
 
 @TypedGoRoute<LibraryRoute>(path: '/library')
-class LibraryRoute extends GoRouteData {
+class LibraryRoute extends GoRouteData with $LibraryRoute {
   const LibraryRoute();
 
   @override
@@ -47,16 +47,16 @@ class LibraryRoute extends GoRouteData {
 }
 
 @TypedGoRoute<RecordingsRoute>(path: '/recordings')
-class RecordingsRoute extends GoRouteData {
+class RecordingsRoute extends GoRouteData with $RecordingsRoute {
   const RecordingsRoute();
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      slideUpPage(state: state, child: const LibraryScreen(initialTabIndex: 0));
+      slideUpPage(state: state, child: const LibraryScreen());
 }
 
 @TypedGoRoute<LibraryLogsRoute>(path: '/library/logs')
-class LibraryLogsRoute extends GoRouteData {
+class LibraryLogsRoute extends GoRouteData with $LibraryLogsRoute {
   const LibraryLogsRoute();
 
   @override
@@ -65,7 +65,7 @@ class LibraryLogsRoute extends GoRouteData {
 }
 
 @TypedGoRoute<RhythmRoute>(path: '/rhythm')
-class RhythmRoute extends GoRouteData {
+class RhythmRoute extends GoRouteData with $RhythmRoute {
   const RhythmRoute();
 
   @override
@@ -74,7 +74,7 @@ class RhythmRoute extends GoRouteData {
 }
 
 @TypedGoRoute<ChordAnalyserRoute>(path: '/chord-analyser')
-class ChordAnalyserRoute extends GoRouteData {
+class ChordAnalyserRoute extends GoRouteData with $ChordAnalyserRoute {
   const ChordAnalyserRoute();
 
   @override
@@ -83,7 +83,7 @@ class ChordAnalyserRoute extends GoRouteData {
 }
 
 @TypedGoRoute<CompositionHelperRoute>(path: '/composition-helper')
-class CompositionHelperRoute extends GoRouteData {
+class CompositionHelperRoute extends GoRouteData with $CompositionHelperRoute {
   const CompositionHelperRoute();
 
   @override
@@ -92,7 +92,7 @@ class CompositionHelperRoute extends GoRouteData {
 }
 
 @TypedGoRoute<VideoPracticeRoute>(path: '/video-practice')
-class VideoPracticeRoute extends GoRouteData {
+class VideoPracticeRoute extends GoRouteData with $VideoPracticeRoute {
   const VideoPracticeRoute();
 
   @override

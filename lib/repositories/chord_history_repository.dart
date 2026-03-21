@@ -83,8 +83,8 @@ class SqliteChordHistoryRepository implements ChordHistoryRepository {
     return rows
         .map(
           (row) => ChordHistoryEntry(
-            chord: row['chord_name'] as String,
-            time: DateTime.parse(row['detected_at'] as String),
+            chord: row['chord_name']! as String,
+            time: DateTime.parse(row['detected_at']! as String),
           ),
         )
         .toList();

@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:just_audio_background/just_audio_background.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/data/app_database.dart';
 import 'package:music_life/l10n/app_localizations.dart';
@@ -15,6 +13,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/router/app_router.dart';
 import 'package:music_life/theme/app_theme_seed.dart';
 import 'package:music_life/utils/app_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const double _themeContrastLevel = 0.5;
 

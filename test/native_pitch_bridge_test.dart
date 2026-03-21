@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/services/permission_service.dart';
@@ -20,6 +21,18 @@ class _StubPermissionGateway implements PermissionGateway {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  
+  setUpAll(() {
+    const channel = MethodChannel('com.llfbandit.record/messages');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (methodCall) async {
+        return null;
+      },
+    );
+  });
+
   tearDown(
     NativePitchBridge.resetNativeResourceInitializationCallbackForTesting,
   );

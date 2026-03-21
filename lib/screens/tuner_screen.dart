@@ -3,18 +3,17 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/app_constants.dart';
+import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/native_pitch_bridge.dart';
-import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/tuner_provider.dart';
 import 'package:music_life/utils/tuner_transposition.dart';
-import 'package:music_life/widgets/shared/loading_state_widget.dart';
 import 'package:music_life/widgets/listening_indicator.dart';
 import 'package:music_life/widgets/mic_permission_denied_view.dart';
 import 'package:music_life/widgets/mic_permission_gate.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
 Color _tunerInTuneColor(ColorScheme colorScheme) => colorScheme.tertiary;
 Color _tunerWarningColor(ColorScheme colorScheme) => colorScheme.secondary;
 
@@ -111,7 +110,7 @@ class _TunerBodyWrapperState extends ConsumerState<_TunerBodyWrapper>
         (settings) => (settings.dynamicThemeEnergy *
                 settings.dynamicThemeIntensity)
             .clamp(0.0, 1.0)
-            .toDouble(),
+            ,
       ),
     );
 
@@ -200,7 +199,7 @@ class _TunerBody extends StatelessWidget {
         final leftPaneChildren = <Widget>[
           if (showTranspositionControl) ...[
             DropdownButtonFormField<String>(
-              value: transposition,
+              initialValue: transposition,
               decoration:
                   InputDecoration(labelText: l10n.tunerTranspositionLabel),
               items: TunerTransposition.supported
@@ -295,7 +294,7 @@ class _TunerBody extends StatelessWidget {
               label: l10n.waveformSemanticLabel,
               child: AnimatedBuilder(
                 animation: pulseCtrl,
-                builder: (_, __) => _TunerWaveform(
+                builder: (_, _) => _TunerWaveform(
                   hasReading: latest != null,
                   spectrumBins: spectrumBins,
                   cents: cents,
@@ -426,13 +425,6 @@ class _TunerWaveform extends StatelessWidget {
 }
 
 class _TunerWavePainter extends CustomPainter {
-  static const double _baseAmplitude = 2.0;
-  static const double _maxCentsForScale = 50.0;
-  static const double _amplitudeScale = 8.0;
-  static const double _idleAmplitude = 2.5;
-  static const double _waveCycles = 2.5;
-  static const double _baseSpectrumScale = 0.65;
-  static const double _spectrumScaleRange = 0.35;
 
   const _TunerWavePainter({
     required this.hasReading,
@@ -442,6 +434,13 @@ class _TunerWavePainter extends CustomPainter {
     required this.color,
     required this.trackColor,
   });
+  static const double _baseAmplitude = 2;
+  static const double _maxCentsForScale = 50;
+  static const double _amplitudeScale = 8;
+  static const double _idleAmplitude = 2.5;
+  static const double _waveCycles = 2.5;
+  static const double _baseSpectrumScale = 0.65;
+  static const double _spectrumScaleRange = 0.35;
 
   final bool hasReading;
   final List<double> spectrumBins;
@@ -464,12 +463,12 @@ class _TunerWavePainter extends CustomPainter {
       final amplitudeScale = _baseSpectrumScale +
           ((cents.abs().clamp(0.0, _maxCentsForScale) / _maxCentsForScale) *
               _spectrumScaleRange)
-              .toDouble();
+              ;
       final hasSingleBin = spectrumBins.length == 1;
       final step = hasSingleBin ? 0.0 : size.width / (spectrumBins.length - 1);
       for (var i = 0; i < spectrumBins.length; i++) {
         final x = hasSingleBin ? size.width / 2 : i * step;
-        final magnitude = spectrumBins[i].clamp(0.0, 1.0).toDouble();
+        final magnitude = spectrumBins[i].clamp(0.0, 1.0);
         final y = centerY - (magnitude * availableHeight * amplitudeScale);
         if (i == 0) {
           path.moveTo(x, y);

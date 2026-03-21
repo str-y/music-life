@@ -25,7 +25,7 @@ class RecordingPlaybackState {
     if (duration.inMilliseconds <= 0) return 0;
     return (position.inMilliseconds / duration.inMilliseconds)
         .clamp(0.0, 1.0)
-        .toDouble();
+        ;
   }
 
   RecordingPlaybackState copyWith({
@@ -128,7 +128,7 @@ class RecordingPlaybackNotifier extends Notifier<RecordingPlaybackState> {
     if (duration.inMilliseconds <= 0) return;
     try {
       await _ensurePlayer();
-      final clamped = ratio.clamp(0.0, 1.0).toDouble();
+      final clamped = ratio.clamp(0.0, 1.0);
       final next = Duration(
         milliseconds: (duration.inMilliseconds * clamped).round(),
       );
@@ -144,7 +144,7 @@ class RecordingPlaybackNotifier extends Notifier<RecordingPlaybackState> {
   }
 
   Future<void> setVolume(double volume) async {
-    final clamped = volume.clamp(0.0, 1.0).toDouble();
+    final clamped = volume.clamp(0.0, 1.0);
     try {
       await _ensurePlayer();
       await _player!.setVolume(clamped);
@@ -159,7 +159,7 @@ class RecordingPlaybackNotifier extends Notifier<RecordingPlaybackState> {
   }
 }
 
-final recordingPlaybackProvider =
+final NotifierProvider<RecordingPlaybackNotifier, RecordingPlaybackState> recordingPlaybackProvider =
     NotifierProvider.autoDispose<RecordingPlaybackNotifier, RecordingPlaybackState>(
   RecordingPlaybackNotifier.new,
 );

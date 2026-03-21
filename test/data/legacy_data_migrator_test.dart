@@ -199,7 +199,7 @@ void main() {
       final migrator = createMigrator(
         ensureMigrationDiskSpace: (requiredBytes) async {
           diskSpaceChecks += 1;
-          throw FileSystemException('disk full');
+          throw const FileSystemException('disk full');
         },
       );
 

@@ -8,31 +8,31 @@ void main() {
   group('ReviewService', () {
     test('returns false when review dialog is unavailable', () async {
       final api = _MockInAppReviewApi();
-      when(() => api.isAvailable()).thenAnswer((_) async => false);
+      when(api.isAvailable).thenAnswer((_) async => false);
       final service = ReviewService(api: api);
 
       final shown = await service.requestReviewIfAvailable();
 
       expect(shown, isFalse);
-      verifyNever(() => api.requestReview());
+      verifyNever(api.requestReview);
     });
 
     test('requests review dialog when available', () async {
       final api = _MockInAppReviewApi();
-      when(() => api.isAvailable()).thenAnswer((_) async => true);
-      when(() => api.requestReview()).thenAnswer((_) async {});
+      when(api.isAvailable).thenAnswer((_) async => true);
+      when(api.requestReview).thenAnswer((_) async {});
       final service = ReviewService(api: api);
 
       final shown = await service.requestReviewIfAvailable();
 
       expect(shown, isTrue);
-      verify(() => api.requestReview()).called(1);
+      verify(api.requestReview).called(1);
     });
 
     test('rethrows when requesting review fails', () async {
       final api = _MockInAppReviewApi();
-      when(() => api.isAvailable()).thenAnswer((_) async => true);
-      when(() => api.requestReview())
+      when(api.isAvailable).thenAnswer((_) async => true);
+      when(api.requestReview)
           .thenThrow(StateError('review request failed'));
       final service = ReviewService(api: api);
 

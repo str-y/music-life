@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/metronome_sound_library.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 const Set<int> _supportedMetronomeDenominators = <int>{4, 8};
 
 class MetronomePreset {
@@ -14,6 +13,19 @@ class MetronomePreset {
     required this.timeSignatureNumerator,
     required this.timeSignatureDenominator,
   });
+
+  factory MetronomePreset.fromJson(Map<String, dynamic> json) {
+    return MetronomePreset(
+      name: (json['name'] as String?)?.trim() ?? '',
+      bpm: sanitizeMetronomeBpm(json['bpm'] as int?),
+      timeSignatureNumerator: sanitizeTimeSignatureNumerator(
+        json['timeSignatureNumerator'] as int?,
+      ),
+      timeSignatureDenominator: sanitizeTimeSignatureDenominator(
+        json['timeSignatureDenominator'] as int?,
+      ),
+    );
+  }
 
   final String name;
   final int bpm;
@@ -29,19 +41,6 @@ class MetronomePreset {
         'timeSignatureNumerator': timeSignatureNumerator,
         'timeSignatureDenominator': timeSignatureDenominator,
       };
-
-  factory MetronomePreset.fromJson(Map<String, dynamic> json) {
-    return MetronomePreset(
-      name: (json['name'] as String?)?.trim() ?? '',
-      bpm: sanitizeMetronomeBpm(json['bpm'] as int?),
-      timeSignatureNumerator: sanitizeTimeSignatureNumerator(
-        json['timeSignatureNumerator'] as int?,
-      ),
-      timeSignatureDenominator: sanitizeTimeSignatureDenominator(
-        json['timeSignatureDenominator'] as int?,
-      ),
-    );
-  }
 
   @override
   bool operator ==(Object other) =>
@@ -210,7 +209,7 @@ class MetronomeSettingsRepository {
       if (decoded is! List) return const <MetronomePreset>[];
       return decoded
           .whereType<Map>()
-          .map((preset) => Map<String, dynamic>.from(preset))
+          .map(Map<String, dynamic>.from)
           .map(MetronomePreset.fromJson)
           .where((preset) => preset.name.isNotEmpty)
           .toList(growable: false);
@@ -221,11 +220,11 @@ class MetronomeSettingsRepository {
 }
 
 int sanitizeMetronomeBpm(int? bpm) {
-  return (bpm ?? 120).clamp(30, 240).toInt();
+  return (bpm ?? 120).clamp(30, 240);
 }
 
 int sanitizeTimeSignatureNumerator(int? numerator) {
-  return (numerator ?? 4).clamp(2, 12).toInt();
+  return (numerator ?? 4).clamp(2, 12);
 }
 
 int sanitizeTimeSignatureDenominator(int? denominator) {

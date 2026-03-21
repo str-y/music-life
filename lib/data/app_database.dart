@@ -2,18 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:music_life/data/waveform_codec.dart';
+import 'package:music_life/utils/app_logger.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
-
-import 'package:music_life/data/waveform_codec.dart';
-import 'package:music_life/utils/app_logger.dart';
 /// Singleton Drift database used throughout the app.
 ///
 /// Tables:
@@ -30,9 +28,9 @@ class AppDatabase {
   static const String _databasePasswordKey = 'database_password';
   static const String _encryptedDatabaseAlias = 'encrypted';
   static const String _legacyPlaintextDatabaseSuffix = '.unencrypted';
-  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
-    iOptions: const IOSOptions(
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock,
     ),
   );

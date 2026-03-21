@@ -33,11 +33,11 @@ class RingBuffer {
     final firstChunkLength = target.length <= (_buffer.length - _head)
         ? target.length
         : (_buffer.length - _head);
-    for (int i = 0; i < firstChunkLength; i++) {
+    for (var i = 0; i < firstChunkLength; i++) {
       target[i] = _buffer[_head + i];
     }
     final remaining = target.length - firstChunkLength;
-    for (int i = 0; i < remaining; i++) {
+    for (var i = 0; i < remaining; i++) {
       target[firstChunkLength + i] = _buffer[i];
     }
     _head = (_head + target.length) % _buffer.length;
@@ -49,12 +49,12 @@ class RingBuffer {
 
   void _ensureCapacity(int minCapacity) {
     if (_buffer.length >= minCapacity) return;
-    int newCapacity = _buffer.length * 2;
+    var newCapacity = _buffer.length * 2;
     while (newCapacity < minCapacity) {
       newCapacity *= 2;
     }
     final newBuffer = List<double>.filled(newCapacity, 0);
-    for (int i = 0; i < _length; i++) {
+    for (var i = 0; i < _length; i++) {
       newBuffer[i] = _buffer[(_head + i) % _buffer.length];
     }
     _buffer = newBuffer;

@@ -1,8 +1,6 @@
 part of 'native_pitch_bridge.dart';
 
 class NativePitchIsolateManager {
-  // Cap heartbeat tokens at max signed 32-bit so IDs stay positive and bounded.
-  static const int _maxHeartbeatToken = 0x7fffffff;
 
   NativePitchIsolateManager({
     required this.handle,
@@ -17,6 +15,8 @@ class NativePitchIsolateManager {
     this.heartbeatInterval = const Duration(seconds: 2),
     this.heartbeatTimeout = const Duration(seconds: 6),
   });
+  // Cap heartbeat tokens at max signed 32-bit so IDs stay positive and bounded.
+  static const int _maxHeartbeatToken = 0x7fffffff;
 
   final Pointer<Void> handle;
   final Pointer<Float> buffer;
@@ -351,14 +351,14 @@ void _audioProcessingIsolate(IsolateSetup setup) {
       'ml_pitch_detector_process');
 
   final sampleBuf = RingBuffer();
-  int peakBufferedSamples = 0;
-  int framesProcessed = 0;
-  int totalFrameProcessingMicros = 0;
-  int lastFrameProcessingMicros = 0;
-  int maxFrameProcessingMicros = 0;
-  int lastChunkSampleCount = 0;
-  int bufferBacklogEvents = 0;
-  final analysisBufferCount = AppConstants.tunerSpectrumBinCount;
+  var peakBufferedSamples = 0;
+  var framesProcessed = 0;
+  var totalFrameProcessingMicros = 0;
+  var lastFrameProcessingMicros = 0;
+  var maxFrameProcessingMicros = 0;
+  var lastChunkSampleCount = 0;
+  var bufferBacklogEvents = 0;
+  const analysisBufferCount = AppConstants.tunerSpectrumBinCount;
   final spectrumBuffers = [
     Float32List(analysisBufferCount),
     Float32List(analysisBufferCount),
@@ -367,10 +367,10 @@ void _audioProcessingIsolate(IsolateSetup setup) {
   final fftReal = Float32List(fftSize);
   final fftImag = Float32List(fftSize);
   final fftWindow = _buildHannWindow(fftSize);
-  int nextSpectrumBufferIndex = 0;
+  var nextSpectrumBufferIndex = 0;
   // Two queued frames allows for normal buffering while still flagging when
   // processing begins to fall behind real-time capture.
-  const int bufferBacklogThresholdMultiplier = 2;
+  const bufferBacklogThresholdMultiplier = 2;
 
   void publishMetrics() {
     final bufferedSamples = sampleBuf.length;
@@ -433,7 +433,7 @@ void _audioProcessingIsolate(IsolateSetup setup) {
       }
       if (result.pitched != 0) {
         final bytes = <int>[];
-        for (int i = 0; i < 8; i++) {
+        for (var i = 0; i < 8; i++) {
           final b = result.noteName[i];
           if (b == 0) break;
           bytes.add(b);
@@ -462,8 +462,8 @@ void _audioProcessingIsolate(IsolateSetup setup) {
 
   void processPcmChunk(Uint8List chunk) {
     lastChunkSampleCount = chunk.length ~/ Int16List.bytesPerElement;
-    for (int i = 0; i + 1 < chunk.length; i += 2) {
-      int s = chunk[i] | (chunk[i + 1] << 8);
+    for (var i = 0; i + 1 < chunk.length; i += 2) {
+      var s = chunk[i] | (chunk[i + 1] << 8);
       if (s >= 0x8000) s -= 0x10000;
       sampleBuf.add(s / 32768.0);
     }
@@ -604,7 +604,7 @@ void _fillSpectrumBins({
       sum += magnitude;
     }
     final average = sum / (end - start);
-    target[i] = average.toDouble();
+    target[i] = average;
     if (average > peak) {
       peak = average;
     }
@@ -615,7 +615,7 @@ void _fillSpectrumBins({
   }
   final safePeak = peak;
   for (var i = 0; i < target.length; i++) {
-    target[i] = math.sqrt(target[i] / safePeak).clamp(0.0, 1.0).toDouble();
+    target[i] = math.sqrt(target[i] / safePeak).clamp(0.0, 1.0);
   }
 }
 
@@ -657,10 +657,10 @@ void _fftInPlace(Float32List real, Float32List imag) {
             (real[oddIndex] * wReal) - (imag[oddIndex] * wImag);
         final vImag =
             (real[oddIndex] * wImag) + (imag[oddIndex] * wReal);
-        real[evenIndex] = (uReal + vReal).toDouble();
-        imag[evenIndex] = (uImag + vImag).toDouble();
-        real[oddIndex] = (uReal - vReal).toDouble();
-        imag[oddIndex] = (uImag - vImag).toDouble();
+        real[evenIndex] = uReal + vReal;
+        imag[evenIndex] = uImag + vImag;
+        real[oddIndex] = uReal - vReal;
+        imag[oddIndex] = uImag - vImag;
         final nextWReal = (wReal * wLenCos) - (wImag * wLenSin);
         wImag = (wReal * wLenSin) + (wImag * wLenCos);
         wReal = nextWReal;

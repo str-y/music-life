@@ -23,7 +23,7 @@ double computeGrooveTapOffset({
   required double elapsedMs,
   required double beatMs,
 }) {
-  double offset = elapsedMs;
+  var offset = elapsedMs;
   if (offset > beatMs / 2) offset -= beatMs;
   return offset;
 }

@@ -7,11 +7,39 @@ part of 'native_pitch_bridge.dart';
 /// - **Memory-Safe**: Uses [NativeFinalizer] and [Finalizable] to prevent leaks.
 /// - **Robust**: Real-time error reporting via [FfiErrorHandler].
 class NativePitchBridge implements Finalizable {
+
+  factory NativePitchBridge({
+    int sampleRate = defaultSampleRate,
+    int frameSize = defaultFrameSize,
+    double threshold = defaultThreshold,
+    FfiErrorHandler? onError,
+    PermissionService permissionService = defaultPermissionService,
+  }) {
+    return NativePitchBridge._(
+      frameSize: frameSize,
+      sampleRate: sampleRate,
+      threshold: threshold,
+      permissionService: permissionService,
+      onError: onError,
+    );
+  }
+
+  NativePitchBridge._({
+    required int frameSize,
+    required int sampleRate,
+    required double threshold,
+    required PermissionService permissionService,
+    FfiErrorHandler? onError,
+  })  : _frameSize = frameSize,
+        _sampleRate = sampleRate,
+        _threshold = threshold,
+        _permissionService = permissionService,
+        _onError = onError;
   static const int defaultFrameSize = AppConstants.audioFrameSize;
   static const int defaultSampleRate = AppConstants.audioSampleRate;
   static const double defaultThreshold = AppConstants.pitchDetectionThreshold;
   static bool _nativeLoggingConfigured = false;
-  static final _NativePitchResourceFactory _nativePitchResourceFactory =
+  static const _NativePitchResourceFactory _nativePitchResourceFactory =
       _createNativeResources;
   static VoidCallback? _onNativeResourceInitializationAttemptForTesting;
   static final NativeCallable<_MLNativeLogCallbackNative> _nativeLogCallback =
@@ -66,36 +94,7 @@ class NativePitchBridge implements Finalizable {
       androidConfig: const AndroidRecordConfig(
         audioSource: AndroidAudioSource.voiceRecognition,
         audioManagerMode: AudioManagerMode.modeInCommunication,
-        useLegacy: false,
       ),
-    );
-  }
-
-  NativePitchBridge._({
-    required int frameSize,
-    required int sampleRate,
-    required double threshold,
-    required PermissionService permissionService,
-    FfiErrorHandler? onError,
-  })  : _frameSize = frameSize,
-        _sampleRate = sampleRate,
-        _threshold = threshold,
-        _permissionService = permissionService,
-        _onError = onError;
-
-  factory NativePitchBridge({
-    int sampleRate = defaultSampleRate,
-    int frameSize = defaultFrameSize,
-    double threshold = defaultThreshold,
-    FfiErrorHandler? onError,
-    PermissionService permissionService = defaultPermissionService,
-  }) {
-    return NativePitchBridge._(
-      frameSize: frameSize,
-      sampleRate: sampleRate,
-      threshold: threshold,
-      permissionService: permissionService,
-      onError: onError,
     );
   }
 
@@ -289,7 +288,7 @@ class NativePitchBridge implements Finalizable {
     // dispose() is called: the isolate is single-threaded, so it finishes its
     // current message (including any in-flight native call) before processing
     // the null shutdown signal and exiting.
-    bool freed = false;
+    var freed = false;
     StreamSubscription<dynamic>? exitSub;
     Timer? forceKillTimer;
     void freeNativeResources() {

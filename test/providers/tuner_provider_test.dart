@@ -45,8 +45,8 @@ void main() {
     test('copyWith with a PitchResult sets latest', () {
       const result = PitchResult(
         noteName: 'A4',
-        frequency: 440.0,
-        centsOffset: 0.0,
+        frequency: 440,
+        centsOffset: 0,
         midiNote: 69,
       );
       final next = initial.copyWith(latest: result);
@@ -74,7 +74,7 @@ void main() {
       const result = PitchResult(
         noteName: 'C4',
         frequency: 261.63,
-        centsOffset: -2.0,
+        centsOffset: -2,
         midiNote: 60,
       );
       const stateWithLatest = TunerState(loading: false, latest: result);
@@ -85,12 +85,12 @@ void main() {
     test('copyWith(clearLatest: false) preserves an existing latest', () {
       const result = PitchResult(
         noteName: 'G4',
-        frequency: 392.0,
-        centsOffset: 3.0,
+        frequency: 392,
+        centsOffset: 3,
         midiNote: 67,
       );
       const stateWithLatest = TunerState(loading: false, latest: result);
-      final copy = stateWithLatest.copyWith(clearLatest: false);
+      final copy = stateWithLatest.copyWith();
       expect(copy.latest, equals(result));
     });
 
@@ -99,7 +99,7 @@ void main() {
       const existing = PitchResult(
         noteName: 'E4',
         frequency: 329.63,
-        centsOffset: 1.0,
+        centsOffset: 1,
         midiNote: 64,
       );
       const stateWithLatest = TunerState(loading: false, latest: existing);
@@ -137,7 +137,7 @@ void main() {
           initial.copyWith(loading: true, clearLatest: true, bridgeActive: false);
       expect(starting.loading, isTrue);
 
-      const failed = TunerState(loading: false, bridgeActive: false);
+      const failed = TunerState(loading: false);
       expect(failed.loading, isFalse);
       expect(failed.bridgeActive, isFalse);
     });

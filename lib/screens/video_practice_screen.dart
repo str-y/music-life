@@ -3,22 +3,21 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
-
 import 'package:music_life/app_constants.dart';
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/providers/tuner_provider.dart';
 import 'package:music_life/services/ad_service.dart';
 import 'package:music_life/services/premium_video_export_service.dart';
 import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/utils/tuner_transposition.dart';
-import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/widgets/shared/loading_state_widget.dart';
 import 'package:music_life/widgets/shared/status_message_view.dart';
 import 'package:music_life/widgets/shared/waveform_view.dart';
+import 'package:share_plus/share_plus.dart';
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 const List<double> _exportPreviewWaveform = <double>[
   0.18,
@@ -186,7 +185,6 @@ class _CameraViewState extends ConsumerState<_CameraView> {
       controller = CameraController(
         cameras.first,
         ResolutionPreset.high,
-        enableAudio: true,
       );
       await controller.initialize();
       if (!mounted) {
@@ -498,7 +496,7 @@ class _RecordingDotState extends State<_RecordingDot>
     final errorColor = Theme.of(context).colorScheme.error;
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) => Opacity(
+      builder: (_, _) => Opacity(
         opacity: _ctrl.value,
         child: Icon(Icons.circle, color: errorColor, size: 12),
       ),
@@ -1039,8 +1037,6 @@ LinearGradient _effectOverlayGradient(PremiumVideoExportEffect effect) {
       ),
     PremiumVideoExportEffect.prism => const LinearGradient(
         colors: [Color(0x26FF4081), Color(0x00000000), Color(0x2600E5FF)],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
       ),
     PremiumVideoExportEffect.shimmer => const LinearGradient(
         colors: [Color(0x00FFFFFF), Color(0x22FFFFFF), Color(0x00FFFFFF)],

@@ -9,6 +9,7 @@ import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/chord_history_repository.dart';
 import 'package:music_life/screens/chord_analyser_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'golden_test_utils.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
@@ -53,23 +54,26 @@ class _InMemoryChordHistoryRepository implements ChordHistoryRepository {
   }
 }
 
-Widget _wrap(
+Future<Widget> _wrap(
   Widget child, {
   List<dynamic> overrides = const [],
   ChordHistoryRepository? chordHistoryRepository,
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
-}) {
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   final repository = chordHistoryRepository ?? _InMemoryChordHistoryRepository();
   return ProviderScope(
     overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
       chordHistoryRepositoryProvider.overrideWithValue(repository),
       ...overrides,
     ],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
-      home: Scaffold(body: child),
+      home: child,
     ),
   );
 }
@@ -79,13 +83,13 @@ void main() {
     testWidgets('currentNoteSemanticLabel is a non-empty localized string',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.currentNoteSemanticLabel;
           return const SizedBox.shrink();
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(label, isNotEmpty);
     });
@@ -94,7 +98,7 @@ void main() {
         'Semantics node with currentNoteSemanticLabel is found in widget tree',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.currentNoteSemanticLabel;
           return Semantics(
@@ -105,7 +109,7 @@ void main() {
           );
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.bySemanticsLabel(label), findsOneWidget);
     });
@@ -116,13 +120,13 @@ void main() {
         (tester) async {
       await prepareGoldenSurface(tester);
       final bridge = _MockNativePitchBridge();
-      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(bridge.startCapture).thenAnswer((_) async => true);
       when(() => bridge.chordStream)
           .thenAnswer((_) => const Stream<String>.empty());
-      when(() => bridge.dispose()).thenReturn(null);
+      when(bridge.dispose).thenReturn(null);
 
       await tester.pumpWidget(
-        _wrap(
+        await _wrap(
           const ChordAnalyserScreen(useMicPermissionGate: false),
           locale: variant.locale,
           themeMode: variant.themeMode,
@@ -146,14 +150,15 @@ void main() {
 
   testWidgets('disposing ChordAnalyserScreen does not leak animation tickers',
       (tester) async {
+    await prepareGoldenSurface(tester);
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.chordStream)
         .thenAnswer((_) => const Stream<String>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const ChordAnalyserScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -162,7 +167,9 @@ void main() {
     );
     await tester.pump();
 
-    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    // Replace with a different root type so ProviderScope is fully disposed
+    // (Riverpod prohibits changing override count on the same ProviderScope).
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -172,13 +179,13 @@ void main() {
     testWidgets('chordHistory label is a non-empty localized string',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.chordHistory;
           return const SizedBox.shrink();
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(label, isNotEmpty);
     });
@@ -186,7 +193,7 @@ void main() {
     testWidgets('Semantics node with chordHistory label is found in widget tree',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.chordHistory;
           return Semantics(
@@ -195,20 +202,21 @@ void main() {
           );
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.bySemanticsLabel(label), findsOneWidget);
     });
 
     testWidgets('chord history trigger is announced as button', (tester) async {
+      await prepareGoldenSurface(tester);
       final bridge = _MockNativePitchBridge();
-      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(bridge.startCapture).thenAnswer((_) async => true);
       when(() => bridge.chordStream)
           .thenAnswer((_) => const Stream<String>.empty());
-      when(() => bridge.dispose()).thenReturn(null);
+      when(bridge.dispose).thenReturn(null);
 
       await tester.pumpWidget(
-        _wrap(
+        await _wrap(
           const ChordAnalyserScreen(useMicPermissionGate: false),
           overrides: [
             pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -219,7 +227,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final localizations =
-          AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
+          AppLocalizations.of(tester.element(find.byType(ChordAnalyserScreen)))!;
       final semanticsHandle = tester.ensureSemantics();
       addTearDown(semanticsHandle.dispose);
 
@@ -230,6 +238,8 @@ void main() {
         tester.getSemantics(historyTrigger),
         matchesSemantics(
           isButton: true,
+          isFocusable: true,
+          hasFocusAction: true,
           hasTapAction: true,
           label: localizations.chordHistory,
           hint: localizations.filterByChordName,
@@ -240,21 +250,16 @@ void main() {
 
   testWidgets('dynamic theme energy visualization semantics are exposed',
       (tester) async {
+    await prepareGoldenSurface(tester);
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
-    when(() => bridge.chordStream)
-        .thenAnswer((_) => const Stream<String>.empty());
-  testWidgets('shows enhanced empty-state content for chord history',
-      (tester) async {
-    final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(
       () => bridge.chordStream,
     ).thenAnswer((_) => const Stream<String>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const ChordAnalyserScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -272,7 +277,23 @@ void main() {
     );
   });
 
-  testWidgets('loads persisted history and filters by chord name', (tester) async {
+  testWidgets('shows enhanced empty-state content for chord history',
+      (tester) async {
+    await prepareGoldenSurface(tester);
+    final bridge = _MockNativePitchBridge();
+    when(bridge.startCapture).thenAnswer((_) async => true);
+    when(() => bridge.chordStream)
+        .thenAnswer((_) => const Stream<String>.empty());
+    when(bridge.dispose).thenReturn(null);
+
+    await tester.pumpWidget(
+      await _wrap(
+        const ChordAnalyserScreen(useMicPermissionGate: false),
+        overrides: [
+          pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
+        ],
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Your note history will appear here'), findsOneWidget);
@@ -286,23 +307,24 @@ void main() {
     await tester.tap(find.text('Listen for your first chord'));
     await tester.pump();
 
-    verify(() => bridge.startCapture()).called(2);
+    verify(bridge.startCapture).called(2);
   });
 
   testWidgets('loads persisted history and filters by chord name',
       (tester) async {
+    await prepareGoldenSurface(tester);
     final bridge = _MockNativePitchBridge();
     final controller = StreamController<String>();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.chordStream).thenAnswer((_) => controller.stream);
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
     final repository = _InMemoryChordHistoryRepository([
       ChordHistoryEntry(chord: 'G', time: DateTime(2026, 3, 1, 12)),
       ChordHistoryEntry(chord: 'C', time: DateTime(2026, 3, 1, 11)),
     ]);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const ChordAnalyserScreen(useMicPermissionGate: false),
         chordHistoryRepository: repository,
         overrides: [
@@ -312,16 +334,16 @@ void main() {
     );
     await tester.pump();
     final localizations =
-        AppLocalizations.of(tester.element(find.byType(Scaffold)))!;
+        AppLocalizations.of(tester.element(find.byType(ChordAnalyserScreen)))!;
 
     expect(find.text('G'), findsWidgets);
     expect(find.text('C'), findsWidgets);
 
     await tester.tap(find.text(localizations.chordHistory));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
     await tester.enterText(find.byType(TextField), 'C');
     await tester.tap(find.text(localizations.save));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     expect(find.text('C'), findsWidgets);
     expect(find.text('G'), findsNothing);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:music_life/config/app_config.dart';
@@ -8,6 +9,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/video_practice_screen.dart';
 import 'package:music_life/services/ad_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'golden_test_utils.dart';
 
 // ---------------------------------------------------------------------------
@@ -22,12 +24,12 @@ class _MockAdService extends Mock implements IAdService {}
 
 Widget _wrap(
   Widget child, {
-  List<dynamic> overrides = const [],
+  List<Override> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>().toList()],
+    overrides: [...overrides.whereType<dynamic>()],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
@@ -137,7 +139,7 @@ void main() {
       )!;
 
       await tester.tap(find.text(l10n.watchAdAndUnlock));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       verify(
         () => adService.showRewardedAd(
@@ -172,7 +174,7 @@ void main() {
       )!;
 
       await tester.tap(find.text(l10n.watchAdAndUnlock));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text(l10n.rewardedAdNotReady), findsOneWidget);
     });
@@ -250,7 +252,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
     });
   });
 
@@ -271,7 +273,7 @@ void main() {
           overrides: overrides,
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(MaterialApp)),
@@ -329,7 +331,7 @@ void main() {
           overrides: overrides,
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(MaterialApp)),
@@ -337,7 +339,7 @@ void main() {
       final previewCard = find.byKey(const Key('premium-export-preview-card'));
 
       await tester.tap(find.text(l10n.videoPracticeExportSkinSunsetGold));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       expect(
         find.descendant(
           of: previewCard,
@@ -347,7 +349,7 @@ void main() {
       );
 
       await tester.tap(find.text(l10n.videoPracticeExportEffectPrism));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       expect(
         find.descendant(
           of: previewCard,
@@ -358,7 +360,7 @@ void main() {
 
       await tester.ensureVisible(find.text(l10n.videoPracticeExportQualityUltra));
       await tester.tap(find.text(l10n.videoPracticeExportQualityUltra));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       expect(
         find.descendant(of: previewCard, matching: find.text('2160×3840')),
         findsOneWidget,
@@ -370,7 +372,7 @@ void main() {
 
       await tester.ensureVisible(find.text(l10n.videoPracticeExportLogo));
       await tester.tap(find.text(l10n.videoPracticeExportLogo));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       expect(
         find.descendant(
           of: previewCard,

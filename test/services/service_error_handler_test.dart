@@ -4,13 +4,9 @@ import 'package:music_life/services/service_error_handler.dart';
 import 'package:music_life/utils/app_logger.dart';
 
 void main() {
-  setUp(() {
-    AppLogger.clearBufferedLogs();
-  });
+  setUp(AppLogger.clearBufferedLogs);
 
-  tearDown(() {
-    AppLogger.clearBufferedLogs();
-  });
+  tearDown(AppLogger.clearBufferedLogs);
 
   test('report logs errors through AppLogger', () {
     ServiceErrorHandler.report(

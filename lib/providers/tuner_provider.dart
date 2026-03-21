@@ -1,10 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/providers/haptic_service_provider.dart';
-import 'package:music_life/native_pitch_bridge.dart';
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -65,7 +64,7 @@ class TunerNotifier extends Notifier<TunerState> {
     });
     // Initialize capture after build finishes
     scheduleMicrotask(_startCapture);
-    return const TunerState(loading: true);
+    return const TunerState();
   }
 
   Future<void> _startCapture() async {
@@ -90,7 +89,7 @@ class TunerNotifier extends Notifier<TunerState> {
     if (!started) {
       _bridge = null;
       bridge.dispose();
-      state = const TunerState(loading: false, bridgeActive: false);
+      state = const TunerState(loading: false);
       return;
     }
     _analysisSub = bridge.tunerAnalysisStream.listen((analysisFrame) {
@@ -122,7 +121,7 @@ class TunerNotifier extends Notifier<TunerState> {
 // Provider
 // ---------------------------------------------------------------------------
 
-final tunerProvider =
+final NotifierProvider<TunerNotifier, TunerState> tunerProvider =
     NotifierProvider.autoDispose<TunerNotifier, TunerState>(
   TunerNotifier.new,
 );

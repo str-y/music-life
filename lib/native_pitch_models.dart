@@ -212,7 +212,7 @@ class TransferableTunerAnalysisFrame {
     final boundedBinCount = math.min(binCount, maxBins);
     final bins = buffer
         .asFloat32List(0, boundedBinCount)
-        .map((value) => value.toDouble())
+        .map((value) => value)
         .toList(growable: false);
     return TunerAnalysisFrame(bins: bins);
   }

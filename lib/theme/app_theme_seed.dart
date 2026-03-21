@@ -24,7 +24,7 @@ const Map<String, int> _noteSteps = <String, int>{
 
 const double minThemeColorWeight = 0.35;
 const double themeColorEnergyWeightRange = 0.65;
-final RegExp _notePattern = RegExp(r'^[A-G](?:#|b)?');
+final RegExp _notePattern = RegExp('^[A-G](?:#|b)?');
 final RegExp _octavePattern = RegExp(r'-?\d+$');
 
 Color themeSeedColor(
@@ -39,8 +39,8 @@ Color themeSeedColor(
   final base = _baseThemeColor(key, mode);
   final octave = _parseOctave(noteName);
   final octaveTuned = _applyOctaveRange(base, octave);
-  final clampedEnergy = energy.clamp(0.0, 1.0).toDouble();
-  final clampedIntensity = intensity.clamp(0.0, 1.0).toDouble();
+  final clampedEnergy = energy.clamp(0.0, 1.0);
+  final clampedIntensity = intensity.clamp(0.0, 1.0);
   return Color.lerp(
         Colors.blueGrey,
         octaveTuned,
@@ -102,7 +102,7 @@ Color _colorFromHsl({
   required double lightness,
 }) {
   return HSLColor.fromAHSL(
-    1.0,
+    1,
     hue.toDouble(),
     saturation,
     lightness,

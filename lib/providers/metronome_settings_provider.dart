@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:music_life/repositories/metronome_settings_repository.dart';
 import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/repositories/metronome_settings_repository.dart';
 
 class MetronomeSettingsNotifier extends Notifier<MetronomeSettings> {
   @override

@@ -1,15 +1,13 @@
 import 'dart:collection';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/data/app_database.dart';
 import 'package:music_life/data/legacy_data_migrator.dart';
 import 'package:music_life/data/waveform_codec.dart';
 import 'package:music_life/utils/app_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Data models
@@ -25,6 +23,19 @@ class RecordingEntry {
     required this.waveformData,
     this.audioFilePath,
   });
+
+  factory RecordingEntry.fromJson(Map<String, dynamic> json) {
+    return RecordingEntry(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      recordedAt: DateTime.parse(json['recordedAt'] as String),
+      durationSeconds: json['durationSeconds'] as int,
+      waveformData: (json['waveformData'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      audioFilePath: json['audioFilePath'] as String?,
+    );
+  }
 
   final String id;
   final String title;
@@ -49,19 +60,6 @@ class RecordingEntry {
         'waveformData': waveformData,
         'audioFilePath': audioFilePath,
       };
-
-  factory RecordingEntry.fromJson(Map<String, dynamic> json) {
-    return RecordingEntry(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      recordedAt: DateTime.parse(json['recordedAt'] as String),
-      durationSeconds: json['durationSeconds'] as int,
-      waveformData: (json['waveformData'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      audioFilePath: json['audioFilePath'] as String?,
-    );
-  }
 }
 
 /// Aggregated daily practice log data.
@@ -72,6 +70,14 @@ class PracticeLogEntry {
     this.memo = '',
   });
 
+  factory PracticeLogEntry.fromJson(Map<String, dynamic> json) {
+    return PracticeLogEntry(
+      date: DateTime.parse(json['date'] as String),
+      durationMinutes: json['durationMinutes'] as int,
+      memo: json['memo'] as String? ?? '',
+    );
+  }
+
   final DateTime date;
   final int durationMinutes;
   final String memo;
@@ -81,14 +87,6 @@ class PracticeLogEntry {
         'durationMinutes': durationMinutes,
         'memo': memo,
       };
-
-  factory PracticeLogEntry.fromJson(Map<String, dynamic> json) {
-    return PracticeLogEntry(
-      date: DateTime.parse(json['date'] as String),
-      durationMinutes: json['durationMinutes'] as int,
-      memo: json['memo'] as String? ?? '',
-    );
-  }
 }
 
 typedef _QueryAllRows = Future<List<Map<String, Object?>>> Function();
@@ -111,17 +109,6 @@ class _WaveformCacheEntry {
 
 /// Persists recordings and practice logs with one-time legacy migration support.
 class RecordingRepository {
-  static const int _maxWaveformCacheEntries = 256;
-  static const int _maxWaveformCacheBytes = 4 * 1024 * 1024;
-  // Allow one oversized waveform to use up to 2x `_maxWaveformCacheBytes`
-  // before skipping caching altogether so typical recordings still benefit
-  // from reuse.
-  static const int _maxSingleWaveformCacheEntryMultiplier = 2;
-  static const int _maxWaveformCacheEntryBytes =
-      _maxWaveformCacheBytes * _maxSingleWaveformCacheEntryMultiplier;
-  static final LinkedHashMap<String, _WaveformCacheEntry> _waveformCache =
-      LinkedHashMap<String, _WaveformCacheEntry>();
-  static int _waveformCacheBytes = 0;
 
   /// Creates a repository backed by the supplied [prefs] instance (for migration).
   RecordingRepository(
@@ -140,13 +127,7 @@ class RecordingRepository {
           prefs,
           config: config,
           replaceAllData: replaceAllData ??
-              ({
-                required recordings,
-                required practiceLogs,
-              }) => AppDatabase.instance.replaceAllData(
-                    recordings: recordings,
-                    practiceLogs: practiceLogs,
-                  ),
+              AppDatabase.instance.replaceAllData,
           ensureMigrationDiskSpace: ensureMigrationDiskSpace,
           persistBool: persistBool,
           removeValue: removeValue,
@@ -155,6 +136,17 @@ class RecordingRepository {
             queryAllRecordings ?? AppDatabase.instance.queryAllRecordings,
         _queryAllPracticeLogs =
             queryAllPracticeLogs ?? AppDatabase.instance.queryAllPracticeLogs;
+  static const int _maxWaveformCacheEntries = 256;
+  static const int _maxWaveformCacheBytes = 4 * 1024 * 1024;
+  // Allow one oversized waveform to use up to 2x `_maxWaveformCacheBytes`
+  // before skipping caching altogether so typical recordings still benefit
+  // from reuse.
+  static const int _maxSingleWaveformCacheEntryMultiplier = 2;
+  static const int _maxWaveformCacheEntryBytes =
+      _maxWaveformCacheBytes * _maxSingleWaveformCacheEntryMultiplier;
+  static final LinkedHashMap<String, _WaveformCacheEntry> _waveformCache =
+      LinkedHashMap<String, _WaveformCacheEntry>();
+  static int _waveformCacheBytes = 0;
 
   final LegacyDataMigrator _migrator;
   final _QueryAllRows _queryAllRecordings;
@@ -256,13 +248,13 @@ class RecordingRepository {
     var cacheMisses = 0;
     final recordings = rows
         .map((row) => RecordingEntry(
-              id: row['id'] as String,
-              title: row['title'] as String,
-              recordedAt: DateTime.parse(row['recorded_at'] as String),
-              durationSeconds: row['duration_seconds'] as int,
+              id: row['id']! as String,
+              title: row['title']! as String,
+              recordedAt: DateTime.parse(row['recorded_at']! as String),
+              durationSeconds: row['duration_seconds']! as int,
               waveformData: _decodeWaveform(
-                row['id'] as String,
-                row['waveform_data'] as Uint8List,
+                row['id']! as String,
+                row['waveform_data']! as Uint8List,
                 onCacheAccess: (hit) {
                   if (hit) {
                     cacheHits += 1;
@@ -309,8 +301,8 @@ class RecordingRepository {
     final rows = await _queryAllPracticeLogs();
     return rows
         .map((row) => PracticeLogEntry(
-              date: DateTime.parse(row['date'] as String),
-              durationMinutes: row['duration_minutes'] as int,
+              date: DateTime.parse(row['date']! as String),
+              durationMinutes: row['duration_minutes']! as int,
               memo: row['memo'] as String? ?? '',
             ))
         .toList();

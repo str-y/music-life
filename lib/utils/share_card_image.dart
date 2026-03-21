@@ -14,9 +14,9 @@ Color _deriveNeutralTone(
   final hsl = HSLColor.fromColor(accentColor);
   return hsl
       .withSaturation(
-        (hsl.saturation * saturationFactor).clamp(0.0, 1.0).toDouble(),
+        (hsl.saturation * saturationFactor).clamp(0.0, 1.0),
       )
-      .withLightness(lightness.clamp(0.0, 1.0).toDouble())
+      .withLightness(lightness.clamp(0.0, 1.0))
       .toColor();
 }
 
@@ -129,7 +129,7 @@ Future<XFile> generateShareCardImage({
     ),
     textDirection: TextDirection.ltr,
   )..layout(maxWidth: 820);
-  footerPainter.paint(canvas, Offset(130, height - 160));
+  footerPainter.paint(canvas, const Offset(130, height - 160));
   footerPainter.dispose();
 
   final image = await recorder.endRecording().toImage(width, height);

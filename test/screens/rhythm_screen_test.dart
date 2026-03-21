@@ -6,14 +6,14 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/rhythm_screen.dart';
 import 'package:music_life/widgets/rhythm/groove_analysis_section.dart';
 import 'package:music_life/widgets/rhythm/metronome_controls.dart';
-import 'package:music_life/widgets/rhythm/metronome_section.dart';
 import 'package:music_life/widgets/rhythm/sound_library_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'golden_test_utils.dart';
 
 Widget _wrap(
   Widget child, {
-  List<dynamic> overrides = const [],
+  List<Override> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
@@ -53,7 +53,7 @@ Future<String> _pumpSemanticLabel(
     }),
     overrides: overrides,
   ));
-  await tester.pumpAndSettle();
+  for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
   return label;
 }
 
@@ -104,7 +104,7 @@ void main() {
     final overrides = await _settingsOverridesWithPrefs();
 
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
@@ -129,7 +129,7 @@ void main() {
     final overrides = await _settingsOverridesWithPrefs();
 
     await tester.pumpWidget(_wrap(const RhythmScreen(), overrides: overrides));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
@@ -160,7 +160,7 @@ void main() {
       const RhythmScreen(),
       overrides: overrides,
     ));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
@@ -171,7 +171,7 @@ void main() {
     expect(buttonFinder, findsOneWidget);
     await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
      
     expect(find.byType(SoundLibrarySheet), findsOneWidget);
     expect(find.text(l10n.metronomeSoundPackElectronicName), findsWidgets);
@@ -185,14 +185,14 @@ void main() {
       const RhythmScreen(),
       overrides: overrides,
     ));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
     await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final sheetFinder = find.byType(SoundLibrarySheet);
     expect(sheetFinder, findsOneWidget);
@@ -212,7 +212,7 @@ void main() {
       listFinder,
       const Offset(0, -100),
     );
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     expect(acousticPackItemFinder, findsWidgets);
 
@@ -226,7 +226,7 @@ void main() {
       find.descendant(of: sheetFinder, matching: find.byType(ListView)),
       const Offset(0, -100),
     );
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
     
     // Natural tap via hit-testing on the center of the button
     await tester.tapAt(tester.getCenter(actionButtonFinder));
@@ -234,7 +234,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     
     // Give it plenty of time for async work to complete and frames to draw
-    await tester.pumpAndSettle(const Duration(seconds: 2));
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     // The header should now show the selected pack
     expect(
@@ -256,14 +256,14 @@ void main() {
       const RhythmScreen(),
       overrides: overrides,
     ));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final l10n = AppLocalizations.of(tester.element(find.byType(RhythmScreen)))!;
 
     final buttonFinder = find.byKey(const ValueKey('metronome-sound-library-button'));
     await tester.ensureVisible(buttonFinder);
     await tester.tap(buttonFinder);
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
     final sheetFinder = find.byType(SoundLibrarySheet);
     expect(sheetFinder, findsOneWidget);
     expect(
@@ -291,7 +291,7 @@ void main() {
       listFinder,
       const Offset(0, -100),
     );
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
     
     expect(voicePackItemFinder, findsOneWidget);
     expect(

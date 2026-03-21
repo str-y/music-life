@@ -20,8 +20,8 @@ class WaveformAnalyzer {
   /// Each pair of bytes is interpreted as a signed 16-bit sample and
   /// converted to the [-1.0, 1.0] float range.
   void addChunk(Uint8List chunk) {
-    for (int i = 0; i + 1 < chunk.length; i += 2) {
-      int s = chunk[i] | (chunk[i + 1] << 8);
+    for (var i = 0; i + 1 < chunk.length; i += 2) {
+      var s = chunk[i] | (chunk[i + 1] << 8);
       if (s >= 0x8000) s -= 0x10000;
       _samples.add(s / 32768.0);
     }
@@ -52,8 +52,8 @@ class WaveformAnalyzer {
     final buckets = List.generate(barCount, (i) {
       final start = i * bucketSize;
       final end = (i == barCount - 1) ? _samples.length : start + bucketSize;
-      double sumSq = 0.0;
-      for (int j = start; j < end; j++) {
+      var sumSq = 0;
+      for (var j = start; j < end; j++) {
         sumSq += _samples[j] * _samples[j];
       }
       return math.sqrt(sumSq / (end - start));
@@ -61,7 +61,7 @@ class WaveformAnalyzer {
 
     // Normalise to [0.0, 1.0].
     final peak = buckets.reduce(math.max);
-    if (peak == 0.0) return List.filled(barCount, 0.0);
+    if (peak == 0.0) return List.filled(barCount, 0);
     return buckets.map((v) => (v / peak).clamp(0.0, 1.0)).toList();
   }
 

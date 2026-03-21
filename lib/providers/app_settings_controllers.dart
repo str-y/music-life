@@ -1,15 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:music_life/providers/app_settings_provider.dart';
-import 'package:music_life/providers/dependency_providers.dart';
-import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/native_pitch_bridge.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
+import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/repositories/metronome_settings_repository.dart';
 import 'package:music_life/repositories/settings_repository.dart';
-const double _maxCentsOffsetForThemeEnergy = 50.0;
-final RegExp _noteNamePattern = RegExp(r'^[A-G](?:#|b)?');
+const double _maxCentsOffsetForThemeEnergy = 50;
+final RegExp _noteNamePattern = RegExp('^[A-G](?:#|b)?');
 
 class AppSettingsController {
   AppSettingsController(this._ref);
@@ -219,10 +218,10 @@ class DynamicThemeController {
     final centsEnergy =
         (pitch.centsOffset.abs() / _maxCentsOffsetForThemeEnergy)
             .clamp(0.0, 1.0)
-            .toDouble();
+            ;
     final energy = (centsEnergy * _frequencyRangeWeight(pitch.frequency))
         .clamp(0.0, 1.0)
-        .toDouble();
+        ;
     _notifier.setTransient(
       _ref.read(appSettingsProvider).copyWith(
             dynamicThemeNote: pitch.noteName,
@@ -246,7 +245,7 @@ class DynamicThemeController {
 
   double _frequencyRangeWeight(double frequency) {
     if (frequency < 196.0) return 0.85;
-    if (frequency < 523.25) return 1.0;
+    if (frequency < 523.25) return 1;
     return 1.15;
   }
 

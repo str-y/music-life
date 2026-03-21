@@ -8,11 +8,7 @@ import 'package:music_life/providers/rhythm_provider.dart';
 
 class GrooveAnalysisSection extends ConsumerWidget {
   const GrooveAnalysisSection({
-    super.key,
-    required this.colorScheme,
-    required this.beatPulseAnimation,
-    required this.tapRingAnimation,
-    required this.onTap,
+    required this.colorScheme, required this.beatPulseAnimation, required this.tapRingAnimation, required this.onTap, super.key,
   });
 
   final ColorScheme colorScheme;
@@ -46,7 +42,7 @@ class GrooveAnalysisSection extends ConsumerWidget {
       onTapHint: l10n.grooveTargetTapHint,
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
+        child: ColoredBox(
           color: colorScheme.surfaceContainerHighest,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -180,7 +176,7 @@ class GrooveTargetPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..color = primaryColor.withValues(alpha: 60 / 255);
-    for (int i = 1; i <= 3; i++) {
+    for (var i = 1; i <= 3; i++) {
       canvas.drawCircle(center, maxRadius * i / 3, ringPaint);
     }
 

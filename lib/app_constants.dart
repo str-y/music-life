@@ -26,11 +26,11 @@ abstract final class AppConstants {
 
   /// Cents offset (absolute) within which a note is considered "in tune"
   /// and displayed in green.
-  static const double tunerInTuneThresholdCents = 5.0;
+  static const double tunerInTuneThresholdCents = 5;
 
   /// Cents offset (absolute) within which a note shows a caution colour
   /// (orange). Notes beyond this are shown in the error colour.
-  static const double tunerWarningThresholdCents = 15.0;
+  static const double tunerWarningThresholdCents = 15;
 
   /// Number of spectrum bins rendered in the tuner visualiser.
   static const int tunerSpectrumBinCount = 24;

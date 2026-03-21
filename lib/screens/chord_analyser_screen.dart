@@ -1,23 +1,18 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/app_constants.dart';
-import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
-import 'package:music_life/providers/app_settings_controllers.dart';
-import 'package:music_life/providers/dependency_providers.dart';
+import 'package:music_life/providers/chord_analyser_provider.dart';
 import 'package:music_life/repositories/chord_history_repository.dart';
-import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/utils/chord_utils.dart';
-import 'package:music_life/widgets/shared/chord_card.dart';
-import 'package:music_life/widgets/shared/loading_state_widget.dart';
-import 'package:music_life/widgets/shared/status_message_view.dart';
 import 'package:music_life/widgets/listening_indicator.dart';
 import 'package:music_life/widgets/mic_permission_denied_view.dart';
 import 'package:music_life/widgets/mic_permission_gate.dart';
+import 'package:music_life/widgets/shared/chord_card.dart';
+import 'package:music_life/widgets/shared/loading_state_widget.dart';
+import 'package:music_life/widgets/shared/status_message_view.dart';
+
 class ChordAnalyserScreen extends StatelessWidget {
   const ChordAnalyserScreen({super.key, this.useMicPermissionGate = true});
 
@@ -48,26 +43,11 @@ class _ChordAnalyserBody extends ConsumerStatefulWidget {
   ConsumerState<_ChordAnalyserBody> createState() => _ChordAnalyserBodyState();
 }
 
+/// Holds only the [AnimationController] that requires a [TickerProvider].
+/// All other state and lifecycle logic lives in [ChordAnalyserNotifier].
 class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     with SingleTickerProviderStateMixin {
-  NativePitchBridge? _bridge;
-  StreamSubscription<String>? _subscription;
-  bool _loading = true;
-
-  /// The chord currently being detected.
-  String _currentChord = '---';
-
-  /// Ordered list of recently detected chords (newest first).
-  final List<_ChordEntry> _history = [];
-
-  DateTime? _selectedFilterDate;
-  String _chordNameFilter = '';
-
-  /// Controller for the pulsing "listening" indicator.
   late final AnimationController _listeningCtrl;
-
-  /// Timer used to stop [_listeningCtrl] after [AppConstants.listeningIdleTimeout] of no audio input.
-  Timer? _idleTimer;
 
   @override
   void initState() {
@@ -75,239 +55,12 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     _listeningCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-    _loadHistory();
-    _startCapture();
-    _scheduleIdleStop();
-  }
-
-  Future<void> _startCapture() async {
-    setState(() => _loading = true);
-
-    final bridge = ref.read(pitchBridgeFactoryProvider)(
-      onError: _onBridgeError,
     );
-    final started = await bridge.startCapture();
-    if (!mounted) {
-      bridge.dispose();
-      return;
-    }
-    if (!started) {
-      // Permission may have been revoked after MicPermissionGate confirmed it.
-      bridge.dispose();
-      setState(() => _loading = false); // _bridge stays null → shows denied UI
-      return;
-    }
-
-    _bridge = bridge;
-    _subscription = bridge.chordStream.listen((chord) {
-      if (!mounted) return;
-      ref.read(dynamicThemeControllerProvider).updateFromChord(chord);
-      if (!_listeningCtrl.isAnimating) {
-        _listeningCtrl.repeat(reverse: true);
-      }
-      _scheduleIdleStop();
-      setState(() => _currentChord = chord);
-      unawaited(
-        _persistChordAndRefresh(
-          _ChordEntry(chord: chord, time: DateTime.now()),
-        ),
-      );
-    });
-    if (!mounted) return;
-    setState(() => _loading = false);
-  }
-
-  Future<void> _restartCapture() async {
-    await _subscription?.cancel();
-    _subscription = null;
-    _bridge?.dispose();
-    _bridge = null;
-    if (mounted) {
-      setState(() => _currentChord = '---');
-    }
-    await _startCapture();
-  }
-
-  Future<void> _persistChordAndRefresh(_ChordEntry entry) async {
-    try {
-      final repository = ref.read(chordHistoryRepositoryProvider);
-      await repository.addEntry(
-        ChordHistoryEntry(chord: entry.chord, time: entry.time),
-      );
-      if (!mounted) return;
-      await _loadHistory();
-    } catch (error, stackTrace) {
-      AppLogger.reportError(
-        'Failed to persist chord analysis entry',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<void> _loadHistory() async {
-    try {
-      final repository = ref.read(chordHistoryRepositoryProvider);
-      final entries = await repository.loadEntries(
-        day: _selectedFilterDate,
-        chordNameFilter: _chordNameFilter,
-      );
-      if (!mounted) return;
-      setState(() {
-        _history
-          ..clear()
-          ..addAll(entries.map((e) => _ChordEntry(chord: e.chord, time: e.time)));
-      });
-    } catch (error, stackTrace) {
-      AppLogger.reportError(
-        'Failed to load chord analysis history',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<void> _openFilterSheet() async {
-    final localizations = AppLocalizations.of(context)!;
-    final initialDate = _selectedFilterDate;
-    final initialChordName = _chordNameFilter;
-    final chordFilterController =
-        TextEditingController(text: initialChordName);
-    DateTime? pendingDate = initialDate;
-
-    try {
-      final action = await showModalBottomSheet<_HistoryFilterAction>(
-        context: context,
-        useSafeArea: true,
-        isScrollControlled: true,
-        builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              final dateLabel = pendingDate == null
-                  ? '-'
-                  : formatDateYMD(pendingDate!);
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 12,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: chordFilterController,
-                      decoration: InputDecoration(
-                        labelText: localizations.filterByChordName,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('${localizations.practiceDate}: $dateLabel'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: pendingDate ?? DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (picked != null && context.mounted) {
-                              setModalState(() => pendingDate = picked);
-                            }
-                          },
-                          child: Text(localizations.practiceDate),
-                        ),
-                        TextButton(
-                          onPressed: () => setModalState(() => pendingDate = null),
-                          child: Text(localizations.clearDateFilter),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop(_HistoryFilterAction.clear),
-                          child: Text(localizations.clearFilter),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(localizations.cancel),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop(_HistoryFilterAction.apply),
-                          child: Text(localizations.save),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      );
-
-      final appliedText = chordFilterController.text.trim();
-      if (!mounted || action == null) return;
-
-      if (action == _HistoryFilterAction.apply) {
-        setState(() {
-          _selectedFilterDate = pendingDate;
-          _chordNameFilter = appliedText;
-        });
-        await _loadHistory();
-        return;
-      }
-
-      setState(() {
-        _selectedFilterDate = null;
-        _chordNameFilter = '';
-      });
-      await _loadHistory();
-    } finally {
-      chordFilterController.dispose();
-    }
-  }
-
-  /// Called when the [NativePitchBridge] reports a runtime error.
-  void _onBridgeError(Object error, StackTrace stack) {
-    AppLogger.reportError(
-      'Chord analyser bridge error',
-      error: error,
-      stackTrace: stack,
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.chordAnalyserError),
-      ),
-    );
-  }
-
-  /// Schedules [_listeningCtrl] to stop after [AppConstants.listeningIdleTimeout] of no audio activity.
-  void _scheduleIdleStop() {
-    _idleTimer?.cancel();
-    _idleTimer = Timer(AppConstants.listeningIdleTimeout, () {
-      if (mounted) _listeningCtrl.stop();
-    });
+    _listeningCtrl.repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _idleTimer?.cancel();
-    _subscription?.cancel();
-    _bridge?.dispose();
     _listeningCtrl.dispose();
     super.dispose();
   }
@@ -319,19 +72,48 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       appSettingsProvider.select(
         (settings) => (settings.dynamicThemeEnergy *
                 settings.dynamicThemeIntensity)
-            .clamp(0.0, 1.0)
-            .toDouble(),
+            .clamp(0.0, 1.0),
       ),
     );
+    final analyserState = ref.watch(chordAnalyserProvider);
 
-    if (_loading) return const LoadingStateWidget();
+    ref
+      // Control the listening animation from provider state.
+      ..listen<bool>(
+        chordAnalyserProvider.select((s) => s.isListeningActive),
+        (_, isActive) {
+          if (isActive) {
+            if (!_listeningCtrl.isAnimating) _listeningCtrl.repeat(reverse: true);
+          } else {
+            _listeningCtrl.stop();
+          }
+        },
+      )
+      // Surface bridge errors as a SnackBar, then clear the error state.
+      ..listen<String?>(
+        chordAnalyserProvider.select((s) => s.errorMessage),
+        (_, errorMessage) {
+          if (errorMessage != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.chordAnalyserError),
+              ),
+            );
+            ref.read(chordAnalyserProvider.notifier).clearError();
+          }
+        },
+      );
+
+    if (analyserState.loading) return const LoadingStateWidget();
 
     // Bridge failed to start (e.g. permission revoked after the gate check).
-    if (_bridge == null) {
+    if (!analyserState.bridgeReady) {
       return MicPermissionDeniedView(
-        onRetry: () => _startCapture(),
+        onRetry: () => ref.read(chordAnalyserProvider.notifier).restartCapture(),
       );
     }
+
+    final currentChord = analyserState.currentChord;
 
     return Column(
       children: [
@@ -343,7 +125,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
               child: Semantics(
                 liveRegion: true,
                 label: AppLocalizations.of(context)!.currentNoteSemanticLabel,
-                value: _currentChord == '---' ? null : _currentChord,
+                value: currentChord == '---' ? null : currentChord,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -358,7 +140,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                       duration: const Duration(milliseconds: 240),
                       curve: Curves.easeOutCubic,
                       scale: 1.0 +
-                          ((_currentChord == '---' ? 0.0 : dynamicThemeEnergy) *
+                          ((currentChord == '---' ? 0.0 : dynamicThemeEnergy) *
                               0.04),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 400),
@@ -367,13 +149,13 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                           child: FadeTransition(opacity: animation, child: child),
                         ),
                         child: Text(
-                          _currentChord,
-                          key: ValueKey(_currentChord),
+                          currentChord,
+                          key: ValueKey(currentChord),
                           style: Theme.of(context).textTheme.displayLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: colorScheme.primary,
                                 fontSize: 80,
-                                shadows: _currentChord == '---'
+                                shadows: currentChord == '---'
                                     ? null
                                     : [
                                         Shadow(
@@ -431,21 +213,23 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
           hint: AppLocalizations.of(context)!.filterByChordName,
           child: InkWell(
             onTap: _openFilterSheet,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.history, size: 18, color: colorScheme.secondary),
-                    const SizedBox(width: 6),
-                    Text(
-                      AppLocalizations.of(context)!.chordHistory,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: colorScheme.secondary,
-                          ),
-                    ),
-                  ],
+            child: ExcludeSemantics(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, size: 18, color: colorScheme.secondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        AppLocalizations.of(context)!.chordHistory,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: colorScheme.secondary,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -456,7 +240,7 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
           child: Semantics(
             label: AppLocalizations.of(context)!.chordHistory,
             child: RepaintBoundary(
-              child: _history.isEmpty
+              child: analyserState.history.isEmpty
                   ? StatusMessageView(
                       illustration: StatusMessageIllustration(
                         primaryIcon: Icons.music_note_rounded,
@@ -472,7 +256,8 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                                 color: colorScheme.onSurfaceVariant,
                               ),
                       action: OutlinedButton.icon(
-                        onPressed: _restartCapture,
+                        onPressed: () =>
+                            ref.read(chordAnalyserProvider.notifier).restartCapture(),
                         icon: const Icon(Icons.hearing_rounded),
                         label: Text(
                           AppLocalizations.of(context)!.listenForFirstChord,
@@ -482,9 +267,9 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
                   : ListView.builder(
                       padding:
                           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      itemCount: _history.length,
+                      itemCount: analyserState.history.length,
                       itemBuilder: (context, index) {
-                        final entry = _history[index];
+                        final entry = analyserState.history[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: _ChordHistoryTile(
@@ -502,21 +287,113 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
       ],
     );
   }
+
+  Future<void> _openFilterSheet() async {
+    final localizations = AppLocalizations.of(context)!;
+    final notifier = ref.read(chordAnalyserProvider.notifier);
+    final currentState = ref.read(chordAnalyserProvider);
+    final chordFilterController =
+        TextEditingController(text: currentState.chordNameFilter);
+    var pendingDate = currentState.selectedFilterDate;
+
+    try {
+      final action = await showModalBottomSheet<_HistoryFilterAction>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              final dateLabel =
+                  pendingDate == null ? '-' : formatDateYMD(pendingDate!);
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: chordFilterController,
+                      decoration: InputDecoration(
+                        labelText: localizations.filterByChordName,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('${localizations.practiceDate}: $dateLabel'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: pendingDate ?? DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null && context.mounted) {
+                              setModalState(() => pendingDate = picked);
+                            }
+                          },
+                          child: Text(localizations.practiceDate),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              setModalState(() => pendingDate = null),
+                          child: Text(localizations.clearDateFilter),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context)
+                              .pop(_HistoryFilterAction.clear),
+                          child: Text(localizations.clearFilter),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(localizations.cancel),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(context)
+                              .pop(_HistoryFilterAction.apply),
+                          child: Text(localizations.save),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+
+      final appliedText = chordFilterController.text.trim();
+      if (!mounted || action == null) return;
+
+      if (action == _HistoryFilterAction.apply) {
+        await notifier.applyFilter(date: pendingDate, chordName: appliedText);
+        return;
+      }
+
+      await notifier.clearFilter();
+    } finally {
+      chordFilterController.dispose();
+    }
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-// ── Data model ────────────────────────────────────────────────────────────────
-
-class _ChordEntry {
-  const _ChordEntry({
-    required this.chord,
-    required this.time,
-  });
-
-  final String chord;
-  final DateTime time;
-}
 
 enum _HistoryFilterAction { apply, clear }
 
@@ -530,7 +407,7 @@ class _ChordHistoryTile extends StatelessWidget {
     required this.animation,
   });
 
-  final _ChordEntry entry;
+  final ChordHistoryEntry entry;
   final bool isLatest;
   final ColorScheme colorScheme;
   final Animation<double> animation;

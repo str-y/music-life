@@ -66,7 +66,7 @@ void main() {
 
   group('PracticeLogEntry', () {
     final entry = PracticeLogEntry(
-      date: DateTime(2024, 6, 1),
+      date: DateTime(2024, 6),
       durationMinutes: 45,
       memo: 'Scales and arpeggios',
     );
@@ -290,7 +290,7 @@ void main() {
       final repository = createRepository(
         ensureMigrationDiskSpace: (requiredBytes) async {
           diskSpaceChecks += 1;
-          throw FileSystemException('disk full');
+          throw const FileSystemException('disk full');
         },
       );
 
@@ -371,7 +371,7 @@ void main() {
             .skip(2)
             .take(254)
             .map(_recordingRow)
-            .toList(growable: false),
+            ,
         _recordingRow(recordings[1]),
       ];
 

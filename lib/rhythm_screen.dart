@@ -6,6 +6,7 @@ import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/providers/rhythm_provider.dart';
 import 'package:music_life/repositories/metronome_settings_repository.dart';
+import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/widgets/rhythm/groove_analysis_section.dart';
 import 'package:music_life/widgets/rhythm/metronome_controls.dart';
 
@@ -80,10 +81,11 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   @override
   void dispose() {
-    _beatPulseCurve.dispose();
-    _tapRingCurve.dispose();
+    // Dispose parent controllers before their dependent CurvedAnimations.
     _beatPulseCtrl.dispose();
+    _beatPulseCurve.dispose();
     _tapRingCtrl.dispose();
+    _tapRingCurve.dispose();
     super.dispose();
   }
 
@@ -203,7 +205,7 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
 
   Future<void> _changeBpm(int delta) {
     final rhythmState = ref.read(rhythmProvider);
-    final nextBpm = (rhythmState.bpm + delta).clamp(30, 240).toInt();
+    final nextBpm = (rhythmState.bpm + delta).clamp(30, 240);
     return _updateMetronomeSettings(
       bpm: nextBpm,
       numerator: rhythmState.timeSignatureNumerator,
@@ -216,15 +218,25 @@ class _RhythmScreenState extends ConsumerState<RhythmScreen>
     required int numerator,
     required int denominator,
   }) async {
+    // Apply immediately for responsive UI feedback.
     ref.read(rhythmProvider.notifier).applyMetronomeSettings(
           bpm: bpm,
           timeSignatureNumerator: numerator,
           timeSignatureDenominator: denominator,
         );
-    await ref.read(metronomeSettingsControllerProvider).updateMetronomeSettings(
-          bpm: bpm,
-          timeSignatureNumerator: numerator,
-          timeSignatureDenominator: denominator,
-        );
+    // Persist asynchronously; log on failure but keep in-memory state intact.
+    try {
+      await ref.read(metronomeSettingsControllerProvider).updateMetronomeSettings(
+            bpm: bpm,
+            timeSignatureNumerator: numerator,
+            timeSignatureDenominator: denominator,
+          );
+    } on Object catch (error, stackTrace) {
+      AppLogger.reportError(
+        'Failed to persist metronome settings',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 }

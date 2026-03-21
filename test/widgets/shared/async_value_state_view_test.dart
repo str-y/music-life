@@ -17,8 +17,8 @@ void main() {
     testWidgets('shows loading indicator for AsyncLoading', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          AsyncValueStateView<int>(
-            value: const AsyncLoading<int>(),
+          const AsyncValueStateView<int>(
+            value: AsyncLoading<int>(),
             loadingSemanticsLabel: 'Loading test data',
             errorMessage: 'Error',
             data: _emptyWidget,
@@ -57,8 +57,8 @@ void main() {
     testWidgets('renders data content for AsyncData', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          AsyncValueStateView<int>(
-            value: const AsyncData<int>(42),
+          const AsyncValueStateView<int>(
+            value: AsyncData<int>(42),
             errorMessage: 'Error',
             data: _valueText,
           ),

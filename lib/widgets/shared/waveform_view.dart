@@ -11,11 +11,7 @@ import 'package:music_life/l10n/app_localizations.dart';
 /// and [color] parameters fully describe the rendered waveform.
 class WaveformView extends StatefulWidget {
   const WaveformView({
-    super.key,
-    required this.data,
-    required this.durationSeconds,
-    required this.isPlaying,
-    required this.color,
+    required this.data, required this.durationSeconds, required this.isPlaying, required this.color, super.key,
     this.animate = false,
   });
 
@@ -81,7 +77,7 @@ class _WaveformViewState extends State<WaveformView>
         height: 48,
         child: AnimatedBuilder(
           animation: _breathCtrl,
-          builder: (_, __) => CustomPaint(
+          builder: (_, _) => CustomPaint(
             painter: WaveformPainter(
               data: widget.data,
               color: widget.color,
@@ -159,9 +155,9 @@ class WaveformPainter extends CustomPainter {
     }
 
     canvas.save();
-    canvas.translate(0.0, centerY);
-    canvas.scale(1.0, breathScale);
-    canvas.translate(0.0, -centerY);
+    canvas.translate(0, centerY);
+    canvas.scale(1, breathScale);
+    canvas.translate(0, -centerY);
     canvas.drawPicture(picture);
     canvas.restore();
   }

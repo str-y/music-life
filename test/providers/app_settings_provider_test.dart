@@ -38,9 +38,7 @@ void main() {
         useSystemTheme: false,
         localeCode: 'ja',
         themeColorNote: 'G',
-        dynamicThemeMode: DynamicThemeMode.chill,
-        dynamicThemeIntensity: 0.7,
-        referencePitch: 442.0,
+        referencePitch: 442,
         hapticFeedbackEnabled: false,
       ),
     );
@@ -63,7 +61,7 @@ void main() {
       themeColorNote: 'A#',
       dynamicThemeMode: DynamicThemeMode.intense,
       dynamicThemeIntensity: 0.25,
-      referencePitch: 444.0,
+      referencePitch: 444,
       hapticFeedbackEnabled: false,
     );
     await container.read(appSettingsControllerProvider).update(updated);
@@ -102,8 +100,8 @@ void main() {
     container.read(dynamicThemeControllerProvider).updateFromPitch(
           const PitchResult(
             noteName: 'A4',
-            frequency: 440.0,
-            centsOffset: 25.0,
+            frequency: 440,
+            centsOffset: 25,
             midiNote: 69,
           ),
         );
@@ -116,7 +114,7 @@ void main() {
           const PitchResult(
             noteName: 'C4',
             frequency: 261.63,
-            centsOffset: 0.0,
+            centsOffset: 0,
             midiNote: 60,
           ),
         );
@@ -126,7 +124,7 @@ void main() {
           const PitchResult(
             noteName: 'B4',
             frequency: 493.88,
-            centsOffset: 60.0,
+            centsOffset: 60,
             midiNote: 71,
           ),
         );
@@ -165,7 +163,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    final now = DateTime.utc(2026, 1, 1, 0, 0, 0);
+    final now = DateTime.utc(2026);
     await container.read(premiumSettingsControllerProvider).unlockRewardedPremiumFor(
           const Duration(hours: 24),
           now: now,
@@ -173,7 +171,7 @@ void main() {
 
     expect(
       container.read(appSettingsProvider).rewardedPremiumExpiresAt,
-      DateTime.utc(2026, 1, 2, 0, 0, 0),
+      DateTime.utc(2026, 1, 2),
     );
     expect(
       prefs.getString(AppConfig.defaultRewardedPremiumExpiresAtStorageKey),
@@ -243,7 +241,7 @@ void main() {
 
     await container.read(premiumSettingsControllerProvider).unlockRewardedPremiumFor(
           const Duration(hours: 24),
-          now: DateTime.utc(2030, 1, 1),
+          now: DateTime.utc(2030),
         );
     await container.read(cloudSyncControllerProvider).setEnabled(true);
 

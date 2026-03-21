@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/metronome_sound_library.dart';
-import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/providers/metronome_sound_library_controller.dart';
-import 'package:music_life/services/ad_service.dart';
 
 const Duration _rewardedPremiumDuration = Duration(hours: 24);
 
@@ -24,8 +22,7 @@ Future<void> showSoundLibrarySheet({
 
 class SoundLibrarySheet extends ConsumerWidget {
   const SoundLibrarySheet({
-    super.key,
-    required this.bpm,
+    required this.bpm, super.key,
   });
 
   final int bpm;

@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/repositories/backup_repository.dart';
@@ -14,6 +12,7 @@ import 'package:music_life/services/ai_practice_insights_service.dart';
 import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/services/premium_video_export_service.dart';
 import 'package:music_life/services/recording_storage_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 typedef PitchBridgeFactory = NativePitchBridge Function(
     {FfiErrorHandler? onError});
 

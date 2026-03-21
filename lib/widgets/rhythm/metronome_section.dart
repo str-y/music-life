@@ -7,28 +7,7 @@ import 'package:music_life/widgets/rhythm/metronome_preset_controls.dart';
 
 class MetronomeSection extends StatelessWidget {
   const MetronomeSection({
-    super.key,
-    required this.presetOptions,
-    required this.selectedPresetId,
-    required this.onPresetSelected,
-    required this.onSavePreset,
-    required this.timeSignatureNumerators,
-    required this.timeSignatureDenominators,
-    required this.selectedNumerator,
-    required this.selectedDenominator,
-    required this.onNumeratorChanged,
-    required this.onDenominatorChanged,
-    required this.bpm,
-    required this.isPlaying,
-    required this.beatPulseAnimation,
-    required this.onDecrease10,
-    required this.onDecrease1,
-    required this.onTogglePlayStop,
-    required this.onIncrease1,
-    required this.onIncrease10,
-    required this.selectedPack,
-    required this.recommendedPack,
-    required this.onManageSoundLibrary,
+    required this.presetOptions, required this.selectedPresetId, required this.onPresetSelected, required this.onSavePreset, required this.timeSignatureNumerators, required this.timeSignatureDenominators, required this.selectedNumerator, required this.selectedDenominator, required this.onNumeratorChanged, required this.onDenominatorChanged, required this.bpm, required this.isPlaying, required this.beatPulseAnimation, required this.onDecrease10, required this.onDecrease1, required this.onTogglePlayStop, required this.onIncrease1, required this.onIncrease10, required this.selectedPack, required this.recommendedPack, required this.onManageSoundLibrary, super.key,
   });
 
   final List<MetronomePresetOption> presetOptions;

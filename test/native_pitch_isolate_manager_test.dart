@@ -28,8 +28,8 @@ void _successfulIsolate(IsolateSetup setup) {
     } else if (msg == 'emit-data') {
       setup.resultPort.send(NativePitchResultMessage(
         noteName: 'A4',
-        frequency: 440.0,
-        centsOffset: 0.0,
+        frequency: 440,
+        centsOffset: 0,
         midiNote: 69,
       ).encode());
     } else if (msg == 'emit-spectrum') {
@@ -88,7 +88,7 @@ void _metricsReportingIsolate(IsolateSetup setup) {
         bufferedSamples: 32,
         peakBufferedSamples: 64,
         bufferUtilization: 0.5,
-        peakBufferUtilization: 1.0,
+        peakBufferUtilization: 1,
         framesProcessed: 3,
         lastFrameProcessingTime: Duration(milliseconds: 2),
         averageFrameProcessingTime: Duration(milliseconds: 1),
@@ -192,7 +192,7 @@ void main() {
       final started = await manager.start();
       expect(started, isFalse);
       expect(reportedError, isA<NativeIsolateFailure>());
-      final failure = reportedError as NativeIsolateFailure;
+      final failure = reportedError! as NativeIsolateFailure;
       expect(failure.code, 'handshake-timeout');
       expect(failure.phase, 'handshake');
       manager.disposeImmediately();
@@ -212,7 +212,7 @@ void main() {
       final started = await manager.start();
       expect(started, isFalse);
       expect(reportedError, isA<NativeIsolateFailure>());
-      final failure = reportedError as NativeIsolateFailure;
+      final failure = reportedError! as NativeIsolateFailure;
       expect(failure.code, 'startup-failure');
       expect(failure.phase, 'test-startup');
       expect(failure.message, 'simulated startup failure');

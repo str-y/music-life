@@ -2,14 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/composition_provider.dart';
 import 'package:music_life/repositories/composition_repository.dart';
 import 'package:music_life/services/service_error_handler.dart';
 import 'package:music_life/utils/share_card_image.dart';
 import 'package:music_life/widgets/shared/chord_card.dart';
+import 'package:share_plus/share_plus.dart';
 // ── Palette chords ────────────────────────────────────────────────────────────
 
 const List<String> _kPaletteChords = [
@@ -68,7 +67,7 @@ class _CompositionHelperScreenState
 
   void _clearSequence() {
     _stopPlayback();
-    setState(() => _sequence.clear());
+    setState(_sequence.clear);
   }
 
   void _reorderSequence(int oldIndex, int newIndex) {
@@ -151,7 +150,7 @@ class _CompositionHelperScreenState
   Future<void> _showSaveDialog() async {
     final l10n = AppLocalizations.of(context)!;
     final savedCount =
-        ref.read(compositionProvider).asData?.value?.length ?? 0;
+        ref.read(compositionProvider).asData?.value.length ?? 0;
     final controller = TextEditingController(
       text: l10n.compositionDefaultName(savedCount + 1),
     );
@@ -430,7 +429,7 @@ class _ChordPalette extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             scrollDirection: Axis.horizontal,
             itemCount: _kPaletteChords.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
             itemBuilder: (ctx, i) {
               final chord = _kPaletteChords[i];
               return ActionChip(
@@ -586,11 +585,7 @@ class _ChordBuilderDialogState extends State<_ChordBuilderDialog> {
 
 class _SequenceChordTile extends StatelessWidget {
   const _SequenceChordTile({
-    super.key,
-    required this.chord,
-    required this.index,
-    required this.isActive,
-    required this.onRemove,
+    required this.chord, required this.index, required this.isActive, required this.onRemove, super.key,
   });
 
   final String chord;
@@ -771,7 +766,6 @@ class _LoadCompositionSheetState extends State<_LoadCompositionSheet> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.5,
       maxChildSize: 0.85,
       minChildSize: 0.3,
       expand: false,
@@ -810,7 +804,7 @@ class _LoadCompositionSheetState extends State<_LoadCompositionSheet> {
                   : ListView.separated(
                       controller: scrollController,
                       itemCount: _items.length,
-                      separatorBuilder: (_, __) =>
+                      separatorBuilder: (_, _) =>
                           const Divider(height: 1),
                       itemBuilder: (ctx, index) {
                         final comp = _items[index];

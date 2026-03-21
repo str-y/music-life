@@ -11,8 +11,8 @@ void main() {
       final summary = computePracticeSummary(
         [
           PracticeLogEntry(date: DateTime(2026, 2, 28), durationMinutes: 20),
-          PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 30),
-          PracticeLogEntry(date: DateTime(2026, 3, 1), durationMinutes: 15),
+          PracticeLogEntry(date: DateTime(2026, 3), durationMinutes: 30),
+          PracticeLogEntry(date: DateTime(2026, 3), durationMinutes: 15),
         ],
         now: DateTime(2026, 3, 1, 12),
       );
@@ -39,11 +39,11 @@ void main() {
     test('build resolves to AsyncData with aggregated monthly log stats',
         () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer(
+      when(mockRepo.loadRecordings).thenAnswer((_) async => const []);
+      when(mockRepo.loadPracticeLogs).thenAnswer(
         (_) async => [
-          PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 30),
-          PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 20),
+          PracticeLogEntry(date: DateTime(2026, 2), durationMinutes: 30),
+          PracticeLogEntry(date: DateTime(2026, 2), durationMinutes: 20),
           PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 40),
           PracticeLogEntry(date: DateTime(2026, 3, 2), durationMinutes: 15),
         ],
@@ -71,10 +71,10 @@ void main() {
     test('reuses memoized monthly stats when log entries are unchanged',
         () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer(
+      when(mockRepo.loadRecordings).thenAnswer((_) async => const []);
+      when(mockRepo.loadPracticeLogs).thenAnswer(
         (_) async => [
-          PracticeLogEntry(date: DateTime(2026, 2, 1), durationMinutes: 30),
+          PracticeLogEntry(date: DateTime(2026, 2), durationMinutes: 30),
           PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 40),
         ],
       );
@@ -88,15 +88,15 @@ void main() {
 
       await container.read(libraryProvider.notifier).reload();
       final reloadedStats =
-          container.read(libraryProvider).asData?.value!.monthlyLogStats;
+          container.read(libraryProvider).asData?.value.monthlyLogStats;
 
       expect(identical(initialStats, reloadedStats), isTrue);
     });
 
     test('build exposes AsyncError when repository load fails', () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => mockRepo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+      when(mockRepo.loadRecordings).thenAnswer((_) async => const []);
+      when(mockRepo.loadPracticeLogs).thenThrow(Exception('load failed'));
 
       final container = ProviderContainer(
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],

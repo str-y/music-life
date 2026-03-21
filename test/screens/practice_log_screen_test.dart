@@ -7,6 +7,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
 import 'package:music_life/utils/practice_log_utils.dart';
+
 import 'golden_test_utils.dart';
 
 Widget _wrap(
@@ -23,12 +24,12 @@ Widget _wrap(
 
 Widget _wrapScreen(
   Widget child, {
-  List<dynamic> overrides = const [],
+  List<Override> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>().toList()],
+    overrides: [...overrides.whereType<dynamic>()],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
@@ -52,7 +53,7 @@ void main() {
             return const SizedBox.shrink();
           }),
         ));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
         expect(label, isNotEmpty);
       });
@@ -75,7 +76,7 @@ void main() {
           );
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.bySemanticsLabel('15, $todayLabel, $practicedLabel'),
@@ -100,7 +101,6 @@ void main() {
       PracticeLogEntry(
         date: DateTime(2026, 1, 20),
         durationMinutes: 40,
-        memo: '',
       ),
     ];
 
@@ -152,7 +152,7 @@ void main() {
           ),
         ];
         final repo = _MockRecordingRepository();
-        when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+        when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
         await tester.pumpWidget(
           _wrapScreen(
@@ -164,7 +164,7 @@ void main() {
             ],
           ),
         );
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
         await expectScreenGolden(
           find.byType(PracticeLogScreen),
@@ -190,7 +190,7 @@ void main() {
         ),
       ];
       final repo = _MockRecordingRepository();
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
         _wrapScreen(
@@ -200,7 +200,7 @@ void main() {
           ],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(PracticeLogScreen)),
@@ -232,7 +232,7 @@ void main() {
         ),
       ];
       final repo = _MockRecordingRepository();
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
         _wrapScreen(
@@ -242,7 +242,7 @@ void main() {
           ],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(PracticeLogScreen)),
@@ -254,7 +254,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('practice-trend-bar-2/10')));
       await tester.pump();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.text('2/10 • ${l10n.durationMinutes(20)}'),
@@ -266,7 +266,7 @@ void main() {
   group('PracticeLogScreen async states', () {
     testWidgets('shows retry UI when practice logs fail to load', (tester) async {
       final repo = _MockRecordingRepository();
-      when(() => repo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+      when(repo.loadPracticeLogs).thenThrow(Exception('load failed'));
       late String loadError;
       late String retry;
 
@@ -283,7 +283,7 @@ void main() {
           ],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text(loadError), findsOneWidget);
       expect(find.text(retry), findsOneWidget);
@@ -307,7 +307,7 @@ void main() {
         ),
       ];
       final repo = _MockRecordingRepository();
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => logs);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
         _wrapScreen(
@@ -317,14 +317,14 @@ void main() {
           ],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(PracticeLogScreen)),
       )!;
 
       await tester.tap(find.text(l10n.recordListTab));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.byKey(const ValueKey('practice-log-export-selected-csv')),

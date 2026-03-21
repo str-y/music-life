@@ -55,10 +55,10 @@ class _FakeAiPracticeInsightsService implements AiPracticeInsightsService {
 
 Widget _wrap(
   Widget child, {
-  List<dynamic> overrides = const [],
+  List<Override> overrides = const [],
 }) {
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>().toList()],
+    overrides: [...overrides.whereType<dynamic>()],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -89,24 +89,24 @@ void main() {
       tester,
     ) async {
       final repository = _MockRecordingRepository();
-      when(() => repository.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repository.loadPracticeLogs()).thenAnswer((_) async => const []);
+      when(repository.loadRecordings).thenAnswer((_) async => const []);
+      when(repository.loadPracticeLogs).thenAnswer((_) async => const []);
       final overrides = await _baseOverrides(repository: repository);
 
       await tester.pumpWidget(
         _wrap(
           const PracticeLogScreen(),
-          overrides: [...overrides.whereType<dynamic>().toList()],
+          overrides: [...overrides.whereType<dynamic>()],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(PracticeLogScreen)),
       )!;
 
       await tester.tap(find.byTooltip(l10n.aiPracticeInsightsTitle));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.byType(AiPracticeInsightsScreen), findsOneWidget);
       expect(find.text(l10n.aiPracticeInsightsPremiumTitle), findsOneWidget);
@@ -116,7 +116,7 @@ void main() {
       tester,
     ) async {
       final repository = _MockRecordingRepository();
-      when(() => repository.loadRecordings()).thenAnswer(
+      when(repository.loadRecordings).thenAnswer(
         (_) async => [
           RecordingEntry(
             id: 'r1',
@@ -127,7 +127,7 @@ void main() {
           ),
         ],
       );
-      when(() => repository.loadPracticeLogs()).thenAnswer(
+      when(repository.loadPracticeLogs).thenAnswer(
         (_) async => [
           PracticeLogEntry(
             date: DateTime(2026, 3, 14),
@@ -148,10 +148,10 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const AiPracticeInsightsScreen(),
-          overrides: [...overrides.whereType<dynamic>().toList()],
+          overrides: [...overrides.whereType<dynamic>()],
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final l10n = AppLocalizations.of(
         tester.element(find.byType(AiPracticeInsightsScreen)),

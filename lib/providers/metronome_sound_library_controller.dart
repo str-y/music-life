@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_life/metronome_sound_library.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
-import 'package:music_life/providers/metronome_settings_provider.dart';
 import 'package:music_life/services/ad_service.dart';
 
 class MetronomeSoundLibraryState {

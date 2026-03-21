@@ -2,18 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/data/app_database.dart';
 import 'package:music_life/data/waveform_codec.dart';
 import 'package:music_life/services/service_error_handler.dart';
 import 'package:music_life/utils/app_logger.dart';
+import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' show getDatabasesPath;
 
 typedef ReplaceAllRecordingData =
     Future<void> Function({
@@ -36,13 +34,7 @@ class LegacyDataMigrator {
   })  : _prefs = prefs,
         _config = config,
         _replaceAllData = replaceAllData ??
-            (({
-              required recordings,
-              required practiceLogs,
-            }) => AppDatabase.instance.replaceAllData(
-                  recordings: recordings,
-                  practiceLogs: practiceLogs,
-                )),
+            (AppDatabase.instance.replaceAllData),
         _ensureMigrationDiskSpace =
             ensureMigrationDiskSpace ?? _defaultEnsureMigrationDiskSpace,
         _persistBool = persistBool ?? ((key, value) => prefs.setBool(key, value)),
@@ -82,20 +74,20 @@ class LegacyDataMigrator {
 
   Future<void> migrateIfNeeded() async {
     // Already completed successfully in this session.
-    if (_migrationCompleter?.isCompleted == true) return;
+    if (_migrationCompleter?.isCompleted ?? false) return;
     // Migration is already in progress – join it instead of starting another.
     if (_migrationCompleter != null) return _migrationCompleter!.future;
 
     _migrationCompleter = Completer<void>();
-    _migrationCompleter!.future.catchError((_, __) {});
+    _migrationCompleter!.future.catchError((_, _) {});
     try {
-      if (_prefs.getBool(_config.recordingsMigratedStorageKey) == true) {
+      if (_prefs.getBool(_config.recordingsMigratedStorageKey) ?? false) {
         AppLogger.debug('RecordingRepository: migration already completed.');
         _migrationCompleter!.complete();
         return;
       }
 
-      if (_prefs.getBool(_migrationInProgressKey) == true) {
+      if (_prefs.getBool(_migrationInProgressKey) ?? false) {
         AppLogger.warning(
           'RecordingRepository: interrupted migration detected; retrying.',
         );
@@ -107,7 +99,7 @@ class LegacyDataMigrator {
       // error in one set does not leave the database in a half-migrated state.
       final recordingRows = <Map<String, Object?>>[];
       final logRows = <Map<String, Object?>>[];
-      String currentStage = 'legacy payload parsing';
+      var currentStage = 'legacy payload parsing';
       var migrationSucceeded = true;
 
       final recStr = _prefs.getString(_config.recordingsStorageKey);

@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/services/service_error_handler.dart';
-import 'package:music_life/providers/dependency_providers.dart';
 
 class PracticeLogNotifier
     extends AsyncNotifier<List<PracticeLogEntry>> {
@@ -69,7 +68,7 @@ class PracticeLogNotifier
       [...entries]..sort((a, b) => b.date.compareTo(a.date));
 }
 
-final practiceLogProvider = AsyncNotifierProvider.autoDispose<
+final AsyncNotifierProvider<PracticeLogNotifier, List<PracticeLogEntry>> practiceLogProvider = AsyncNotifierProvider.autoDispose<
     PracticeLogNotifier, List<PracticeLogEntry>>(
   PracticeLogNotifier.new,
 );

@@ -4,7 +4,7 @@ import 'package:music_life/main.dart' as app;
 import 'package:music_life/utils/app_logger.dart';
 
 void main() {
-  FlutterExceptionHandler? previousOnError;
+  void Function(FlutterErrorDetails)? previousOnError;
 
   setUp(() {
     previousOnError = FlutterError.onError;

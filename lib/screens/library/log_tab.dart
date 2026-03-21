@@ -8,8 +8,7 @@ import 'package:music_life/providers/library_provider.dart';
 
 class LogTab extends StatefulWidget {
   const LogTab({
-    super.key,
-    required this.monthlyLogStatsByMonth,
+    required this.monthlyLogStatsByMonth, super.key,
     this.onRecordPractice,
   });
 
@@ -114,11 +113,7 @@ class _LogTabState extends State<LogTab> {
 
 class MonthHeader extends StatelessWidget {
   const MonthHeader({
-    super.key,
-    required this.year,
-    required this.month,
-    required this.onPrev,
-    required this.onNext,
+    required this.year, required this.month, required this.onPrev, required this.onNext, super.key,
   });
 
   final int year;
@@ -153,10 +148,7 @@ class MonthHeader extends StatelessWidget {
 
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({
-    super.key,
-    required this.year,
-    required this.month,
-    required this.practiceDays,
+    required this.year, required this.month, required this.practiceDays, super.key,
   });
 
   final int year;
@@ -178,7 +170,7 @@ class CalendarGrid extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
     // Day-of-week index for the 1st (0 = Sunday)
-    final firstWeekday = DateTime(year, month, 1).weekday % 7;
+    final firstWeekday = DateTime(year, month).weekday % 7;
 
     final totalCells = firstWeekday + daysInMonth;
     final rowCount = (totalCells / 7).ceil();
@@ -246,12 +238,7 @@ class CalendarGrid extends StatelessWidget {
 
 class DayCell extends StatelessWidget {
   const DayCell({
-    super.key,
-    required this.day,
-    required this.hasPractice,
-    required this.isToday,
-    required this.isSunday,
-    required this.isSaturday,
+    required this.day, required this.hasPractice, required this.isToday, required this.isSunday, required this.isSaturday, super.key,
   });
 
   final int day;
@@ -326,9 +313,7 @@ class DayCell extends StatelessWidget {
 
 class PracticeSummary extends StatelessWidget {
   const PracticeSummary({
-    super.key,
-    required this.practiceDayCount,
-    required this.totalMinutes,
+    required this.practiceDayCount, required this.totalMinutes, super.key,
   });
 
   final int practiceDayCount;
@@ -366,11 +351,7 @@ class PracticeSummary extends StatelessWidget {
 
 class SummaryItem extends StatelessWidget {
   const SummaryItem({
-    super.key,
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
+    required this.icon, required this.value, required this.label, required this.color, super.key,
   });
 
   final IconData icon;

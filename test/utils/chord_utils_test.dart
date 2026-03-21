@@ -4,7 +4,7 @@ import 'package:music_life/utils/chord_utils.dart';
 void main() {
   group('formatTimeHMS', () {
     test('formats midnight as 00:00:00', () {
-      expect(formatTimeHMS(DateTime(2024, 1, 1, 0, 0, 0)), '00:00:00');
+      expect(formatTimeHMS(DateTime(2024)), '00:00:00');
     });
 
     test('zero-pads single-digit hour, minute, and second', () {
@@ -12,7 +12,7 @@ void main() {
     });
 
     test('formats noon correctly', () {
-      expect(formatTimeHMS(DateTime(2024, 1, 1, 12, 0, 0)), '12:00:00');
+      expect(formatTimeHMS(DateTime(2024, 1, 1, 12)), '12:00:00');
     });
 
     test('formats end of day as 23:59:59', () {

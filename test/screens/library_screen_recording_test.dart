@@ -17,8 +17,6 @@ void main() {
   setUpAll(() {
     registerFallbackValue(
       const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        sampleRate: 44100,
         numChannels: 1,
       ),
     );
@@ -35,10 +33,10 @@ void main() {
           throw const RecordingStorageException(requiredBytes: 9 * 1024 * 1024);
         },
       );
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
-      when(() => recorder.dispose()).thenAnswer((_) async {});
-      when(() => recorder.isRecording()).thenAnswer((_) async => false);
+      when(repo.loadRecordings).thenAnswer((_) async => const []);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => const []);
+      when(recorder.dispose).thenAnswer((_) async {});
+      when(recorder.isRecording).thenAnswer((_) async => false);
 
       late String expectedWarning;
       late String expectedError;
@@ -61,16 +59,19 @@ void main() {
           repository: repo,
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.byType(FloatingActionButton));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text(expectedWarning), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.mic));
+      await tester.tap(find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byIcon(Icons.mic),
+      ));
       await tester.pump();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text(expectedError), findsOneWidget);
       verifyNever(() => recorder.start(any(), path: any(named: 'path')));
@@ -95,12 +96,12 @@ void main() {
           estimatedRequiredBytes: 9 * 1024 * 1024,
         ),
       );
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+      when(repo.loadRecordings).thenAnswer((_) async => const []);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => const []);
       when(() => repo.saveRecordings(any())).thenThrow(Exception('save failed'));
-      when(() => recorder.dispose()).thenAnswer((_) async {});
-      when(() => recorder.isRecording()).thenAnswer((_) async => false);
-      when(() => recorder.stop()).thenAnswer((_) async => null);
+      when(recorder.dispose).thenAnswer((_) async {});
+      when(recorder.isRecording).thenAnswer((_) async => false);
+      when(recorder.stop).thenAnswer((_) async => null);
       when(
         () => recorder.onAmplitudeChanged(const Duration(milliseconds: 120)),
       ).thenAnswer((_) => const Stream<Amplitude>.empty());
@@ -126,17 +127,20 @@ void main() {
           repository: repo,
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.byType(FloatingActionButton));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.mic));
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
+      await tester.tap(find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byIcon(Icons.mic),
+      ));
       await tester.pump();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.byIcon(Icons.stop));
       await tester.pump();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(
         find.text(
@@ -144,7 +148,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text(expectedError), findsOneWidget);
       expect((await tempDir.list().toList()).isEmpty, isTrue);

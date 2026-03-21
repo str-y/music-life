@@ -12,8 +12,8 @@ import 'package:music_life/services/service_error_handler.dart';
 const int kMaxCompositions = 50;
 
 class CompositionLimitReachedException implements Exception {
-  final int max;
   CompositionLimitReachedException(this.max);
+  final int max;
   @override
   String toString() => 'Save limit of $max compositions reached.';
 }
@@ -111,7 +111,7 @@ class CompositionNotifier extends AsyncNotifier<List<Composition>> {
 // Provider
 // ---------------------------------------------------------------------------
 
-final compositionProvider =
+final AsyncNotifierProvider<CompositionNotifier, List<Composition>> compositionProvider =
     AsyncNotifierProvider.autoDispose<CompositionNotifier, List<Composition>>(
   CompositionNotifier.new,
 );

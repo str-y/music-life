@@ -1,11 +1,11 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:music_life/metronome_sound_library.dart';
+import 'package:music_life/providers/app_settings_controllers.dart';
 import 'package:music_life/providers/metronome_sound_library_controller.dart';
 import 'package:music_life/services/ad_service.dart';
-import 'package:music_life/providers/app_settings_controllers.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class MockAdService extends Mock implements IAdService {}
 class MockMetronomeSettingsController extends Mock implements MetronomeSettingsController {}

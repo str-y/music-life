@@ -1,8 +1,7 @@
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/data/app_database.dart';
 import 'package:music_life/repositories/backup_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 abstract interface class CloudBackupStore {
   Future<void> saveBackupBundle(String jsonBundle, DateTime syncedAt);

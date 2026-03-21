@@ -11,25 +11,25 @@ void main() {
     });
 
     test('maps enharmonic keys to the same seed color', () {
-      expect(themeSeedColor('C#4', 1.0), themeSeedColor('Db4', 1.0));
+      expect(themeSeedColor('C#4', 1), themeSeedColor('Db4', 1));
     });
 
     test('uses different palettes for each dynamic mode', () {
       expect(
-        themeSeedColor('A4', 1.0, mode: DynamicThemeMode.chill),
-        isNot(themeSeedColor('A4', 1.0, mode: DynamicThemeMode.intense)),
+        themeSeedColor('A4', 1),
+        isNot(themeSeedColor('A4', 1, mode: DynamicThemeMode.intense)),
       );
       expect(
-        themeSeedColor('A4', 1.0, mode: DynamicThemeMode.classical),
-        isNot(themeSeedColor('A4', 1.0, mode: DynamicThemeMode.intense)),
+        themeSeedColor('A4', 1, mode: DynamicThemeMode.classical),
+        isNot(themeSeedColor('A4', 1, mode: DynamicThemeMode.intense)),
       );
     });
 
     test('tunes colors by octave range and intensity', () {
-      final low = themeSeedColor('C2', 1.0);
-      final high = themeSeedColor('C6', 1.0);
-      final muted = themeSeedColor('C4', 1.0, intensity: 0.2);
-      final vivid = themeSeedColor('C4', 1.0, intensity: 1.0);
+      final low = themeSeedColor('C2', 1);
+      final high = themeSeedColor('C6', 1);
+      final muted = themeSeedColor('C4', 1, intensity: 0.2);
+      final vivid = themeSeedColor('C4', 1);
 
       expect(low, isNot(high));
       expect(muted, isNot(vivid));

@@ -26,12 +26,7 @@ final class MLPitchResult extends Struct {
 
 // ── FFI function typedefs ─────────────────────────────────────────────────────
 
-typedef _MLCreateNative = Pointer<Void> Function(
-    Int32 sampleRate, Int32 frameSize, Float threshold);
-typedef _MLCreateDart = Pointer<Void> Function(
-    int sampleRate, int frameSize, double threshold);
 
-typedef _MLDestroyNative = Void Function(Pointer<Void> handle);
 typedef _MLDestroyDart = void Function(Pointer<Void> handle);
 
 typedef _MLProcessNative = MLPitchResult Function(
@@ -44,13 +39,7 @@ typedef _MLNativeLogCallbackNative = Void Function(
 typedef _MLNativeLogCallbackDart = void Function(
     int level, Pointer<Utf8> message);
 
-typedef _MLSetLogCallbackNative = Void Function(
-    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
-typedef _MLSetLogCallbackDart = void Function(
-    Pointer<NativeFunction<_MLNativeLogCallbackNative>> callback);
 
-typedef _MLInstallCrashHandlersNative = Void Function();
-typedef _MLInstallCrashHandlersDart = void Function();
 
 typedef _NativePitchResourceFactory = _NativePitchResources Function({
   required int sampleRate,
@@ -89,7 +78,7 @@ _NativePitchResources _createNativeResources({
         'ml_pitch_detector_destroy'),
   );
 
-  final create = lib.lookupFunction<_MLCreateNative, _MLCreateDart>(
+  final create = lib.lookupFunction<Pointer<Void> Function(Int32, Int32, Float), Pointer<Void> Function(int, int, double)>(
       'ml_pitch_detector_create');
   final handle = create(sampleRate, frameSize, threshold);
   if (handle == nullptr) {
@@ -98,7 +87,7 @@ _NativePitchResources _createNativeResources({
 
   return _NativePitchResources(
     handle: handle,
-    nativeDestroy: lib.lookupFunction<_MLDestroyNative, _MLDestroyDart>(
+    nativeDestroy: lib.lookupFunction<Void Function(Pointer<Void>), _MLDestroyDart>(
         'ml_pitch_detector_destroy'),
     persistentBuffer: malloc.allocate<Float>(frameSize * sizeOf<Float>()),
     handleFinalizer: handleFinalizer,
@@ -110,13 +99,13 @@ void _configureNativeLogging(DynamicLibrary lib) {
   NativePitchBridge._nativeLoggingConfigured = true;
   try {
     lib
-        .lookupFunction<_MLSetLogCallbackNative, _MLSetLogCallbackDart>(
+        .lookupFunction<Void Function(Pointer<NativeFunction<_MLNativeLogCallbackNative>>), void Function(Pointer<NativeFunction<_MLNativeLogCallbackNative>>)>(
           'ml_pitch_detector_set_log_callback',
         )
         .call(NativePitchBridge._nativeLogCallback.nativeFunction);
     lib
-        .lookupFunction<_MLInstallCrashHandlersNative,
-            _MLInstallCrashHandlersDart>(
+        .lookupFunction<Void Function(),
+            void Function()>(
           'ml_pitch_detector_install_crash_handlers',
         )
         .call();
@@ -137,20 +126,16 @@ void _onNativeLog(int level, Pointer<Utf8> messagePointer) {
   switch (level) {
     case _mlLogLevelTrace:
       AppLogger.trace('[native] $message');
-      break;
     case _mlLogLevelDebug:
       AppLogger.debug('[native] $message');
-      break;
     case _mlLogLevelInfo:
       AppLogger.info('[native] $message');
-      break;
     case _mlLogLevelError:
       AppLogger.reportError(
         '[native] $message',
         error: StateError('Native C++ error'),
         stackTrace: StackTrace.current,
       );
-      break;
     default:
       AppLogger.info('[native][unknown:$level] $message');
   }

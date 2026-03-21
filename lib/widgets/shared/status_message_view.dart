@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 /// theme-aware colors, typography, and action widgets.
 class StatusMessageView extends StatelessWidget {
   const StatusMessageView({
-    super.key,
     required this.message,
+    super.key,
     this.details,
     this.icon,
     this.illustration,
@@ -34,33 +34,35 @@ class StatusMessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: padding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (illustration != null || icon != null) ...[
-              illustration ?? Icon(icon, size: iconSize, color: iconColor),
-              const SizedBox(height: 12),
-            ],
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: messageStyle,
-            ),
-            if (details != null) ...[
-              const SizedBox(height: 8),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: padding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (illustration != null || icon != null) ...[
+                illustration ?? Icon(icon, size: iconSize, color: iconColor),
+                const SizedBox(height: 12),
+              ],
               Text(
-                details!,
+                message,
                 textAlign: TextAlign.center,
-                style: detailsStyle,
+                style: messageStyle,
               ),
+              if (details != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  details!,
+                  textAlign: TextAlign.center,
+                  style: detailsStyle,
+                ),
+              ],
+              if (action != null) ...[
+                const SizedBox(height: 16),
+                action!,
+              ],
             ],
-            if (action != null) ...[
-              const SizedBox(height: 16),
-              action!,
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -69,10 +71,10 @@ class StatusMessageView extends StatelessWidget {
 
 class StatusMessageIllustration extends StatelessWidget {
   const StatusMessageIllustration({
-    super.key,
     required this.primaryIcon,
     required this.accentIcon,
     required this.colorScheme,
+    super.key,
   });
 
   final IconData primaryIcon;

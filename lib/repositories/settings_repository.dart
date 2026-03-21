@@ -1,31 +1,11 @@
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/models/premium_video_export.dart';
 import 'package:music_life/theme/dynamic_theme_mode.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 const Set<String> _supportedLocaleCodes = <String>{'en', 'ja'};
 
 /// Immutable application settings persisted in local storage.
 class AppSettings {
-  final bool darkMode;
-  final bool useSystemTheme;
-  final String? localeCode;
-  final String? themeColorNote;
-  final double referencePitch;
-  final String tunerTransposition;
-  final bool hapticFeedbackEnabled;
-  final DynamicThemeMode dynamicThemeMode;
-  final double dynamicThemeIntensity;
-  final String? dynamicThemeNote;
-  final double dynamicThemeEnergy;
-  final bool cloudSyncEnabled;
-  final DateTime? lastCloudSyncAt;
-  final DateTime? rewardedPremiumExpiresAt;
-  final PremiumVideoExportSkin premiumVideoExportSkin;
-  final int premiumVideoExportColor;
-  final PremiumVideoExportEffect premiumVideoExportEffect;
-  final bool premiumVideoExportShowLogo;
-  final PremiumVideoExportQuality premiumVideoExportQuality;
 
   const AppSettings({
     this.darkMode = false,
@@ -48,6 +28,25 @@ class AppSettings {
     this.premiumVideoExportShowLogo = true,
     this.premiumVideoExportQuality = PremiumVideoExportQuality.high,
   });
+  final bool darkMode;
+  final bool useSystemTheme;
+  final String? localeCode;
+  final String? themeColorNote;
+  final double referencePitch;
+  final String tunerTransposition;
+  final bool hapticFeedbackEnabled;
+  final DynamicThemeMode dynamicThemeMode;
+  final double dynamicThemeIntensity;
+  final String? dynamicThemeNote;
+  final double dynamicThemeEnergy;
+  final bool cloudSyncEnabled;
+  final DateTime? lastCloudSyncAt;
+  final DateTime? rewardedPremiumExpiresAt;
+  final PremiumVideoExportSkin premiumVideoExportSkin;
+  final int premiumVideoExportColor;
+  final PremiumVideoExportEffect premiumVideoExportEffect;
+  final bool premiumVideoExportShowLogo;
+  final PremiumVideoExportQuality premiumVideoExportQuality;
 
   AppSettings copyWith({
     bool? darkMode,
@@ -173,7 +172,7 @@ class AppSettings {
       ]);
 
   static double _clampDynamicThemeIntensity(double intensity) {
-    return intensity.clamp(0.0, 1.0).toDouble();
+    return intensity.clamp(0.0, 1.0);
   }
 }
 

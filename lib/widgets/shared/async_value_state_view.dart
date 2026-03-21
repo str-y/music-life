@@ -7,10 +7,7 @@ import 'package:music_life/widgets/shared/status_message_view.dart';
 
 class AsyncValueStateView<T> extends StatelessWidget {
   const AsyncValueStateView({
-    super.key,
-    required this.value,
-    required this.data,
-    required this.errorMessage,
+    required this.value, required this.data, required this.errorMessage, super.key,
     this.loadingSemanticsLabel,
     this.onRetry,
   });
@@ -25,7 +22,7 @@ class AsyncValueStateView<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return value.when(
       loading: () => LoadingStateWidget(semanticsLabel: loadingSemanticsLabel),
-      error: (_, __) => StatusMessageView(
+      error: (_, _) => StatusMessageView(
         icon: Icons.error_outline,
         iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
         message: errorMessage,

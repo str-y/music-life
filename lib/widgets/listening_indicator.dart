@@ -7,8 +7,7 @@ import 'package:flutter/material.dart';
 /// be overridden via [color].
 class ListeningIndicator extends StatelessWidget {
   const ListeningIndicator({
-    super.key,
-    required this.controller,
+    required this.controller, super.key,
     this.color,
     this.semanticLabel,
   });
@@ -27,7 +26,7 @@ class ListeningIndicator extends StatelessWidget {
     final barColor = color ?? Theme.of(context).colorScheme.primary;
     final indicator = AnimatedBuilder(
       animation: controller,
-      builder: (_, __) {
+      builder: (_, _) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,

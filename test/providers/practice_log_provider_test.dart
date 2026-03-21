@@ -15,7 +15,7 @@ void main() {
     test('build resolves to AsyncData with entries sorted newest first',
         () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer(
+      when(mockRepo.loadPracticeLogs).thenAnswer(
         (_) async => [
           PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 20),
           PracticeLogEntry(date: DateTime(2026, 2, 14), durationMinutes: 30),
@@ -42,7 +42,7 @@ void main() {
 
     test('build exposes AsyncError when repository load fails', () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+      when(mockRepo.loadPracticeLogs).thenThrow(Exception('load failed'));
 
       final container = ProviderContainer(
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
@@ -60,7 +60,7 @@ void main() {
       final mockRepo = _MockRecordingRepository();
       final reloadedEntries = Completer<List<PracticeLogEntry>>();
       var loadCallCount = 0;
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer((_) {
+      when(mockRepo.loadPracticeLogs).thenAnswer((_) {
         loadCallCount += 1;
         if (loadCallCount == 1) {
           return Future.value([
@@ -106,7 +106,7 @@ void main() {
     test('reload exposes AsyncError and succeeds on retry', () async {
       final mockRepo = _MockRecordingRepository();
       var loadCallCount = 0;
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer((_) async {
+      when(mockRepo.loadPracticeLogs).thenAnswer((_) async {
         loadCallCount += 1;
         switch (loadCallCount) {
           case 1:
@@ -140,7 +140,7 @@ void main() {
 
     test('addEntry throws StateError when data is not loaded', () async {
       final mockRepo = _MockRecordingRepository();
-      when(() => mockRepo.loadPracticeLogs()).thenThrow(Exception('load failed'));
+      when(mockRepo.loadPracticeLogs).thenThrow(Exception('load failed'));
 
       final container = ProviderContainer(
         overrides: [recordingRepositoryProvider.overrideWithValue(mockRepo)],
@@ -164,7 +164,7 @@ void main() {
       final existing = [
         PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 20),
       ];
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer((_) async => existing);
+      when(mockRepo.loadPracticeLogs).thenAnswer((_) async => existing);
       when(() => mockRepo.savePracticeLogs(any())).thenThrow(Exception('save failed'));
 
       final container = ProviderContainer(
@@ -194,12 +194,12 @@ void main() {
         PracticeLogEntry(date: DateTime(2026, 2, 10), durationMinutes: 20),
       ];
       var syncCallCount = 0;
-      when(() => mockRepo.loadPracticeLogs()).thenAnswer((_) async => existing);
+      when(mockRepo.loadPracticeLogs).thenAnswer((_) async => existing);
       when(() => mockRepo.savePracticeLogs(any())).thenAnswer((_) async {});
-      when(() => mockCloudSyncRepository.syncNow()).thenAnswer((_) async {
+      when(mockCloudSyncRepository.syncNow).thenAnswer((_) async {
         syncCallCount += 1;
         if (syncCallCount == 1) {
-          return DateTime.utc(2030, 1, 1);
+          return DateTime.utc(2030);
         }
         throw Exception('sync failed');
       });
@@ -216,7 +216,7 @@ void main() {
           .read(premiumSettingsControllerProvider)
           .unlockRewardedPremiumFor(
             const Duration(hours: 24),
-            now: DateTime.utc(2030, 1, 1),
+            now: DateTime.utc(2030),
           );
       await container.read(cloudSyncControllerProvider).setEnabled(true);
       await container.read(practiceLogProvider.future);

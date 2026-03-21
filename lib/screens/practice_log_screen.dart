@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:file_selector/file_selector.dart';
-import 'package:share_plus/share_plus.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/practice_log_provider.dart';
 import 'package:music_life/repositories/recording_repository.dart';
@@ -16,6 +14,7 @@ import 'package:music_life/utils/practice_log_export.dart';
 import 'package:music_life/utils/practice_log_utils.dart';
 import 'package:music_life/utils/share_card_image.dart';
 import 'package:music_life/widgets/shared/async_value_state_view.dart';
+import 'package:share_plus/share_plus.dart';
 const _chartBarMaxHeight = 70.0;
 const _chartBarMinHeight = 4.0;
 
@@ -305,13 +304,10 @@ class _PracticeLogScreenState extends ConsumerState<PracticeLogScreen>
               switch (value) {
                 case 'csv':
                   _exportCsv(entries);
-                  break;
                 case 'pdf':
                   _exportPdf(entries);
-                  break;
                 case 'share':
                   _shareMonthlySummaryCard(entries);
-                  break;
               }
             },
             itemBuilder: (context) {
@@ -796,7 +792,7 @@ class _CalendarGrid extends StatelessWidget {
     ];
     final cs = Theme.of(context).colorScheme;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
-    final firstWeekday = DateTime(year, month, 1).weekday % 7;
+    final firstWeekday = DateTime(year, month).weekday % 7;
     final rowCount = ((firstWeekday + daysInMonth) / 7).ceil();
 
     return Column(
@@ -1028,7 +1024,7 @@ class _ListTab extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: entries.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, i) {
         final e = entries[i];
         final entryKey = entrySelectionKeys[i];

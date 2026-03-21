@@ -11,11 +11,7 @@ void main() {
     final plan = service.buildPlan(
       sourceVideoPath: '/tmp/performance.mp4',
       settings: const PremiumVideoExportSettings(
-        skin: PremiumVideoExportSkin.aurora,
         waveformColorValue: 0xFF00E5FF,
-        effect: PremiumVideoExportEffect.glow,
-        showLogo: true,
-        quality: PremiumVideoExportQuality.high,
       ),
     );
 
@@ -25,7 +21,7 @@ void main() {
     expect(plan.ffmpegCommandLine, contains('showwaves=s=1440x280'));
     expect(plan.ffmpegCommandLine, contains('colors=#00E5FF'));
     expect(plan.ffmpegCommandLine, contains('gblur=sigma=16:steps=2'));
-    expect(plan.ffmpegCommandLine, contains('drawtext=text=\'music-life\''));
+    expect(plan.ffmpegCommandLine, contains("drawtext=text='music-life'"));
   });
 
   test('buildPlan omits logo overlay and upgrades output for ultra preset', () {
@@ -45,7 +41,7 @@ void main() {
     expect(plan.bitrateLabel, '30 Mbps');
     expect(plan.ffmpegCommandLine, contains('tmix=frames=3'));
     expect(plan.ffmpegCommandLine, contains('-preset slow'));
-    expect(plan.ffmpegCommandLine, isNot(contains('drawtext=text=\'music-life\'')));
+    expect(plan.ffmpegCommandLine, isNot(contains("drawtext=text='music-life'")));
   });
 
   test('createShareReadyCopy runs ffmpeg and returns the processed file',
@@ -91,7 +87,7 @@ void main() {
     final sourceFile = File('${sourceDirectory.path}/take.mp4');
     await sourceFile.writeAsBytes(const <int>[1, 2, 3, 4, 5]);
     final exportService = PremiumVideoExportService(
-      processRunner: (_, __) async => ProcessResult(0, 1, '', 'ffmpeg missing'),
+      processRunner: (_, _) async => ProcessResult(0, 1, '', 'ffmpeg missing'),
     );
 
     final plan = exportService.buildPlan(

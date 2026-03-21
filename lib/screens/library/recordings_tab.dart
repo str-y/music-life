@@ -3,23 +3,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/providers/recording_playback_provider.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/widgets/shared/status_message_view.dart';
 import 'package:music_life/widgets/shared/waveform_view.dart';
+import 'package:path/path.dart' as p;
+import 'package:share_plus/share_plus.dart';
 // ---------------------------------------------------------------------------
 // Recordings tab
 // ---------------------------------------------------------------------------
 
 class RecordingsTab extends ConsumerStatefulWidget {
   const RecordingsTab({
-    super.key,
-    required this.recordings,
+    required this.recordings, super.key,
     this.onCreateRecording,
   });
 
@@ -76,7 +74,7 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
       return;
     }
     final nextVisibleCount =
-        (_visibleCount + _pageSize).clamp(0, _sorted.length).toInt();
+        (_visibleCount + _pageSize).clamp(0, _sorted.length);
     if (nextVisibleCount == _visibleCount) {
       return;
     }
@@ -136,7 +134,7 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
       padding: const EdgeInsets.symmetric(vertical: 8),
 
       itemCount: _visibleCount,
-      separatorBuilder: (_, __) => const Divider(height: 1),
+      separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final entry = _sorted[index];
         final isActive = playback.activeRecordingId == entry.id;
@@ -157,14 +155,7 @@ class _RecordingsTabState extends ConsumerState<RecordingsTab> {
 
 class RecordingTile extends StatelessWidget {
   const RecordingTile({
-    super.key,
-    required this.entry,
-    required this.isPlaying,
-    required this.progress,
-    required this.volume,
-    required this.onPlayPause,
-    required this.onSeek,
-    required this.onVolumeChanged,
+    required this.entry, required this.isPlaying, required this.progress, required this.volume, required this.onPlayPause, required this.onSeek, required this.onVolumeChanged, super.key,
     this.onShare,
   });
 
@@ -219,11 +210,11 @@ class RecordingTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final dateFormat = DateFormat.yMd(locale).add_Hm();
-    final canPlay = entry.audioFilePath?.isNotEmpty == true;
+    final canPlay = entry.audioFilePath?.isNotEmpty ?? false;
     final canShare = canPlay;
     final isActive = onSeek != null;
 
-    final VoidCallback shareHandler = onShare ?? () { _shareRecording(context); };
+    final shareHandler = onShare ?? () { _shareRecording(context); };
 
     return Column(
       mainAxisSize: MainAxisSize.min,

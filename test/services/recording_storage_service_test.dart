@@ -54,7 +54,7 @@ void main() {
       final service = RecordingStorageService(
         gateway: _StubRecordingStorageGateway(
           directoryPath: '/tmp/recordings',
-          onVerifyWritableSpace: (_, __) async {
+          onVerifyWritableSpace: (_, _) async {
             throw const FileSystemException('disk full');
           },
         ),
@@ -89,7 +89,7 @@ void main() {
       final service = RecordingStorageService(
         gateway: _StubRecordingStorageGateway(
           directoryPath: tempDir.path,
-          onVerifyWritableSpace: (_, __) async {},
+          onVerifyWritableSpace: (_, _) async {},
         ),
       );
 

@@ -2,211 +2,267 @@
 
 part of 'routes.dart';
 
+// **************************************************************************
+// GoRouterGenerator
+// **************************************************************************
+
 List<RouteBase> get $appRoutes => [
-      $homeRoute,
-      $tunerRoute,
-      $practiceLogRoute,
-      $libraryRoute,
-      $recordingsRoute,
-      $libraryLogsRoute,
-      $rhythmRoute,
-      $chordAnalyserRoute,
-      $compositionHelperRoute,
-      $videoPracticeRoute,
-    ];
+  $homeRoute,
+  $tunerRoute,
+  $practiceLogRoute,
+  $libraryRoute,
+  $recordingsRoute,
+  $libraryLogsRoute,
+  $rhythmRoute,
+  $chordAnalyserRoute,
+  $compositionHelperRoute,
+  $videoPracticeRoute,
+];
 
-RouteBase get $homeRoute => GoRouteData.$route(
-      path: '/',
-      factory: $HomeRouteExtension._fromState,
-    );
+RouteBase get $homeRoute =>
+    GoRouteData.$route(path: '/', factory: $HomeRoute._fromState);
 
-extension $HomeRouteExtension on HomeRoute {
+mixin $HomeRoute on GoRouteData {
   static HomeRoute _fromState(GoRouterState state) => const HomeRoute();
 
+  @override
   String get location => GoRouteData.$location('/');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
-RouteBase get $tunerRoute => GoRouteData.$route(
-      path: '/tuner',
-      factory: $TunerRouteExtension._fromState,
-    );
+RouteBase get $tunerRoute =>
+    GoRouteData.$route(path: '/tuner', factory: $TunerRoute._fromState);
 
-extension $TunerRouteExtension on TunerRoute {
+mixin $TunerRoute on GoRouteData {
   static TunerRoute _fromState(GoRouterState state) => const TunerRoute();
 
+  @override
   String get location => GoRouteData.$location('/tuner');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $practiceLogRoute => GoRouteData.$route(
-      path: '/practice-log',
-      factory: $PracticeLogRouteExtension._fromState,
-    );
+  path: '/practice-log',
+  factory: $PracticeLogRoute._fromState,
+);
 
-extension $PracticeLogRouteExtension on PracticeLogRoute {
+mixin $PracticeLogRoute on GoRouteData {
   static PracticeLogRoute _fromState(GoRouterState state) =>
       const PracticeLogRoute();
 
+  @override
   String get location => GoRouteData.$location('/practice-log');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
-RouteBase get $libraryRoute => GoRouteData.$route(
-      path: '/library',
-      factory: $LibraryRouteExtension._fromState,
-    );
+RouteBase get $libraryRoute =>
+    GoRouteData.$route(path: '/library', factory: $LibraryRoute._fromState);
 
-extension $LibraryRouteExtension on LibraryRoute {
+mixin $LibraryRoute on GoRouteData {
   static LibraryRoute _fromState(GoRouterState state) => const LibraryRoute();
 
+  @override
   String get location => GoRouteData.$location('/library');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $recordingsRoute => GoRouteData.$route(
-      path: '/recordings',
-      factory: $RecordingsRouteExtension._fromState,
-    );
+  path: '/recordings',
+  factory: $RecordingsRoute._fromState,
+);
 
-extension $RecordingsRouteExtension on RecordingsRoute {
+mixin $RecordingsRoute on GoRouteData {
   static RecordingsRoute _fromState(GoRouterState state) =>
       const RecordingsRoute();
 
+  @override
   String get location => GoRouteData.$location('/recordings');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $libraryLogsRoute => GoRouteData.$route(
-      path: '/library/logs',
-      factory: $LibraryLogsRouteExtension._fromState,
-    );
+  path: '/library/logs',
+  factory: $LibraryLogsRoute._fromState,
+);
 
-extension $LibraryLogsRouteExtension on LibraryLogsRoute {
+mixin $LibraryLogsRoute on GoRouteData {
   static LibraryLogsRoute _fromState(GoRouterState state) =>
       const LibraryLogsRoute();
 
+  @override
   String get location => GoRouteData.$location('/library/logs');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
-RouteBase get $rhythmRoute => GoRouteData.$route(
-      path: '/rhythm',
-      factory: $RhythmRouteExtension._fromState,
-    );
+RouteBase get $rhythmRoute =>
+    GoRouteData.$route(path: '/rhythm', factory: $RhythmRoute._fromState);
 
-extension $RhythmRouteExtension on RhythmRoute {
+mixin $RhythmRoute on GoRouteData {
   static RhythmRoute _fromState(GoRouterState state) => const RhythmRoute();
 
+  @override
   String get location => GoRouteData.$location('/rhythm');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $chordAnalyserRoute => GoRouteData.$route(
-      path: '/chord-analyser',
-      factory: $ChordAnalyserRouteExtension._fromState,
-    );
+  path: '/chord-analyser',
+  factory: $ChordAnalyserRoute._fromState,
+);
 
-extension $ChordAnalyserRouteExtension on ChordAnalyserRoute {
+mixin $ChordAnalyserRoute on GoRouteData {
   static ChordAnalyserRoute _fromState(GoRouterState state) =>
       const ChordAnalyserRoute();
 
+  @override
   String get location => GoRouteData.$location('/chord-analyser');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $compositionHelperRoute => GoRouteData.$route(
-      path: '/composition-helper',
-      factory: $CompositionHelperRouteExtension._fromState,
-    );
+  path: '/composition-helper',
+  factory: $CompositionHelperRoute._fromState,
+);
 
-extension $CompositionHelperRouteExtension on CompositionHelperRoute {
+mixin $CompositionHelperRoute on GoRouteData {
   static CompositionHelperRoute _fromState(GoRouterState state) =>
       const CompositionHelperRoute();
 
+  @override
   String get location => GoRouteData.$location('/composition-helper');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $videoPracticeRoute => GoRouteData.$route(
-      path: '/video-practice',
-      factory: $VideoPracticeRouteExtension._fromState,
-    );
+  path: '/video-practice',
+  factory: $VideoPracticeRoute._fromState,
+);
 
-extension $VideoPracticeRouteExtension on VideoPracticeRoute {
+mixin $VideoPracticeRoute on GoRouteData {
   static VideoPracticeRoute _fromState(GoRouterState state) =>
       const VideoPracticeRoute();
 
+  @override
   String get location => GoRouteData.$location('/video-practice');
 
+  @override
   void go(BuildContext context) => context.go(location);
 
+  @override
   Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
-  void pushReplacement(BuildContext context) => context.pushReplacement(location);
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
 
+  @override
   void replace(BuildContext context) => context.replace(location);
 }

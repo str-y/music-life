@@ -5,7 +5,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/library_screen.dart';
-import 'package:music_life/widgets/shared/waveform_view.dart';
 import 'golden_test_utils.dart';
 
 void main() {
@@ -27,15 +26,15 @@ void main() {
     });
 
     test('downsamples by averaging buckets and clamps values', () {
-      final result = downsampleWaveform(<double>[0.0, 0.5, 1.0, 1.5], 2);
+      final result = downsampleWaveform(<double>[0, 0.5, 1, 1.5], 2);
 
-      expect(result, equals(<double>[0.25, 1.0]));
+      expect(result, equals(<double>[0.25, 1]));
     });
 
     test('clamps averages above 1.0 to 1.0', () {
-      final result = downsampleWaveform(<double>[0.0, 2.0, 3.0, 1.0], 2);
+      final result = downsampleWaveform(<double>[0, 2, 3, 1], 2);
 
-      expect(result, equals(<double>[1.0, 1.0]));
+      expect(result, equals(<double>[1, 1]));
     });
   });
 
@@ -46,25 +45,25 @@ void main() {
 
     test('downsamples live amplitude data to target points', () {
       final result = buildLiveWaveformPreview(
-        <double>[0.0, 0.5, 1.0, 1.0],
+        <double>[0, 0.5, 1, 1],
         targetPoints: 2,
       );
 
-      expect(result, equals(<double>[0.25, 1.0]));
+      expect(result, equals(<double>[0.25, 1]));
     });
   });
 
   group('LibraryScreen adaptive layout', () {
     testWidgets('shows side-by-side layout on large screens', (tester) async {
       final repo = _MockRecordingRepository();
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+      when(repo.loadRecordings).thenAnswer((_) async => const []);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => const []);
 
       await tester.binding.setSurfaceSize(const Size(1200, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_wrapLibraryScreen(repo));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.byKey(const ValueKey('library-wide-layout')), findsOneWidget);
       expect(find.byType(TabBar), findsNothing);
@@ -72,14 +71,14 @@ void main() {
 
     testWidgets('keeps tab layout on compact screens', (tester) async {
       final repo = _MockRecordingRepository();
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+      when(repo.loadRecordings).thenAnswer((_) async => const []);
+      when(repo.loadPracticeLogs).thenAnswer((_) async => const []);
 
       await tester.binding.setSurfaceSize(const Size(600, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_wrapLibraryScreen(repo));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.byType(TabBar), findsOneWidget);
       expect(find.byKey(const ValueKey('library-wide-layout')), findsNothing);
@@ -89,8 +88,8 @@ void main() {
       testWidgets('matches compact layout golden baseline (${variant.name})',
           (tester) async {
         final repo = _MockRecordingRepository();
-        when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-        when(() => repo.loadPracticeLogs()).thenAnswer((_) async => const []);
+        when(repo.loadRecordings).thenAnswer((_) async => const []);
+        when(repo.loadPracticeLogs).thenAnswer((_) async => const []);
 
         await prepareGoldenSurface(tester);
 
@@ -99,7 +98,7 @@ void main() {
           locale: variant.locale,
           themeMode: variant.themeMode,
         ));
-        await tester.pumpAndSettle();
+        for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
         await expectScreenGolden(
           find.byType(LibraryScreen),

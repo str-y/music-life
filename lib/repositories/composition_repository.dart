@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:music_life/config/app_config.dart';
 import 'package:music_life/data/app_database.dart';
 import 'package:music_life/services/service_error_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // ── Data model ────────────────────────────────────────────────────────────────
 
 /// Represents a saved composition and its chord progression.
@@ -17,6 +16,13 @@ class Composition {
     required this.chords,
   });
 
+  factory Composition.fromJson(Map<String, dynamic> json) => Composition(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        chords:
+            (json['chords'] as List).map((e) => e as String).toList(),
+      );
+
   final String id;
   final String title;
   final List<String> chords;
@@ -26,13 +32,6 @@ class Composition {
         'title': title,
         'chords': chords,
       };
-
-  factory Composition.fromJson(Map<String, dynamic> json) => Composition(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        chords:
-            (json['chords'] as List).map((e) => e as String).toList(),
-      );
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -92,14 +91,14 @@ class CompositionRepository {
 
   Future<void> _migrateIfNeeded() async {
     // Already completed successfully in this session.
-    if (_migrationCompleter?.isCompleted == true) return;
+    if (_migrationCompleter?.isCompleted ?? false) return;
     // Migration is already in progress – join it instead of starting another.
     if (_migrationCompleter != null) return _migrationCompleter!.future;
 
     _migrationCompleter = Completer<void>();
-    _migrationCompleter!.future.catchError((_, __) {});
+    _migrationCompleter!.future.catchError((_, _) {});
     try {
-      if (_prefs.getBool(_config.compositionsMigratedStorageKey) == true) {
+      if (_prefs.getBool(_config.compositionsMigratedStorageKey) ?? false) {
         _migrationCompleter!.complete();
         return;
       }
@@ -173,9 +172,9 @@ class CompositionRepository {
       final rows = await _store.queryAllCompositions();
       return rows
           .map((row) => Composition(
-                id: row['id'] as String,
-                title: row['title'] as String,
-                chords: (jsonDecode(row['chords'] as String) as List)
+                id: row['id']! as String,
+                title: row['title']! as String,
+                chords: (jsonDecode(row['chords']! as String) as List)
                     .map((e) => e as String)
                     .toList(),
               ))

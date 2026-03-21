@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
-
 import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/widgets/mic_permission_denied_view.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum _GateStatus { loading, denied, granted }
 
@@ -13,8 +12,7 @@ enum _GateStatus { loading, denied, granted }
 /// displayed instead.  The [child] is rendered only once permission is granted.
 class MicPermissionGate extends StatefulWidget {
   const MicPermissionGate({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.permissionService = defaultPermissionService,
   });
 

@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-
 import 'package:music_life/models/premium_video_export.dart';
+import 'package:path/path.dart' as p;
 typedef PremiumVideoProcessRunner =
     Future<ProcessResult> Function(String executable, List<String> arguments);
 
@@ -31,9 +30,9 @@ class PremiumVideoExportPlan {
   final bool showLogo;
   final List<String> ffmpegArguments;
 
-  String get resolutionLabel => '${renderWidth}×$renderHeight';
+  String get resolutionLabel => '$renderWidth×$renderHeight';
 
-  String get bitrateLabel => '${videoBitrateMbps} Mbps';
+  String get bitrateLabel => '$videoBitrateMbps Mbps';
 
   String get ffmpegCommandLine => ffmpegArguments.join(' ');
 }
@@ -55,7 +54,7 @@ class PremiumVideoExportService {
     final waveformColorHex = _formatColorForFfmpeg(settings.waveformColorValue);
     final outputVideoPath = _buildOutputPath(sourceVideoPath, settings.quality);
     final logoFilter = settings.showLogo
-        ? ',drawtext=text=\'music-life\':fontcolor=white:fontsize=42:'
+        ? ",drawtext=text='music-life':fontcolor=white:fontsize=42:"
             'x=w-tw-56:y=72:box=1:boxcolor=black@0.28:boxborderw=18'
         : '';
     final filterComplex =

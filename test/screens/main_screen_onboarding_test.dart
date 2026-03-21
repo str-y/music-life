@@ -11,6 +11,7 @@ import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/utils/app_logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'golden_test_utils.dart';
 
 const String _onboardingShownKey = 'onboarding_completed_v2';
@@ -18,7 +19,7 @@ Future<void> _pumpApp(
   WidgetTester tester, {
   Map<String, Object> initialValues = const <String, Object>{},
   PermissionService testPermissionService = defaultPermissionService,
-  List<dynamic> overrides = const <dynamic>[],
+  List<Override> overrides = const <Override>[],
 }) async {
   SharedPreferences.setMockInitialValues(initialValues);
   final prefs = await SharedPreferences.getInstance();
@@ -32,7 +33,7 @@ Future<void> _pumpApp(
       child: const MusicLifeApp(),
     ),
   );
-  await tester.pumpAndSettle();
+  for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 }
 
 void main() {
@@ -47,18 +48,18 @@ void main() {
       expect(prefs.getBool(_onboardingShownKey), isNull);
 
       await tester.tap(find.byKey(const ValueKey('onboarding-next')));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Enable microphone access'), findsOneWidget);
       expect(prefs.getBool(_onboardingShownKey), isNull);
 
       await tester.tap(find.byKey(const ValueKey('onboarding-skip-permission')));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('How to use Music Life'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('onboarding-finish')));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(prefs.getBool(_onboardingShownKey), isTrue);
       expect(find.byType(AlertDialog), findsNothing);
@@ -79,10 +80,10 @@ void main() {
       await _pumpApp(tester, testPermissionService: permissionService);
 
       await tester.tap(find.byKey(const ValueKey('onboarding-next')));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.byKey(const ValueKey('onboarding-request-permission')));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.text(
@@ -124,8 +125,8 @@ void main() {
         (tester) async {
       final repo = _MockRecordingRepository();
       final now = DateTime.now();
-      when(() => repo.loadRecordings()).thenAnswer((_) async => const []);
-      when(() => repo.loadPracticeLogs()).thenAnswer(
+      when(repo.loadRecordings).thenAnswer((_) async => const []);
+      when(repo.loadPracticeLogs).thenAnswer(
         (_) async => [
           PracticeLogEntry(date: now, durationMinutes: 20),
           PracticeLogEntry(date: now, durationMinutes: 15),
@@ -162,7 +163,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Settings'), findsOneWidget);
       expect(
@@ -171,9 +172,9 @@ void main() {
       );
 
       await tester.tap(find.text('System default'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       await tester.tap(find.text('日本語').last);
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('設定'), findsOneWidget);
 
@@ -192,13 +193,13 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Developer Settings'), findsOneWidget);
       expect(find.text('Recent logs'), findsOneWidget);
 
       await tester.tap(find.text('Recent logs'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.textContaining('Settings log entry'), findsOneWidget);
     });
@@ -210,7 +211,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Help & Feedback'), findsOneWidget);
       expect(find.byKey(const ValueKey('settings-report-bug')), findsOneWidget);
@@ -247,7 +248,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.byKey(const ValueKey('settings-dynamic-theme-mode-selector')),
@@ -259,15 +260,15 @@ void main() {
       );
 
       await tester.tap(find.text('Chill'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       await tester.tap(find.text('Intense').last);
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.drag(
         find.byKey(const ValueKey('settings-dynamic-theme-intensity-slider')),
         const Offset(400, 0),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -287,7 +288,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.byKey(const ValueKey('settings-haptic-feedback-toggle')),
@@ -295,7 +296,7 @@ void main() {
       );
 
       await tester.tap(find.text('Haptic feedback'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -311,7 +312,7 @@ void main() {
         initialValues: const <String, Object>{_onboardingShownKey: true},
       );
 
-      MaterialApp app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      var app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeAnimationDuration, const Duration(milliseconds: 250));
       expect(app.themeAnimationCurve, Curves.easeOutCubic);
       expect(app.theme!.dialogTheme.backgroundColor, app.theme!.colorScheme.surface);
@@ -322,12 +323,12 @@ void main() {
       expect(app.themeMode, ThemeMode.system);
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.text('Follow system theme'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
       await tester.tap(find.text('Dark mode'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeMode, ThemeMode.dark);
@@ -349,7 +350,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Premium cloud sync'), findsOneWidget);
       expect(
@@ -371,7 +372,7 @@ void main() {
       );
 
       await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Cloud sync & backup'), findsOneWidget);
       expect(find.byKey(const ValueKey('settings-cloud-sync-toggle')), findsOneWidget);

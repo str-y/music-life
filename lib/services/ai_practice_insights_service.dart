@@ -20,15 +20,15 @@ class AiPracticeScorePoint {
     required this.score,
   });
 
-  final String label;
-  final int score;
-
   factory AiPracticeScorePoint.fromJson(Map<String, dynamic> json) {
     return AiPracticeScorePoint(
       label: json['label'] as String? ?? '',
       score: _clampScore((json['score'] as num?) ?? 0),
     );
   }
+
+  final String label;
+  final int score;
 
   Map<String, Object> toJson() => {
         'label': label,
@@ -45,13 +45,6 @@ class AiPracticeInsight {
     required this.weeklyMenu,
     required this.coachingNotification,
   });
-
-  final String providerLabel;
-  final String headline;
-  final List<AiPracticeScorePoint> pitchStabilitySeries;
-  final List<AiPracticeScorePoint> rhythmAccuracySeries;
-  final List<String> weeklyMenu;
-  final String coachingNotification;
 
   factory AiPracticeInsight.fromJson(Map<String, dynamic> json) {
     return AiPracticeInsight(
@@ -72,6 +65,13 @@ class AiPracticeInsight {
       coachingNotification: json['coachingNotification'] as String? ?? '',
     );
   }
+
+  final String providerLabel;
+  final String headline;
+  final List<AiPracticeScorePoint> pitchStabilitySeries;
+  final List<AiPracticeScorePoint> rhythmAccuracySeries;
+  final List<String> weeklyMenu;
+  final String coachingNotification;
 }
 
 abstract class AiPracticeInsightsService {
@@ -179,7 +179,7 @@ class HybridAiPracticeInsightsService implements AiPracticeInsightsService {
       if (choices.isEmpty) return null;
       final message = choices.first as Map<String, dynamic>;
       final content =
-          ((message['message'] as Map<String, dynamic>?)?['content']) as String?;
+          (message['message'] as Map<String, dynamic>?)?['content'] as String?;
       return _parseRemoteInsight(content, localeCode: localeCode);
     } finally {
       client.close(force: true);
@@ -226,7 +226,7 @@ class HybridAiPracticeInsightsService implements AiPracticeInsightsService {
       final candidates = payload['candidates'] as List<dynamic>? ?? const [];
       if (candidates.isEmpty) return null;
       final content = candidates.first as Map<String, dynamic>;
-      final parts = ((content['content'] as Map<String, dynamic>?)?['parts'])
+      final parts = (content['content'] as Map<String, dynamic>?)?['parts']
               as List<dynamic>? ??
           const [];
       if (parts.isEmpty) return null;
@@ -300,7 +300,7 @@ AiPracticeInsight _buildHeuristicInsight({
         ? 0.58 + (minutes.clamp(0, 45) / 45) * 0.18
         : dayRecordings
                 .map((entry) => _waveformStability(entry.waveformData))
-                .fold<double>(0.0, (sum, value) => sum + value) /
+                .fold<double>(0, (sum, value) => sum + value) /
             dayRecordings.length;
 
     final pitchScore = _clampScore(
@@ -430,7 +430,7 @@ double _averageScore(List<AiPracticeScorePoint> series) {
   return total / series.length;
 }
 
-int _clampScore(num value) => value.round().clamp(0, 100).toInt();
+int _clampScore(num value) => value.round().clamp(0, 100);
 
 List<String> _buildEnglishMenu({
   required double averagePitch,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/repositories/recording_repository.dart';
@@ -24,7 +24,7 @@ void main() {
       await tester.pumpWidget(_wrap(
         const RecordingsTab(recordings: []),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Your recording library is ready'), findsOneWidget);
       expect(
@@ -45,7 +45,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.text('Start your first recording'));
       await tester.pump();
@@ -58,14 +58,14 @@ void main() {
         RecordingEntry(
           id: '1',
           title: 'My First Take',
-          recordedAt: DateTime(2024, 1, 10, 9, 0),
+          recordedAt: DateTime(2024, 1, 10, 9),
           durationSeconds: 90,
           waveformData: const [0.2, 0.8, 0.4],
         ),
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('My First Take'), findsOneWidget);
     });
@@ -82,7 +82,7 @@ void main() {
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('01:05'), findsOneWidget);
     });
@@ -105,7 +105,7 @@ void main() {
           locale: const Locale('ja'),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(
         find.text(DateFormat.yMd('ja').add_Hm().format(recordedAt)),
@@ -119,7 +119,7 @@ void main() {
         RecordingEntry(
           id: '1',
           title: 'Take A',
-          recordedAt: DateTime(2024, 5, 1),
+          recordedAt: DateTime(2024, 5),
           durationSeconds: 30,
           waveformData: const [],
         ),
@@ -133,7 +133,7 @@ void main() {
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('Take A'), findsOneWidget);
       expect(find.text('Take B'), findsOneWidget);
@@ -144,7 +144,7 @@ void main() {
         RecordingEntry(
           id: 'older',
           title: 'Older',
-          recordedAt: DateTime(2024, 5, 1),
+          recordedAt: DateTime(2024, 5),
           durationSeconds: 30,
           waveformData: const [0.1],
         ),
@@ -158,7 +158,7 @@ void main() {
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       final titleTexts = tester
           .widgetList<Text>(
@@ -187,7 +187,7 @@ void main() {
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.byIcon(Icons.play_circle), findsOneWidget);
       expect(find.byIcon(Icons.pause_circle), findsNothing);
@@ -205,7 +205,6 @@ void main() {
       final base = WaveformPainter(
         data: sameData,
         color: Colors.blue,
-        breathPhase: 0.0,
       );
 
       expect(
@@ -213,7 +212,6 @@ void main() {
           WaveformPainter(
             data: sameData,
             color: Colors.blue,
-            breathPhase: 0.0,
           ),
         ),
         isFalse,
@@ -233,7 +231,6 @@ void main() {
           WaveformPainter(
             data: sameData,
             color: Colors.red,
-            breathPhase: 0.0,
           ),
         ),
         isTrue,
@@ -247,20 +244,20 @@ void main() {
         RecordingEntry(
           id: '1',
           title: 'Cache Target',
-          recordedAt: DateTime(2024, 5, 1),
+          recordedAt: DateTime(2024, 5),
           durationSeconds: 30,
           waveformData: const [0.2, 0.8, 0.4],
         ),
       ];
 
       await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(WaveformPainter.pathCacheSize, greaterThan(0));
       expect(WaveformPainter.pictureCacheSize, greaterThan(0));
 
       await tester.pumpWidget(_wrap(const SizedBox.shrink()));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(WaveformPainter.pathCacheSize, 0);
       expect(WaveformPainter.pictureCacheSize, 0);
@@ -283,7 +280,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(WaveformPainter.pathCacheSize, 1);
       expect(WaveformPainter.pictureCacheSize, 1);
@@ -301,7 +298,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(WaveformPainter.pathCacheSize, 1);
       expect(WaveformPainter.pictureCacheSize, 1);
@@ -335,7 +332,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       await tester.tap(find.byIcon(Icons.share));
       await tester.pump();
@@ -366,21 +363,21 @@ void main() {
       (index) => RecordingEntry(
         id: '$index',
         title: 'Take ${index.toString().padLeft(2, '0')}',
-        recordedAt: DateTime(2024, 5, 1).add(Duration(minutes: index)),
+        recordedAt: DateTime(2024, 5).add(Duration(minutes: index)),
         durationSeconds: 30,
         waveformData: const [0.1, 0.2, 0.3],
       ),
     );
 
     await tester.pumpWidget(_wrap(RecordingsTab(recordings: recordings)));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final initialListView = tester.widget<ListView>(find.byType(ListView));
     // 40 visible recordings render as 40 tiles plus 39 separators.
     expect(initialListView.childrenDelegate.estimatedChildCount, 79);
 
     await tester.drag(find.byType(ListView), const Offset(0, -5000));
-    await tester.pumpAndSettle();
+    for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
     final pagedListView = tester.widget<ListView>(find.byType(ListView));
     // After scrolling, all 45 recordings are visible with 44 separators.

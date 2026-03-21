@@ -3,15 +3,7 @@ import 'package:music_life/l10n/app_localizations.dart';
 
 class MetronomeBpmControls extends StatelessWidget {
   const MetronomeBpmControls({
-    super.key,
-    required this.bpm,
-    required this.isPlaying,
-    required this.beatPulseAnimation,
-    required this.onDecrease10,
-    required this.onDecrease1,
-    required this.onTogglePlayStop,
-    required this.onIncrease1,
-    required this.onIncrease10,
+    required this.bpm, required this.isPlaying, required this.beatPulseAnimation, required this.onDecrease10, required this.onDecrease1, required this.onTogglePlayStop, required this.onIncrease1, required this.onIncrease10, super.key,
   });
 
   final int bpm;

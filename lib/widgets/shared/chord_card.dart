@@ -7,8 +7,7 @@ import 'package:flutter/material.dart';
 /// [child] to adapt the shared surface to each screen's content layout.
 class ChordCard extends StatelessWidget {
   const ChordCard({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.highlighted = false,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
     this.margin,

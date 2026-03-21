@@ -35,7 +35,6 @@ enum AppFlavor {
 }
 
 class AppConfig {
-  static const String flavorEnvironmentKey = 'APP_FLAVOR';
 
   const AppConfig({
     this.flavor = AppFlavor.prod,
@@ -111,7 +110,7 @@ class AppConfig {
         flavor: AppFlavor.dev,
         apiBaseUrl: defaultDevApiBaseUrl,
         logLevel: AppLogLevel.debug,
-        audioNotificationChannelId: '${defaultAudioNotificationChannelId}.dev',
+        audioNotificationChannelId: '$defaultAudioNotificationChannelId.dev',
         audioNotificationChannelName: 'Music Life Dev Playback',
         recordingsStorageKey: 'dev_$defaultRecordingsStorageKey',
         practiceLogsStorageKey: 'dev_$defaultPracticeLogsStorageKey',
@@ -161,7 +160,7 @@ class AppConfig {
         apiBaseUrl: defaultStagingApiBaseUrl,
         logLevel: AppLogLevel.info,
         audioNotificationChannelId:
-            '${defaultAudioNotificationChannelId}.staging',
+            '$defaultAudioNotificationChannelId.staging',
         audioNotificationChannelName: 'Music Life Staging Playback',
         recordingsStorageKey: 'staging_$defaultRecordingsStorageKey',
         practiceLogsStorageKey: 'staging_$defaultPracticeLogsStorageKey',
@@ -231,6 +230,7 @@ class AppConfig {
         return AppConfig.prod();
     }
   }
+  static const String flavorEnvironmentKey = 'APP_FLAVOR';
 
   static const String defaultApiBaseUrl = 'https://api.musiclife.app';
   static const String defaultDevApiBaseUrl = 'https://dev.api.musiclife.app';

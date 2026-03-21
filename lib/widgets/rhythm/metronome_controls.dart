@@ -22,14 +22,7 @@ typedef UpdateMetronomeSettingsCallback =
 
 class MetronomeControls extends ConsumerWidget {
   const MetronomeControls({
-    super.key,
-    required this.timeSignatureNumerators,
-    required this.timeSignatureDenominators,
-    required this.beatPulseAnimation,
-    required this.onPresetApplied,
-    required this.onSavePreset,
-    required this.onChangeBpm,
-    required this.onUpdateMetronomeSettings,
+    required this.timeSignatureNumerators, required this.timeSignatureDenominators, required this.beatPulseAnimation, required this.onPresetApplied, required this.onSavePreset, required this.onChangeBpm, required this.onUpdateMetronomeSettings, super.key,
   });
 
   final List<int> timeSignatureNumerators;

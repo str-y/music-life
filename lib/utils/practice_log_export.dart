@@ -35,7 +35,7 @@ Uint8List buildPracticeLogPdf(List<PracticeLogEntry> entries) {
         .map((r) => (r >= 0x20 && r <= 0x7e) ? String.fromCharCode(r) : '?')
         .join();
     return asciiOnly
-        .replaceAll('\\', r'\\')
+        .replaceAll(r'\', r'\\')
         .replaceAll('(', r'\(')
         .replaceAll(')', r'\)');
   }
@@ -66,7 +66,7 @@ Uint8List buildPracticeLogPdf(List<PracticeLogEntry> entries) {
     '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
     '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
     '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    '5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n${content.toString()}endstream\nendobj\n',
+    '5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n${content}endstream\nendobj\n',
   ];
 
   final output = BytesBuilder();

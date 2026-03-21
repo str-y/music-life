@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:music_life/l10n/app_localizations.dart';
-import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/app_settings_controllers.dart';
+import 'package:music_life/providers/app_settings_provider.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/providers/library_provider.dart';
 import 'package:music_life/repositories/settings_repository.dart';
@@ -14,9 +11,11 @@ import 'package:music_life/services/ad_service.dart';
 import 'package:music_life/services/permission_service.dart';
 import 'package:music_life/services/review_service.dart';
 import 'package:music_life/services/service_error_handler.dart';
-import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/theme/dynamic_theme_mode.dart';
+import 'package:music_life/utils/app_logger.dart';
 import 'package:music_life/widgets/shared/banner_ad_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 const String _privacyPolicyUrl =
     'https://str-y.github.io/music-life/privacy-policy';
 const String _repositoryUrl = 'https://github.com/str-y/music-life';
@@ -105,7 +104,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   Future<void> _showOnboardingIfNeeded() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    if (prefs.getBool(_onboardingShownKey) == true || !mounted) return;
+    if ((prefs.getBool(_onboardingShownKey) ?? false) || !mounted) return;
     final completed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -113,7 +112,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
         permissionService: ref.read(permissionServiceProvider),
       ),
     );
-    if (completed == true) {
+    if (completed ?? false) {
       await prefs.setBool(_onboardingShownKey, true);
     }
   }
@@ -467,7 +466,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
                     icon: Icons.tune,
                     title: l10n.tunerTitle,
                     subtitle: l10n.tunerSubtitle,
-                    delay: 0.0,
+                    delay: 0,
                     animation: _entranceCurve,
                     onTap: () =>
                         _showAdAndPush(() => const TunerRoute().push(context)),
@@ -630,7 +629,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
           child: Text(l10n.onboardingSkipPermission),
         ),
       );
-      if (_permissionStatus?.isPermanentlyDenied == true) {
+      if (_permissionStatus?.isPermanentlyDenied ?? false) {
         actions.add(
           FilledButton.tonal(
             key: const ValueKey('onboarding-open-settings'),
@@ -644,7 +643,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
             key: const ValueKey('onboarding-request-permission'),
             onPressed: _isRequestingPermission
                 ? null
-                : (_permissionStatus?.isGranted == true
+                : (_permissionStatus?.isGranted ?? false
                     ? _goToNextStep
                     : _requestMicrophonePermission),
             child: _isRequestingPermission
@@ -653,7 +652,7 @@ class _OnboardingDialogState extends State<_OnboardingDialog> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    _permissionStatus?.isGranted == true
+                    _permissionStatus?.isGranted ?? false
                         ? l10n.onboardingContinue
                         : l10n.onboardingAllowMicrophone,
                   ),
@@ -790,7 +789,7 @@ class _OnboardingPermissionStep extends StatelessWidget {
           const SizedBox(height: 12),
           const LinearProgressIndicator(),
         ],
-        if (permissionStatus?.isPermanentlyDenied == true) ...[
+        if (permissionStatus?.isPermanentlyDenied ?? false) ...[
           const SizedBox(height: 12),
           Text(
             l10n.onboardingMicrophoneSettingsHint,
@@ -1018,9 +1017,7 @@ class _StreakSummaryMetric extends StatelessWidget {
 
 class _CountUpMetricText extends StatelessWidget {
   const _CountUpMetricText({
-    super.key,
-    required this.value,
-    required this.formatter,
+    required this.value, required this.formatter, super.key,
   });
 
   final int value;
@@ -1158,7 +1155,7 @@ class _FeatureTileState extends State<_FeatureTile> {
       parent: widget.animation,
       curve: Interval(
         widget.delay.clamp(0.0, _maxAnimationDelayFraction),
-        1.0,
+        1,
         curve: Curves.easeOutCubic,
       ),
     );
@@ -1174,7 +1171,7 @@ class _FeatureTileState extends State<_FeatureTile> {
         parent: widget.animation,
         curve: Interval(
           widget.delay.clamp(0.0, _maxAnimationDelayFraction),
-          1.0,
+          1,
           curve: Curves.easeOutCubic,
         ),
       );
@@ -1257,16 +1254,6 @@ class _FeatureTileState extends State<_FeatureTile> {
 }
 
 class _SettingsModal extends StatefulWidget {
-  final AppSettings settings;
-  final bool isRewardedPremiumUnlocked;
-  final ValueChanged<AppSettings> onChanged;
-  final Future<void> Function() onUnlockPremiumWithRewardedAd;
-  final Future<void> Function() onExportBackup;
-  final Future<void> Function() onImportBackup;
-  final Future<DateTime?> Function(bool enabled) onSetCloudSyncEnabled;
-  final Future<DateTime?> Function() onSyncCloudBackupNow;
-  final Future<void> Function() onRestoreCloudBackup;
-  final Future<void> Function() onRequestReview;
 
   const _SettingsModal({
     required this.settings,
@@ -1280,6 +1267,16 @@ class _SettingsModal extends StatefulWidget {
     required this.onRestoreCloudBackup,
     required this.onRequestReview,
   });
+  final AppSettings settings;
+  final bool isRewardedPremiumUnlocked;
+  final ValueChanged<AppSettings> onChanged;
+  final Future<void> Function() onUnlockPremiumWithRewardedAd;
+  final Future<void> Function() onExportBackup;
+  final Future<void> Function() onImportBackup;
+  final Future<DateTime?> Function(bool enabled) onSetCloudSyncEnabled;
+  final Future<DateTime?> Function() onSyncCloudBackupNow;
+  final Future<void> Function() onRestoreCloudBackup;
+  final Future<void> Function() onRequestReview;
 
   @override
   State<_SettingsModal> createState() => _SettingsModalState();
@@ -1323,7 +1320,7 @@ class _SettingsModalState extends State<_SettingsModal> {
 
   Future<void> _showRecentLogs(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final recentLogs = AppLogger.recentBufferedLogs(limit: 50);
+    final recentLogs = AppLogger.recentBufferedLogs();
     return showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1379,7 +1376,7 @@ class _SettingsModalState extends State<_SettingsModal> {
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               key: const ValueKey('settings-language-selector'),
-              value: _local.localeCode ?? '',
+              initialValue: _local.localeCode ?? '',
               decoration: InputDecoration(
                 labelText: l10n.languageLabel,
               ),
@@ -1432,7 +1429,7 @@ class _SettingsModalState extends State<_SettingsModal> {
               ),
             DropdownButtonFormField<DynamicThemeMode>(
               key: const ValueKey('settings-dynamic-theme-mode-selector'),
-              value: _local.dynamicThemeMode,
+              initialValue: _local.dynamicThemeMode,
               decoration: InputDecoration(
                 labelText: l10n.dynamicThemeModeLabel,
               ),
@@ -1464,8 +1461,6 @@ class _SettingsModalState extends State<_SettingsModal> {
             ),
             Slider(
               key: const ValueKey('settings-dynamic-theme-intensity-slider'),
-              min: 0,
-              max: 1,
               divisions: 10,
               label: '${(_local.dynamicThemeIntensity * 100).round()}%',
               value: _local.dynamicThemeIntensity,
@@ -1474,7 +1469,7 @@ class _SettingsModalState extends State<_SettingsModal> {
             const SizedBox(height: 4),
             if (widget.isRewardedPremiumUnlocked)
               DropdownButtonFormField<String>(
-                value: _local.themeColorNote ?? '',
+                initialValue: _local.themeColorNote ?? '',
                 decoration: InputDecoration(
                   labelText: l10n.themeColorLabel,
                 ),

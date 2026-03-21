@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/tuner_screen.dart';
+
 import 'golden_test_utils.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
 Widget _wrap(
   Widget child, {
-  List<dynamic> overrides = const [],
+  List<Override> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
@@ -37,7 +39,7 @@ void main() {
           return const SizedBox.shrink();
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(label, isNotEmpty);
     });
@@ -55,7 +57,7 @@ void main() {
           );
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.bySemanticsLabel(label), findsOneWidget);
     });
@@ -65,12 +67,12 @@ void main() {
     testWidgets('matches tuner screen golden (${variant.name})', (tester) async {
       await prepareGoldenSurface(tester);
       final bridge = _MockNativePitchBridge();
-      when(() => bridge.startCapture()).thenAnswer((_) async => true);
+      when(bridge.startCapture).thenAnswer((_) async => true);
       when(() => bridge.pitchStream)
           .thenAnswer((_) => const Stream<PitchResult>.empty());
       when(() => bridge.tunerAnalysisStream)
           .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-      when(() => bridge.dispose()).thenReturn(null);
+      when(bridge.dispose).thenReturn(null);
 
       await tester.pumpWidget(
         _wrap(
@@ -100,12 +102,12 @@ void main() {
 
   testWidgets('shows transposition selector on tuner screen', (tester) async {
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
     when(() => bridge.tunerAnalysisStream)
         .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
       _wrap(
@@ -122,12 +124,12 @@ void main() {
 
   testWidgets('uses two-pane adaptive layout on large screens', (tester) async {
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
     when(() => bridge.tunerAnalysisStream)
         .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -149,12 +151,12 @@ void main() {
   testWidgets('disposing TunerScreen does not leak animation tickers',
       (tester) async {
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
     when(() => bridge.tunerAnalysisStream)
         .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
       _wrap(
@@ -185,7 +187,7 @@ void main() {
           return const SizedBox.shrink();
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(noteLabel, isNotEmpty);
       expect(waveformLabel, isNotEmpty);
@@ -215,7 +217,7 @@ void main() {
           );
         }),
       ));
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.bySemanticsLabel(noteLabel), findsOneWidget);
       expect(find.bySemanticsLabel(waveformLabel), findsOneWidget);
@@ -225,12 +227,12 @@ void main() {
   testWidgets('dynamic theme energy visualization semantics are exposed',
       (tester) async {
     final bridge = _MockNativePitchBridge();
-    when(() => bridge.startCapture()).thenAnswer((_) async => true);
+    when(bridge.startCapture).thenAnswer((_) async => true);
     when(() => bridge.pitchStream)
         .thenAnswer((_) => const Stream<PitchResult>.empty());
     when(() => bridge.tunerAnalysisStream)
         .thenAnswer((_) => const Stream<TunerAnalysisFrame>.empty());
-    when(() => bridge.dispose()).thenReturn(null);
+    when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
       _wrap(

@@ -25,7 +25,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.text('No practice records'), findsOneWidget);
       expect(find.text('Add a record with the + button'), findsOneWidget);
@@ -40,14 +40,14 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         _wrap(
-          LogTab(
-            monthlyLogStatsByMonth: const {
+          const LogTab(
+            monthlyLogStatsByMonth: {
               '2024-01': MonthlyPracticeStats(practiceDays: {1}, totalMinutes: 30),
             },
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
 
       expect(find.byType(CalendarGrid), findsOneWidget);
       expect(find.text('No practice records'), findsNothing);

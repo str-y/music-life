@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -58,9 +58,7 @@ void main() {
       _TestPitchBridge.instances.clear();
     });
 
-    tearDown(() {
-      ServiceLocator.reset();
-    });
+    tearDown(ServiceLocator.reset);
 
     testWidgets('Tuner flow: bridge stream updates UI', (tester) async {
       await tester.pumpWidget(const ProviderScope(child: MusicLifeApp()));
@@ -73,8 +71,8 @@ void main() {
       final bridge = _TestPitchBridge.instances.single;
       bridge.emitPitch(const PitchResult(
         noteName: 'A4',
-        frequency: 440.0,
-        centsOffset: 0.0,
+        frequency: 440,
+        centsOffset: 0,
         midiNote: 69,
       ));
       await tester.pumpAndSettle();
@@ -197,8 +195,8 @@ void main() {
 
 class _TestPitchBridge extends Mock implements NativePitchBridge {
   _TestPitchBridge() {
-    when(() => startCapture()).thenAnswer((_) async => true);
-    when(() => dispose()).thenReturn(null);
+    when(startCapture).thenAnswer((_) async => true);
+    when(dispose).thenReturn(null);
     when(() => pitchStream).thenAnswer((_) => _pitchController.stream);
     when(() => chordStream).thenAnswer((_) => _chordController.stream);
     instances.add(this);
