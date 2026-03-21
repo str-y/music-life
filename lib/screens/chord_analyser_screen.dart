@@ -292,104 +292,102 @@ class _ChordAnalyserBodyState extends ConsumerState<_ChordAnalyserBody>
     final localizations = AppLocalizations.of(context)!;
     final notifier = ref.read(chordAnalyserProvider.notifier);
     final currentState = ref.read(chordAnalyserProvider);
-    final chordFilterController =
-        TextEditingController(text: currentState.chordNameFilter);
+    var pendingFilterText = currentState.chordNameFilter;
     var pendingDate = currentState.selectedFilterDate;
 
-    try {
-      final action = await showModalBottomSheet<_HistoryFilterAction>(
-        context: context,
-        useSafeArea: true,
-        isScrollControlled: true,
-        builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setModalState) {
-              final dateLabel =
-                  pendingDate == null ? '-' : formatDateYMD(pendingDate!);
-              return Padding(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 12,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: chordFilterController,
-                      decoration: InputDecoration(
-                        labelText: localizations.filterByChordName,
+    final action = await showModalBottomSheet<_HistoryFilterAction>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final dateLabel =
+                pendingDate == null ? '-' : formatDateYMD(pendingDate!);
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    initialValue: pendingFilterText,
+                    onChanged: (value) => pendingFilterText = value,
+                    decoration: InputDecoration(
+                      labelText: localizations.filterByChordName,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('${localizations.practiceDate}: $dateLabel'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: pendingDate ?? DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null && context.mounted) {
+                            setModalState(() => pendingDate = picked);
+                          }
+                        },
+                        child: Text(localizations.practiceDate),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('${localizations.practiceDate}: $dateLabel'),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: pendingDate ?? DateTime.now(),
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (picked != null && context.mounted) {
-                              setModalState(() => pendingDate = picked);
-                            }
-                          },
-                          child: Text(localizations.practiceDate),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              setModalState(() => pendingDate = null),
-                          child: Text(localizations.clearDateFilter),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop(_HistoryFilterAction.clear),
-                          child: Text(localizations.clearFilter),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(localizations.cancel),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context)
-                              .pop(_HistoryFilterAction.apply),
-                          child: Text(localizations.save),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
+                      TextButton(
+                        onPressed: () =>
+                            setModalState(() => pendingDate = null),
+                        child: Text(localizations.clearDateFilter),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop(_HistoryFilterAction.clear),
+                        child: Text(localizations.clearFilter),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(localizations.cancel),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context)
+                            .pop(_HistoryFilterAction.apply),
+                        child: Text(localizations.save),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted || action == null) return;
+
+    if (action == _HistoryFilterAction.apply) {
+      await notifier.applyFilter(
+        date: pendingDate,
+        chordName: pendingFilterText.trim(),
       );
-
-      final appliedText = chordFilterController.text.trim();
-      if (!mounted || action == null) return;
-
-      if (action == _HistoryFilterAction.apply) {
-        await notifier.applyFilter(date: pendingDate, chordName: appliedText);
-        return;
-      }
-
-      await notifier.clearFilter();
-    } finally {
-      chordFilterController.dispose();
+      return;
     }
+
+    await notifier.clearFilter();
   }
 }
 
