@@ -7,6 +7,7 @@ import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/repositories/recording_repository.dart';
 import 'package:music_life/screens/practice_log_screen.dart';
 import 'package:music_life/utils/practice_log_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'golden_test_utils.dart';
 
@@ -22,14 +23,19 @@ Widget _wrap(
   );
 }
 
-Widget _wrapScreen(
+Future<Widget> _wrapScreen(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
-}) {
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>()],
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      ...overrides,
+    ],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
@@ -155,7 +161,7 @@ void main() {
         when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
         await tester.pumpWidget(
-          _wrapScreen(
+          await _wrapScreen(
             PracticeLogScreen(now: () => fixedNow),
             locale: variant.locale,
             themeMode: variant.themeMode,
@@ -193,7 +199,7 @@ void main() {
       when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
-        _wrapScreen(
+        await _wrapScreen(
           PracticeLogScreen(now: () => now),
           overrides: [
             recordingRepositoryProvider.overrideWithValue(repo),
@@ -207,14 +213,19 @@ void main() {
       )!;
       final weeklyTrend = buildWeeklyPracticeTrend(logs, now: now);
 
-      expect(find.bySemanticsLabel(l10n.previousMonth), findsOneWidget);
-      expect(find.bySemanticsLabel(l10n.nextMonth), findsOneWidget);
+      // IconButton.tooltip surfaces as Semantics.tooltip (not label); use
+      // find.byTooltip to verify the buttons are accessible.
+      expect(find.byTooltip(l10n.previousMonth), findsOneWidget);
+      expect(find.byTooltip(l10n.nextMonth), findsOneWidget);
+      // The analytics bar uses an explicit Semantics(label:...) widget.
+      final semanticsHandle = tester.ensureSemantics();
       expect(
         find.bySemanticsLabel(
           '${weeklyTrend.last.label}, ${l10n.durationMinutes(weeklyTrend.last.minutes)}',
         ),
         findsOneWidget,
       );
+      semanticsHandle.dispose();
     });
 
     testWidgets('analytics bars animate selection details when tapped',
@@ -235,7 +246,7 @@ void main() {
       when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
-        _wrapScreen(
+        await _wrapScreen(
           PracticeLogScreen(now: () => DateTime(2026, 2, 14)),
           overrides: [
             recordingRepositoryProvider.overrideWithValue(repo),
@@ -252,6 +263,7 @@ void main() {
         findsOneWidget,
       );
 
+      await tester.ensureVisible(find.byKey(const ValueKey('practice-trend-bar-2/10')));
       await tester.tap(find.byKey(const ValueKey('practice-trend-bar-2/10')));
       await tester.pump();
       for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
@@ -270,8 +282,19 @@ void main() {
       late String loadError;
       late String retry;
 
+      // Suppress expected FlutterError reports from the intentionally-failing
+      // repository: AppLogger.reportError → FlutterError.reportError would
+      // otherwise mark this test as failed.
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        if (details.exceptionAsString().contains('load failed') ||
+            details.context?.toString().contains('practice logs') == true) return;
+        originalOnError?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalOnError);
+
       await tester.pumpWidget(
-        _wrapScreen(
+        await _wrapScreen(
           Builder(builder: (context) {
             final l10n = AppLocalizations.of(context)!;
             loadError = l10n.loadDataError;
@@ -310,7 +333,7 @@ void main() {
       when(repo.loadPracticeLogs).thenAnswer((_) async => logs);
 
       await tester.pumpWidget(
-        _wrapScreen(
+        await _wrapScreen(
           PracticeLogScreen(now: () => now),
           overrides: [
             recordingRepositoryProvider.overrideWithValue(repo),

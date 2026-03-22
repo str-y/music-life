@@ -55,10 +55,10 @@ class _FakeAiPracticeInsightsService implements AiPracticeInsightsService {
 
 Widget _wrap(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
 }) {
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>()],
+    overrides: overrides,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -96,7 +96,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const PracticeLogScreen(),
-          overrides: [...overrides.whereType<dynamic>()],
+          overrides: overrides,
         ),
       );
       for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }
@@ -148,7 +148,7 @@ void main() {
       await tester.pumpWidget(
         _wrap(
           const AiPracticeInsightsScreen(),
-          overrides: [...overrides.whereType<dynamic>()],
+          overrides: overrides,
         ),
       );
       for (var i = 0; i < 50; i++) { await tester.pump(const Duration(milliseconds: 50)); }

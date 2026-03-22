@@ -24,12 +24,12 @@ class _MockAdService extends Mock implements IAdService {}
 
 Widget _wrap(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {
   return ProviderScope(
-    overrides: [...overrides.whereType<dynamic>()],
+    overrides: overrides,
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,

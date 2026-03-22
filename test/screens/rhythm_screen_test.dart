@@ -13,7 +13,7 @@ import 'golden_test_utils.dart';
 
 Widget _wrap(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
 }) {

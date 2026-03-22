@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod/riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:music_life/l10n/app_localizations.dart';
 import 'package:music_life/native_pitch_bridge.dart';
 import 'package:music_life/providers/dependency_providers.dart';
 import 'package:music_life/screens/tuner_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'golden_test_utils.dart';
 
 class _MockNativePitchBridge extends Mock implements NativePitchBridge {}
 
-Widget _wrap(
+Future<Widget> _wrap(
   Widget child, {
-  List<Override> overrides = const [],
+  List<dynamic> overrides = const [],
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
-}) {
+}) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   return ProviderScope(
-    overrides: [...overrides],
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(prefs),
+      ...overrides,
+    ],
     child: buildGoldenTestApp(
       locale: locale,
       themeMode: themeMode,
@@ -33,7 +38,7 @@ void main() {
     testWidgets('centsMeterSemanticLabel is a non-empty localized string',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.centsMeterSemanticLabel;
           return const SizedBox.shrink();
@@ -48,7 +53,7 @@ void main() {
         'Semantics node with centsMeterSemanticLabel is found in widget tree',
         (tester) async {
       late String label;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           label = AppLocalizations.of(context)!.centsMeterSemanticLabel;
           return Semantics(
@@ -75,7 +80,7 @@ void main() {
       when(bridge.dispose).thenReturn(null);
 
       await tester.pumpWidget(
-        _wrap(
+        await _wrap(
           const TunerScreen(
             useMicPermissionGate: false,
             showTranspositionControl: false,
@@ -110,7 +115,7 @@ void main() {
     when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const TunerScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -135,7 +140,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const TunerScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -159,7 +164,7 @@ void main() {
     when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const TunerScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
@@ -168,7 +173,9 @@ void main() {
     );
     await tester.pump();
 
-    await tester.pumpWidget(_wrap(const SizedBox.shrink()));
+    // Replace with a different root type so ProviderScope is fully disposed
+    // (Riverpod prohibits changing override count on the same ProviderScope).
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
@@ -179,7 +186,7 @@ void main() {
         (tester) async {
       late String noteLabel;
       late String waveformLabel;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           final l10n = AppLocalizations.of(context)!;
           noteLabel = l10n.currentNoteSemanticLabel;
@@ -197,7 +204,7 @@ void main() {
         (tester) async {
       late String noteLabel;
       late String waveformLabel;
-      await tester.pumpWidget(_wrap(
+      await tester.pumpWidget(await _wrap(
         Builder(builder: (context) {
           final l10n = AppLocalizations.of(context)!;
           noteLabel = l10n.currentNoteSemanticLabel;
@@ -235,7 +242,7 @@ void main() {
     when(bridge.dispose).thenReturn(null);
 
     await tester.pumpWidget(
-      _wrap(
+      await _wrap(
         const TunerScreen(useMicPermissionGate: false),
         overrides: [
           pitchBridgeFactoryProvider.overrideWithValue(({onError}) => bridge),
